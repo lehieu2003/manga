@@ -55,3 +55,7 @@ export type ReaderPayload = {
   pageUrls: string[];
   dataSaverPageUrls: string[];
 };
+
+export type SourceAware<T> = T & {
+  source: "live" | "cache";
+};

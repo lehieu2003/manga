@@ -10,6 +10,7 @@ import { connectRedis, redis } from "./lib/redis.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
 import { catalogRoutes } from "./modules/catalog/catalog.routes.js";
 import { coverRoutes } from "./modules/catalog/cover.routes.js";
+import { pageRoutes } from "./modules/catalog/page.routes.js";
 import { libraryRoutes } from "./modules/library/library.routes.js";
 import { progressRoutes } from "./modules/progress/progress.routes.js";
 import { syncMangaDexCatalog } from "./modules/catalog/sync.service.js";
@@ -96,6 +97,7 @@ export async function buildApp() {
   await app.register(authRoutes, { prefix: "/api" });
   await app.register(catalogRoutes, { prefix: "/api" });
   await app.register(coverRoutes, { prefix: "/api" });
+  await app.register(pageRoutes, { prefix: "/api" });
   await app.register(libraryRoutes, { prefix: "/api" });
   await app.register(progressRoutes, { prefix: "/api" });
 

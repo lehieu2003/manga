@@ -55,5 +55,6 @@ export async function rotateRefreshToken(app: FastifyInstance, refreshToken: str
     data: { revokedAt: new Date() }
   });
 
-  return issueTokenPair(app, session.user);
+  const tokens = await issueTokenPair(app, session.user);
+  return { user: session.user, ...tokens };
 }

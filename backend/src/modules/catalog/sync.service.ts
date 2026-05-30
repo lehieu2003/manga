@@ -2,11 +2,12 @@ import { prisma } from "../../lib/prisma.js";
 import { getChapters, searchManga } from "../mangadex/mangadex.client.js";
 import { saveChapterBatch, saveMangaBatch } from "./catalog-cache.service.js";
 
-export async function syncMangaDexCatalog(options: { limit: number; includeChapters: boolean }) {
+export async function syncMangaDexCatalog(options: { limit: number; includeChapters: boolean; query?: string; languages?: string[]; chaptersLimit?: number }) {
   const result = await searchManga({
+    q: options.query,
     limit: options.limit,
     offset: 0,
-    languages: ["vi", "en"],
+    languages: options.languages ?? ["vi", "en"],
     tags: []
   });
 
@@ -16,9 +17,9 @@ export async function syncMangaDexCatalog(options: { limit: number; includeChapt
     for (const manga of result.data) {
       const chapters = await getChapters({
         mangaId: manga.id,
-        limit: 32,
+        limit: options.chaptersLimit ?? 32,
         offset: 0,
-        translatedLanguage: ["vi", "en"]
+        translatedLanguage: options.languages ?? ["vi", "en"]
       });
       await saveChapterBatch(manga.id, chapters.data);
     }

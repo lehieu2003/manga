@@ -38,6 +38,7 @@ npm run build --workspaces
 - MangaDex metadata is requested through the backend and cached in Redis.
 - MangaDex catalog data is also persisted in PostgreSQL via `CachedManga` and `CachedChapter`.
 - Run `npm run sync:mangadex -w backend -- --limit=48 --chapters` to manually import manga and first chapter feeds.
+- Narrow syncs are supported, for example `npm run sync:mangadex -w backend -- --query=chainsaw --languages=vi,en --limit=12 --chapters --chapters-limit=64`.
 - Set `SYNC_ON_STARTUP=true` in `backend/.env` to run a non-blocking catalog sync when the backend starts.
 - Reader image URLs are resolved through MangaDex AtHome metadata and loaded directly by the browser.
 - Default translated languages are Vietnamese and English.

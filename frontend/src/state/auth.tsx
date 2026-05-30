@@ -25,6 +25,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setIsLoading(false));
   }, []);
 
+  useEffect(() => {
+    const onAuthCleared = () => setUser(null);
+    window.addEventListener("manga:auth-cleared", onAuthCleared);
+    return () => window.removeEventListener("manga:auth-cleared", onAuthCleared);
+  }, []);
+
   const login = useCallback(async (input: { email: string; password: string }) => {
     const payload = await api.login(input);
     setTokens(payload.accessToken, payload.refreshToken);

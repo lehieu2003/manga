@@ -177,7 +177,7 @@ export async function getReader(chapterId: string): Promise<ReaderPayload> {
     hash: chapter.hash,
     pages: chapter.data,
     dataSaverPages: chapter.dataSaver,
-    pageUrls: chapter.data.map((page) => `${baseUrl}/data/${chapter.hash}/${page}`),
-    dataSaverPageUrls: chapter.dataSaver.map((page) => `${baseUrl}/data-saver/${chapter.hash}/${page}`)
+    pageUrls: chapter.data.map((page) => `/api/pages/${chapterId}/data/${page}`),
+    dataSaverPageUrls: chapter.dataSaver.map((page) => `/api/pages/${chapterId}/data-saver/${page}`)
   };
 }

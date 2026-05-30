@@ -37,10 +37,10 @@ export async function catalogRoutes(app: FastifyInstance) {
       try {
         const result = await searchManga(query);
         await saveMangaBatch(result.data);
-        return result;
+        return { ...result, source: "live" as const };
       } catch (error) {
         const fallback = await searchCachedManga(query);
-        if (fallback.data.length > 0) return fallback;
+        if (fallback.data.length > 0) return { ...fallback, source: "cache" as const };
         throw error;
       }
     });

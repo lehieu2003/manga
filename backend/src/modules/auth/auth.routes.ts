@@ -62,7 +62,8 @@ export async function authRoutes(app: FastifyInstance) {
 
   app.post("/auth/refresh", async (request) => {
     const body = refreshSchema.parse(request.body);
-    return rotateRefreshToken(app, body.refreshToken);
+    const payload = await rotateRefreshToken(app, body.refreshToken);
+    return { ...payload, user: publicUser(payload.user) };
   });
 
   app.post("/auth/logout", async (request) => {

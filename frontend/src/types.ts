@@ -34,6 +34,7 @@ export type Paginated<T> = {
   limit: number;
   offset: number;
   total: number;
+  source?: "live" | "cache";
 };
 
 export type ReaderPayload = {
@@ -53,6 +54,19 @@ export type LibraryItem = {
   isFavorite: boolean;
   lastChapterId: string | null;
   lastReadAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  manga?: Pick<MangaSummary, "id" | "title" | "coverUrl" | "status" | "year" | "tags"> | null;
+  readingProgress?: ReadingProgress | null;
+};
+
+export type ReadingProgress = {
+  id: string;
+  userId: string;
+  mangaId: string;
+  chapterId: string;
+  pageIndex: number;
+  completed: boolean;
   createdAt: string;
   updatedAt: string;
 };

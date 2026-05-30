@@ -11,7 +11,36 @@ export async function libraryRoutes(app: FastifyInstance) {
       where: { userId: request.user.sub },
       orderBy: [{ lastReadAt: "desc" }, { updatedAt: "desc" }]
     });
-    return { data: items };
+    const mangaIds = items.map((item) => item.mangaId);
+    const [manga, progress] = await Promise.all([
+      prisma.cachedManga.findMany({ where: { id: { in: mangaIds } } }),
+      prisma.readingProgress.findMany({
+        where: { userId: request.user.sub, mangaId: { in: mangaIds } },
+        orderBy: { updatedAt: "desc" }
+      })
+    ]);
+    const mangaById = new Map(manga.map((item) => [item.id, item]));
+    const progressByMangaId = new Map(progress.map((item) => [item.mangaId, item]));
+
+    return {
+      data: items.map((item) => {
+        const cached = mangaById.get(item.mangaId);
+        return {
+          ...item,
+          manga: cached
+            ? {
+                id: cached.id,
+                title: cached.title,
+                coverUrl: cached.coverUrl,
+                status: cached.status,
+                year: cached.year,
+                tags: cached.tags
+              }
+            : null,
+          readingProgress: progressByMangaId.get(item.mangaId) ?? null
+        };
+      })
+    };
   });
 
   app.get("/library/:mangaId", { preHandler: app.authenticate }, async (request) => {
