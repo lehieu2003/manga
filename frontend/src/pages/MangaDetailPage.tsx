@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookmarkPlus, Heart } from "lucide-react";
-import { useParams } from "react-router-dom";
+import { BookmarkCheck, BookmarkPlus, Heart, Library, Trash2 } from "lucide-react";
+import { Link, useParams } from "react-router-dom";
 import { ChapterList } from "../components/ChapterList";
 import { api, assetUrl } from "../lib/api";
 import { useAuth } from "../state/auth";
@@ -13,10 +13,16 @@ export function MangaDetailPage() {
   const queryClient = useQueryClient();
   const manga = useQuery({ queryKey: ["manga", mangaId], queryFn: () => api.getManga(mangaId), enabled: Boolean(mangaId) });
   const chapters = useQuery({ queryKey: ["chapters", mangaId], queryFn: () => api.getChapters(mangaId), enabled: Boolean(mangaId) });
+  const libraryItem = useQuery({
+    queryKey: ["library", mangaId],
+    queryFn: () => api.getLibraryItem(mangaId),
+    enabled: Boolean(user && mangaId)
+  });
+  const isFollowed = Boolean(libraryItem.data?.item);
   const follow = useMutation({
     mutationFn: () => api.upsertLibrary(mangaId, { status: "READING", isFavorite: true }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["library"] });
+      await Promise.all([queryClient.invalidateQueries({ queryKey: ["library"] }), queryClient.invalidateQueries({ queryKey: ["library", mangaId] })]);
       showToast({
         kind: "success",
         title: "Added to library",
@@ -27,6 +33,24 @@ export function MangaDetailPage() {
       showToast({
         kind: "error",
         title: "Could not follow manga",
+        description: error instanceof Error ? error.message : "Please try again."
+      });
+    }
+  });
+  const unfollow = useMutation({
+    mutationFn: () => api.removeLibrary(mangaId),
+    onSuccess: async () => {
+      await Promise.all([queryClient.invalidateQueries({ queryKey: ["library"] }), queryClient.invalidateQueries({ queryKey: ["library", mangaId] })]);
+      showToast({
+        kind: "info",
+        title: "Removed from library",
+        description: `${manga.data?.title ?? "This manga"} was removed from your shelf.`
+      });
+    },
+    onError: (error) => {
+      showToast({
+        kind: "error",
+        title: "Could not remove manga",
         description: error instanceof Error ? error.message : "Please try again."
       });
     }
@@ -56,10 +80,24 @@ export function MangaDetailPage() {
               </span>
             ))}
           </div>
-          <button className="btn btn-primary" disabled={!user || follow.isPending} onClick={() => follow.mutate()}>
-            {user ? <Heart size={18} /> : <BookmarkPlus size={18} />}
-            {follow.isPending ? "Saving..." : user ? "Follow in library" : "Login to follow"}
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button className={`btn ${isFollowed ? "" : "btn-primary"}`} disabled={!user || follow.isPending || isFollowed} onClick={() => follow.mutate()}>
+              {!user ? <BookmarkPlus size={18} /> : isFollowed ? <BookmarkCheck size={18} /> : <Heart size={18} />}
+              {follow.isPending ? "Saving..." : !user ? "Login to follow" : isFollowed ? "In library" : "Follow in library"}
+            </button>
+            {isFollowed ? (
+              <>
+                <Link className="btn" to="/library">
+                  <Library size={18} />
+                  Open library
+                </Link>
+                <button className="btn text-[var(--danger)]" disabled={unfollow.isPending} onClick={() => unfollow.mutate()}>
+                  <Trash2 size={18} />
+                  {unfollow.isPending ? "Removing..." : "Remove"}
+                </button>
+              </>
+            ) : null}
+          </div>
         </div>
       </section>
 

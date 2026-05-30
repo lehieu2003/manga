@@ -106,6 +106,9 @@ export const api = {
   async getLibrary() {
     return request<{ data: LibraryItem[] }>("/library");
   },
+  async getLibraryItem(mangaId: string) {
+    return request<{ item: LibraryItem | null }>(`/library/${mangaId}`);
+  },
   async getMangaProgress(mangaId: string) {
     return request<{ progress: ReadingProgress | null }>(`/progress/manga/${mangaId}`);
   },
