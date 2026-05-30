@@ -28,6 +28,8 @@ Stack hiện tại:
 
 - Search manga theo title/keyword.
 - Search trả về pagination với `limit`, `offset`, `total`.
+- Search hỗ trợ sort discovery: relevance, latest update, followed count, title, created newest và updated newest.
+- Search hỗ trợ filter metadata theo included/excluded cached tags, content rating, status và publication year.
 - Backend ưu tiên MangaDex live data, tự lưu manga vào PostgreSQL cache.
 - Nếu MangaDex/network lỗi, backend fallback sang cached manga nếu có data.
 - Response search có `source: "live"` hoặc `source: "cache"` để UI biết nguồn dữ liệu.
@@ -43,6 +45,8 @@ Stack hiện tại:
 - Home có section Browse by genre.
 - Search page có genre chips, active filters và clear filter.
 - Route `/genres/:genre` dùng lại Search layout để browse theo thể loại.
+- Search page có discovery control panel với include/exclude tags, content rating, status, year và sort selector.
+- Có route `/discover/popular` và `/discover/latest` dùng chung discovery layout với preset sort.
 
 ### Theme Và Visual Direction
 
@@ -132,7 +136,8 @@ Stack hiện tại:
 ## Giới Hạn Hiện Tại
 
 - Genre filter dùng cached tags trong PostgreSQL, chưa gọi MangaDex tag registry để map tag name sang tag ID live.
-- Search theo genre luôn trả từ cache, không gọi live MangaDex.
+- Search theo cached tag/genre luôn trả từ cache, không gọi live MangaDex tag registry.
+- Included/excluded tag filter hiện dựa trên tag name đã cache; chưa có UI tag ID registry đầy đủ từ MangaDex.
 - Search chapter toàn feed đang dùng auto-fetch client-side, chưa có query server-side riêng.
 - Scanlation filter chỉ đầy đủ theo các chapter đã load; option list mở rộng dần khi infinite scroll load thêm.
 - Reading stats dựa trên chapters đã load và total từ feed; một số số liệu như scanlation detail chưa đầy đủ như dashboard.
@@ -167,12 +172,10 @@ Stack hiện tại:
 
 ### Manga Discovery
 
-- Advanced MangaDex filters: included/excluded tags, content rating, status, year, demographic.
-- Sort search theo relevance, latest update, followed count, title.
-- Dedicated latest updates page.
-- Dedicated popular/trending page.
 - Author/artist display và search.
 - Better empty states khi DB cache chưa có dữ liệu.
+- MangaDex tag registry để filter live bằng tag ID thay vì cached tag name.
+- Demographic/original-language filters trong UI.
 
 ### Auth Và Account
 

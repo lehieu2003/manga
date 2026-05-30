@@ -119,7 +119,7 @@ export function HomePage() {
       <section>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-black">Popular picks</h2>
-          <Link className="text-sm text-[var(--accent)]" to="/search">
+          <Link className="text-sm text-[var(--accent)]" to="/discover/popular">
             View all
           </Link>
         </div>
@@ -128,6 +128,11 @@ export function HomePage() {
 
       <section>
         <h2 className="mb-4 text-xl font-black">Fast search starters</h2>
+        <div className="mb-4">
+          <Link className="text-sm text-[var(--accent)]" to="/discover/latest">
+            Latest updates
+          </Link>
+        </div>
         {latest.isLoading ? <SkeletonGrid /> : <div className="manga-grid">{latest.data?.data.map((manga) => <MangaCard key={manga.id} manga={manga} />)}</div>}
       </section>
     </div>

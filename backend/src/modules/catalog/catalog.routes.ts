@@ -11,6 +11,7 @@ const csv = (fallback: string[] = []) =>
     .string()
     .optional()
     .transform((value) => value?.split(",").map((item) => item.trim()).filter(Boolean) ?? fallback);
+const sortSchema = z.enum(["relevance", "latest", "followed", "title", "created", "updated"]).default("relevance");
 
 export async function catalogRoutes(app: FastifyInstance) {
   app.get("/manga/search", async (request) => {
@@ -21,11 +22,29 @@ export async function catalogRoutes(app: FastifyInstance) {
         offset: z.coerce.number().int().min(0).default(0),
         languages: csv(["vi", "en"]),
         tags: csv(),
+        includedTags: csv(),
+        excludedTags: csv(),
+        contentRating: csv(["safe", "suggestive"]),
+        status: csv(),
+        year: z.coerce.number().int().min(1900).max(new Date().getFullYear() + 1).optional(),
+        demographic: csv(),
+        sort: sortSchema,
         genre: z.string().trim().optional(),
         genres: csv()
       })
       .parse(request.query);
-    const genres = [...new Set([...(query.genre ? [query.genre] : []), ...query.genres])];
+    const genres = [...new Set([...(query.genre ? [query.genre] : []), ...query.genres, ...query.includedTags])];
+    const cacheFilters = {
+      q: query.q,
+      limit: query.limit,
+      offset: query.offset,
+      genres,
+      excludedGenres: query.excludedTags,
+      status: query.status,
+      contentRating: query.contentRating,
+      year: query.year,
+      sort: query.sort
+    };
 
     if (request.headers.authorization && query.q) {
       try {
@@ -37,7 +56,7 @@ export async function catalogRoutes(app: FastifyInstance) {
     }
 
     if (genres.length) {
-      const fallback = await searchCachedManga({ q: query.q, limit: query.limit, offset: query.offset, genres });
+      const fallback = await searchCachedManga(cacheFilters);
       return { ...fallback, source: "cache" as const };
     }
 
@@ -47,7 +66,7 @@ export async function catalogRoutes(app: FastifyInstance) {
         await saveMangaBatch(result.data);
         return { ...result, source: "live" as const };
       } catch (error) {
-        const fallback = await searchCachedManga({ q: query.q, limit: query.limit, offset: query.offset });
+        const fallback = await searchCachedManga(cacheFilters);
         if (fallback.data.length > 0) return { ...fallback, source: "cache" as const };
         throw error;
       }

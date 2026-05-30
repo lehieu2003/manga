@@ -86,13 +86,33 @@ export const api = {
   async refresh() {
     return refreshSession();
   },
-  async searchManga(params: { q?: string; limit?: number; offset?: number; languages?: string; genres?: string[] }) {
+  async searchManga(params: {
+    q?: string;
+    limit?: number;
+    offset?: number;
+    languages?: string;
+    genres?: string[];
+    includedTags?: string[];
+    excludedTags?: string[];
+    contentRating?: string[];
+    status?: string[];
+    year?: number;
+    demographic?: string[];
+    sort?: "relevance" | "latest" | "followed" | "title" | "created" | "updated";
+  }) {
     const query = new URLSearchParams();
     if (params.q) query.set("q", params.q);
     query.set("limit", String(params.limit ?? 24));
     query.set("offset", String(params.offset ?? 0));
     query.set("languages", params.languages ?? "vi,en");
     if (params.genres?.length) query.set("genres", params.genres.join(","));
+    if (params.includedTags?.length) query.set("includedTags", params.includedTags.join(","));
+    if (params.excludedTags?.length) query.set("excludedTags", params.excludedTags.join(","));
+    if (params.contentRating?.length) query.set("contentRating", params.contentRating.join(","));
+    if (params.status?.length) query.set("status", params.status.join(","));
+    if (params.year) query.set("year", String(params.year));
+    if (params.demographic?.length) query.set("demographic", params.demographic.join(","));
+    if (params.sort) query.set("sort", params.sort);
     return request<Paginated<MangaSummary>>(`/manga/search?${query}`);
   },
   async getGenres() {

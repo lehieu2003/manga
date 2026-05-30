@@ -16,6 +16,8 @@ export function App() {
       <Route element={<AppLayout />}>
         <Route index element={<HomePage />} />
         <Route path="/search" element={<SearchPage />} />
+        <Route path="/discover/popular" element={<SearchPage />} />
+        <Route path="/discover/latest" element={<SearchPage />} />
         <Route path="/genres/:genre" element={<SearchPage />} />
         <Route path="/manga/:mangaId" element={<MangaDetailPage />} />
         <Route path="/read/:chapterId" element={<ReaderPage />} />

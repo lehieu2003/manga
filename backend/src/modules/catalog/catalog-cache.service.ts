@@ -28,7 +28,17 @@ export async function saveChapterBatch(mangaId: string, chapters: ChapterSummary
   );
 }
 
-export async function searchCachedManga(input: { q?: string; limit: number; offset: number; genres?: string[] }) {
+export async function searchCachedManga(input: {
+  q?: string;
+  limit: number;
+  offset: number;
+  genres?: string[];
+  excludedGenres?: string[];
+  status?: string[];
+  contentRating?: string[];
+  year?: number;
+  sort?: "relevance" | "latest" | "followed" | "title" | "created" | "updated";
+}) {
   const filters: Prisma.CachedMangaWhereInput[] = [];
   if (input.q) {
     filters.push({
@@ -41,12 +51,24 @@ export async function searchCachedManga(input: { q?: string; limit: number; offs
   if (input.genres?.length) {
     filters.push({ tags: { hasSome: input.genres } });
   }
+  if (input.excludedGenres?.length) {
+    filters.push({ NOT: { tags: { hasSome: input.excludedGenres } } });
+  }
+  if (input.status?.length) {
+    filters.push({ status: { in: input.status } });
+  }
+  if (input.contentRating?.length) {
+    filters.push({ contentRating: { in: input.contentRating } });
+  }
+  if (input.year) {
+    filters.push({ year: input.year });
+  }
   const where: Prisma.CachedMangaWhereInput = filters.length ? { AND: filters } : {};
 
   const [data, total] = await prisma.$transaction([
     prisma.cachedManga.findMany({
       where,
-      orderBy: [{ fetchedAt: "desc" }, { title: "asc" }],
+      orderBy: getCachedMangaOrder(input.sort),
       take: input.limit,
       skip: input.offset
     }),
@@ -59,6 +81,12 @@ export async function searchCachedManga(input: { q?: string; limit: number; offs
     total,
     data: data.map(fromCachedManga)
   };
+}
+
+function getCachedMangaOrder(sort: "relevance" | "latest" | "followed" | "title" | "created" | "updated" | undefined): Prisma.CachedMangaOrderByWithRelationInput[] {
+  if (sort === "title") return [{ title: "asc" }];
+  if (sort === "updated" || sort === "latest" || sort === "created") return [{ fetchedAt: "desc" }, { title: "asc" }];
+  return [{ fetchedAt: "desc" }, { title: "asc" }];
 }
 
 export async function getCachedGenres() {

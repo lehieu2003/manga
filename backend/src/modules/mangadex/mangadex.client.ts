@@ -3,6 +3,24 @@ import { HttpError } from "../../lib/http-error.js";
 import type { ChapterSummary, MangaDexListResponse, MangaDexSingleResponse, MangaSummary, ReaderPayload } from "./mangadex.types.js";
 
 const USER_AGENT = "mangadex-reader/0.1 (+https://github.com/local/mangadex-reader)";
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export type MangaSearchSort = "relevance" | "latest" | "followed" | "title" | "created" | "updated";
+
+export type MangaSearchInput = {
+  q?: string;
+  limit: number;
+  offset: number;
+  languages: string[];
+  tags: string[];
+  includedTags?: string[];
+  excludedTags?: string[];
+  contentRating?: string[];
+  status?: string[];
+  year?: number;
+  demographic?: string[];
+  sort?: MangaSearchSort;
+};
 
 export function getMangaDexUploadsBaseUrl() {
   if (env.MANGADEX_UPLOADS_BASE_URL) return env.MANGADEX_UPLOADS_BASE_URL;
@@ -116,19 +134,31 @@ export async function searchManga(input: {
   offset: number;
   languages: string[];
   tags: string[];
+  includedTags?: string[];
+  excludedTags?: string[];
+  contentRating?: string[];
+  status?: string[];
+  year?: number;
+  demographic?: string[];
+  sort?: MangaSearchSort;
 }) {
+  const includedTags = [...new Set([...(input.tags ?? []), ...(input.includedTags ?? [])])].filter((tag) => UUID_PATTERN.test(tag));
+  const excludedTags = (input.excludedTags ?? []).filter((tag) => UUID_PATTERN.test(tag));
   const params = new URLSearchParams({
     limit: String(input.limit),
-    offset: String(input.offset),
-    "order[followedCount]": "desc",
-    "order[relevance]": "desc"
+    offset: String(input.offset)
   });
 
+  applyMangaSort(params, input.sort ?? (input.q ? "relevance" : "followed"));
   if (input.q) params.set("title", input.q);
+  if (input.year) params.set("year", String(input.year));
   appendArrayParams(params, "availableTranslatedLanguage", input.languages);
   appendArrayParams(params, "includes", ["cover_art"]);
-  appendArrayParams(params, "contentRating", ["safe", "suggestive"]);
-  appendArrayParams(params, "includedTags", input.tags);
+  appendArrayParams(params, "contentRating", input.contentRating?.length ? input.contentRating : ["safe", "suggestive"]);
+  appendArrayParams(params, "status", input.status ?? []);
+  appendArrayParams(params, "publicationDemographic", input.demographic ?? []);
+  appendArrayParams(params, "includedTags", includedTags);
+  appendArrayParams(params, "excludedTags", excludedTags);
 
   const result = await requestMangaDex<MangaDexListResponse>("/manga", params);
   return {
@@ -137,6 +167,29 @@ export async function searchManga(input: {
     total: result.total,
     data: result.data.map(normalizeManga)
   };
+}
+
+export function applyMangaSort(params: URLSearchParams, sort: MangaSearchSort) {
+  if (sort === "latest") {
+    params.set("order[latestUploadedChapter]", "desc");
+    return;
+  }
+  if (sort === "title") {
+    params.set("order[title]", "asc");
+    return;
+  }
+  if (sort === "created") {
+    params.set("order[createdAt]", "desc");
+    return;
+  }
+  if (sort === "updated") {
+    params.set("order[updatedAt]", "desc");
+    return;
+  }
+  if (sort === "relevance") {
+    params.set("order[relevance]", "desc");
+  }
+  params.set("order[followedCount]", "desc");
 }
 
 export async function getManga(id: string) {
