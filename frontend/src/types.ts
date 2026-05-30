@@ -75,3 +75,9 @@ export type ReadingProgress = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type MangaProgressPayload = {
+  progress: ReadingProgress | null;
+  chaptersProgress: ReadingProgress[];
+  chapter?: ChapterSummary | null;
+};

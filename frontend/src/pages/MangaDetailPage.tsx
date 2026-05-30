@@ -1,5 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookmarkCheck, BookmarkPlus, Heart, Library, Trash2 } from "lucide-react";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { BookmarkCheck, BookmarkPlus, Heart, Library, Play, Trash2 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { ChapterList } from "../components/ChapterList";
 import { api, assetUrl } from "../lib/api";
@@ -12,7 +12,21 @@ export function MangaDetailPage() {
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const manga = useQuery({ queryKey: ["manga", mangaId], queryFn: () => api.getManga(mangaId), enabled: Boolean(mangaId) });
-  const chapters = useQuery({ queryKey: ["chapters", mangaId], queryFn: () => api.getChapters(mangaId), enabled: Boolean(mangaId) });
+  const chapters = useInfiniteQuery({
+    queryKey: ["chapters", mangaId],
+    queryFn: ({ pageParam }) => api.getChapters(mangaId, { limit: 100, offset: pageParam }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => {
+      const nextOffset = lastPage.offset + lastPage.limit;
+      return nextOffset < lastPage.total ? nextOffset : undefined;
+    },
+    enabled: Boolean(mangaId)
+  });
+  const progress = useQuery({
+    queryKey: ["progress", "manga", mangaId],
+    queryFn: () => api.getMangaProgress(mangaId),
+    enabled: Boolean(user && mangaId)
+  });
   const libraryItem = useQuery({
     queryKey: ["library", mangaId],
     queryFn: () => api.getLibraryItem(mangaId),
@@ -60,6 +74,16 @@ export function MangaDetailPage() {
   if (manga.isError) return <div className="surface rounded-lg p-6 text-[var(--danger)]">{manga.error.message}</div>;
   if (!manga.data) return null;
 
+  const chapterPages = chapters.data?.pages ?? [];
+  const chapterItems = chapterPages.flatMap((page) => page.data);
+  const chapterTotal = chapterPages[0]?.total ?? chapterItems.length;
+  const continueChapter = chapterItems.find((chapter) => chapter.id === progress.data?.progress?.chapterId) ?? progress.data?.chapter;
+  const languages = new Set(chapterItems.map((chapter) => chapter.translatedLanguage.toUpperCase())).size;
+  const latestPublishAt = chapterItems
+    .map((chapter) => new Date(chapter.publishAt).getTime())
+    .filter(Number.isFinite)
+    .sort((a, b) => b - a)[0];
+
   return (
     <div className="space-y-6">
       <section className="surface grid gap-6 rounded-lg p-5 md:grid-cols-[220px_1fr]">
@@ -101,14 +125,49 @@ export function MangaDetailPage() {
         </div>
       </section>
 
+      {progress.data?.progress && continueChapter ? (
+        <section className="surface rounded-lg p-5">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="mb-2 text-xs font-bold uppercase tracking-[0.24em] text-[var(--accent)]">Continue Reading</p>
+              <h2 className="text-2xl font-black">{manga.data.title}</h2>
+              <p className="mt-2 text-sm text-[var(--muted)]">
+                Chapter {continueChapter.chapter ?? "?"} · Page {progress.data.progress.pageIndex + 1} / {continueChapter.pages || "?"}
+              </p>
+            </div>
+            <Link className="btn btn-primary" to={`/read/${continueChapter.id}?mangaId=${mangaId}`}>
+              <Play size={18} />
+              Read next
+            </Link>
+          </div>
+        </section>
+      ) : null}
+
       <section className="space-y-4">
-        <h2 className="text-xl font-black">Chapters</h2>
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h2 className="text-xl font-black">Chapters</h2>
+            <div className="mt-2 flex flex-wrap gap-2 text-xs font-bold text-[var(--muted)]">
+              <span className="rounded-md border border-[var(--line)] px-2.5 py-1">{chapterTotal} Chapters</span>
+              <span className="rounded-md border border-[var(--line)] px-2.5 py-1">{languages || 0} Languages</span>
+              <span className="rounded-md border border-[var(--line)] px-2.5 py-1">Last updated {latestPublishAt ? new Date(latestPublishAt).toLocaleDateString() : "unknown"}</span>
+            </div>
+          </div>
+        </div>
         {chapters.isLoading ? (
           <div className="surface rounded-lg p-6 text-[var(--muted)]">Loading chapters...</div>
         ) : chapters.isError ? (
           <div className="surface rounded-lg p-6 text-[var(--danger)]">{chapters.error.message}</div>
         ) : (
-          <ChapterList chapters={chapters.data?.data ?? []} mangaId={mangaId} />
+          <ChapterList
+            chapters={chapterItems}
+            mangaId={mangaId}
+            currentProgress={progress.data?.progress}
+            chaptersProgress={progress.data?.chaptersProgress}
+            hasMore={chapters.hasNextPage}
+            isLoadingMore={chapters.isFetchingNextPage}
+            onLoadMore={() => chapters.fetchNextPage()}
+          />
         )}
       </section>
     </div>

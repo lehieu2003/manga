@@ -1,4 +1,4 @@
-import type { ChapterSummary, GenreSummary, LibraryItem, MangaSummary, Paginated, ReaderPayload, ReadingProgress, User } from "../types";
+import type { ChapterSummary, GenreSummary, LibraryItem, MangaProgressPayload, MangaSummary, Paginated, ReaderPayload, User } from "../types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000/api";
 const API_ORIGIN = new URL(API_URL).origin;
@@ -101,8 +101,12 @@ export const api = {
   async getManga(id: string) {
     return request<MangaSummary>(`/manga/${id}`);
   },
-  async getChapters(mangaId: string) {
-    return request<Paginated<ChapterSummary>>(`/manga/${mangaId}/chapters?translatedLanguage=vi,en&limit=100`);
+  async getChapters(mangaId: string, params: { limit?: number; offset?: number; translatedLanguage?: string[] } = {}) {
+    const query = new URLSearchParams();
+    query.set("translatedLanguage", (params.translatedLanguage ?? ["vi", "en"]).join(","));
+    query.set("limit", String(params.limit ?? 100));
+    query.set("offset", String(params.offset ?? 0));
+    return request<Paginated<ChapterSummary>>(`/manga/${mangaId}/chapters?${query}`);
   },
   async getReader(chapterId: string) {
     return request<ReaderPayload>(`/chapters/${chapterId}/reader`);
@@ -114,7 +118,7 @@ export const api = {
     return request<{ item: LibraryItem | null }>(`/library/${mangaId}`);
   },
   async getMangaProgress(mangaId: string) {
-    return request<{ progress: ReadingProgress | null }>(`/progress/manga/${mangaId}`);
+    return request<MangaProgressPayload>(`/progress/manga/${mangaId}`);
   },
   async upsertLibrary(mangaId: string, input: Partial<Pick<LibraryItem, "status" | "isFavorite" | "lastChapterId">>) {
     return request<{ item: LibraryItem }>(`/library/${mangaId}`, {

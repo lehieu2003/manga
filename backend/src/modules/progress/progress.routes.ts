@@ -7,11 +7,29 @@ const uuidSchema = z.string().uuid();
 export async function progressRoutes(app: FastifyInstance) {
   app.get("/progress/manga/:mangaId", { preHandler: app.authenticate }, async (request) => {
     const { mangaId } = z.object({ mangaId: uuidSchema }).parse(request.params);
-    const progress = await prisma.readingProgress.findFirst({
+    const chaptersProgress = await prisma.readingProgress.findMany({
       where: { userId: request.user.sub, mangaId },
       orderBy: { updatedAt: "desc" }
     });
-    return { progress };
+    const progress = chaptersProgress[0] ?? null;
+    const chapter = progress ? await prisma.cachedChapter.findUnique({ where: { id: progress.chapterId } }) : null;
+
+    return {
+      progress,
+      chaptersProgress,
+      chapter: chapter
+        ? {
+            id: chapter.id,
+            title: chapter.title,
+            chapter: chapter.chapter,
+            volume: chapter.volume,
+            translatedLanguage: chapter.translatedLanguage,
+            publishAt: chapter.publishAt?.toISOString() ?? "",
+            pages: chapter.pages,
+            scanlationGroup: chapter.scanlationGroup ?? undefined
+          }
+        : null
+    };
   });
 
   app.get("/progress/:chapterId", { preHandler: app.authenticate }, async (request) => {
