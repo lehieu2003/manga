@@ -7,4 +7,6 @@ coverage
 *.log
 backend/prisma/dev.db
 .agents
+.claude
+.cortex
 skills-lock.json
