@@ -4,16 +4,32 @@ import { useParams } from "react-router-dom";
 import { ChapterList } from "../components/ChapterList";
 import { api, assetUrl } from "../lib/api";
 import { useAuth } from "../state/auth";
+import { useToast } from "../state/toast";
 
 export function MangaDetailPage() {
   const { mangaId = "" } = useParams();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const queryClient = useQueryClient();
   const manga = useQuery({ queryKey: ["manga", mangaId], queryFn: () => api.getManga(mangaId), enabled: Boolean(mangaId) });
   const chapters = useQuery({ queryKey: ["chapters", mangaId], queryFn: () => api.getChapters(mangaId), enabled: Boolean(mangaId) });
   const follow = useMutation({
     mutationFn: () => api.upsertLibrary(mangaId, { status: "READING", isFavorite: true }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["library"] })
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["library"] });
+      showToast({
+        kind: "success",
+        title: "Added to library",
+        description: `${manga.data?.title ?? "This manga"} is ready on your shelf.`
+      });
+    },
+    onError: (error) => {
+      showToast({
+        kind: "error",
+        title: "Could not follow manga",
+        description: error instanceof Error ? error.message : "Please try again."
+      });
+    }
   });
 
   if (manga.isLoading) return <div className="surface rounded-lg p-6 text-[var(--muted)]">Loading manga...</div>;
@@ -42,7 +58,7 @@ export function MangaDetailPage() {
           </div>
           <button className="btn btn-primary" disabled={!user || follow.isPending} onClick={() => follow.mutate()}>
             {user ? <Heart size={18} /> : <BookmarkPlus size={18} />}
-            {user ? "Follow in library" : "Login to follow"}
+            {follow.isPending ? "Saving..." : user ? "Follow in library" : "Login to follow"}
           </button>
         </div>
       </section>
