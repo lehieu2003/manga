@@ -1,0 +1,121 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum LibraryStatus {
+  READING
+  PLAN_TO_READ
+  COMPLETED
+  PAUSED
+  DROPPED
+}
+
+model User {
+  id              String            @id @default(cuid())
+  email           String            @unique
+  passwordHash    String
+  displayName     String
+  avatarUrl       String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  refreshSessions RefreshSession[]
+  libraryItems    LibraryItem[]
+  progress        ReadingProgress[]
+  searchHistory   SearchHistory[]
+}
+
+model RefreshSession {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model LibraryItem {
+  id            String        @id @default(cuid())
+  userId        String
+  mangaId       String
+  status        LibraryStatus @default(READING)
+  isFavorite    Boolean       @default(false)
+  lastChapterId String?
+  lastReadAt    DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, mangaId])
+  @@index([userId, updatedAt])
+}
+
+model ReadingProgress {
+  id         String   @id @default(cuid())
+  userId     String
+  mangaId    String
+  chapterId  String
+  pageIndex  Int      @default(0)
+  completed  Boolean  @default(false)
+  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, chapterId])
+  @@index([userId, mangaId, updatedAt])
+}
+
+model SearchHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  query     String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model CachedManga {
+  id            String          @id
+  title         String
+  altTitles     Json
+  description   String
+  status        String?
+  year          Int?
+  contentRating String?
+  tags          String[]
+  coverUrl      String?
+  source        String          @default("mangadex")
+  fetchedAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  chapters      CachedChapter[]
+
+  @@index([title])
+  @@index([fetchedAt])
+}
+
+model CachedChapter {
+  id                 String      @id
+  mangaId            String
+  title              String
+  chapter            String?
+  volume             String?
+  translatedLanguage String
+  publishAt          DateTime?
+  pages              Int         @default(0)
+  scanlationGroup    String?
+  fetchedAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  manga              CachedManga @relation(fields: [mangaId], references: [id], onDelete: Cascade)
+
+  @@index([mangaId, translatedLanguage])
+  @@index([mangaId, chapter])
+  @@index([publishAt])
+}
