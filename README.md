@@ -40,5 +40,10 @@ npm run build --workspaces
 - Run `npm run sync:mangadex -w backend -- --limit=48 --chapters` to manually import manga and first chapter feeds.
 - Narrow syncs are supported, for example `npm run sync:mangadex -w backend -- --query=chainsaw --languages=vi,en --limit=12 --chapters --chapters-limit=64`.
 - Set `SYNC_ON_STARTUP=true` in `backend/.env` to run a non-blocking catalog sync when the backend starts.
-- Reader image URLs are resolved through MangaDex AtHome metadata and loaded directly by the browser.
+- Reader image URLs are resolved through MangaDex AtHome metadata and proxied through the backend for local reliability.
 - Default translated languages are Vietnamese and English.
+
+## Documentation
+
+- [Feature status](docs/FEATURE_STATUS.md): current implemented features, known limits, and not-yet-implemented roadmap items.
+- [Reader and chapter navigation plan](docs/READER_CHAPTER_NAVIGATION_PLAN.md): MVP behavior, interfaces, and test scenarios for reader navigation.
