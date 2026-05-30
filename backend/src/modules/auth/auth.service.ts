@@ -39,6 +39,13 @@ export async function issueTokenPair(app: FastifyInstance, user: { id: string; e
   return { accessToken, refreshToken, expiresAt };
 }
 
+export async function revokeUserRefreshSessions(userId: string) {
+  await prisma.refreshSession.updateMany({
+    where: { userId, revokedAt: null },
+    data: { revokedAt: new Date() }
+  });
+}
+
 export async function rotateRefreshToken(app: FastifyInstance, refreshToken: string) {
   const tokenHash = hashToken(refreshToken);
   const session = await prisma.refreshSession.findUnique({

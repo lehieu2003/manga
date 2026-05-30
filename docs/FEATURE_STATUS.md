@@ -22,7 +22,9 @@ Stack hiện tại:
 - JWT access token và refresh token rotation.
 - Frontend tự refresh session khi API trả `401`.
 - Route protected cho Library và Settings.
-- Logout API đã có ở backend, nhưng UI logout hiện chỉ clear local session.
+- Logout UI gọi backend logout để revoke refresh token rồi clear local session.
+- Settings có account screen cho update display name/avatar URL và change password.
+- Change password verify current password, revoke refresh sessions cũ và issue token mới cho browser hiện tại.
 
 ### MangaDex Catalog
 
@@ -143,8 +145,6 @@ Stack hiện tại:
 - Reading stats dựa trên chapters đã load và total từ feed; một số số liệu như scanlation detail chưa đầy đủ như dashboard.
 - Reader chapter navigation cần `mangaId` trên URL; nếu thiếu `mangaId`, reader vẫn đọc được chapter hiện tại nhưng disable previous/next và selector.
 - Theme hiện là một static visual direction, chưa có theme switcher hoặc per-user appearance setting.
-- Settings page hiện là placeholder hoặc chưa có chức năng đáng kể.
-- Logout endpoint backend có nhưng UI chưa có luồng logout đầy đủ trong settings/header.
 - Search history được ghi khi search có token, nhưng chưa có UI hiển thị lịch sử search.
 - No admin dashboard, no cache dashboard, no manual cache invalidation UI.
 
@@ -179,9 +179,6 @@ Stack hiện tại:
 
 ### Auth Và Account
 
-- Change password.
-- Update display name/avatar.
-- Logout button visible trong UI.
 - Forgot password / reset password.
 - Email verification.
 - OAuth login.
@@ -226,6 +223,8 @@ Auth:
 - `POST /api/auth/refresh`
 - `POST /api/auth/logout`
 - `GET /api/me`
+- `PATCH /api/me`
+- `PUT /api/me/password`
 
 Library/progress:
 

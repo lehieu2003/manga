@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
 import { HttpError } from "../../lib/http-error.js";
-import { hashPassword, hashToken, issueTokenPair, rotateRefreshToken, verifyPassword } from "./auth.service.js";
+import { hashPassword, hashToken, issueTokenPair, revokeUserRefreshSessions, rotateRefreshToken, verifyPassword } from "./auth.service.js";
 
 const registerSchema = z.object({
   email: z.string().email().transform((value) => value.toLowerCase()),
@@ -17,6 +17,16 @@ const loginSchema = z.object({
 
 const refreshSchema = z.object({
   refreshToken: z.string().min(20)
+});
+
+const updateProfileSchema = z.object({
+  displayName: z.string().trim().min(2).max(40).optional(),
+  avatarUrl: z.preprocess((value) => (typeof value === "string" && value.trim() === "" ? null : value), z.string().trim().url().max(500).nullable().optional())
+});
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8).max(128)
 });
 
 function publicUser(user: { id: string; email: string; displayName: string; avatarUrl: string | null; createdAt: Date }) {
@@ -78,5 +88,37 @@ export async function authRoutes(app: FastifyInstance) {
   app.get("/me", { preHandler: app.authenticate }, async (request) => {
     const user = await prisma.user.findUniqueOrThrow({ where: { id: request.user.sub } });
     return { user: publicUser(user) };
+  });
+
+  app.patch("/me", { preHandler: app.authenticate }, async (request) => {
+    const body = updateProfileSchema.parse(request.body);
+    if (body.displayName === undefined && body.avatarUrl === undefined) {
+      throw new HttpError(400, "At least one profile field is required", "EMPTY_PROFILE_UPDATE");
+    }
+
+    const user = await prisma.user.update({
+      where: { id: request.user.sub },
+      data: {
+        ...(body.displayName !== undefined ? { displayName: body.displayName } : {}),
+        ...(body.avatarUrl !== undefined ? { avatarUrl: body.avatarUrl } : {})
+      }
+    });
+    return { user: publicUser(user) };
+  });
+
+  app.put("/me/password", { preHandler: app.authenticate }, async (request) => {
+    const body = changePasswordSchema.parse(request.body);
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: request.user.sub } });
+    if (!(await verifyPassword(body.currentPassword, user.passwordHash))) {
+      throw new HttpError(401, "Current password is incorrect", "INVALID_CURRENT_PASSWORD");
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: await hashPassword(body.newPassword) }
+    });
+    await revokeUserRefreshSessions(updatedUser.id);
+    const tokens = await issueTokenPair(app, updatedUser);
+    return { user: publicUser(updatedUser), ...tokens };
   });
 }

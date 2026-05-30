@@ -9,7 +9,7 @@ export function getAccessToken() {
   return localStorage.getItem(ACCESS_TOKEN_KEY);
 }
 
-function getRefreshToken() {
+export function getRefreshToken() {
   return localStorage.getItem(REFRESH_TOKEN_KEY);
 }
 
@@ -85,6 +85,28 @@ export const api = {
   },
   async refresh() {
     return refreshSession();
+  },
+  async logout(refreshToken: string) {
+    return request<{ ok: true }>(
+      "/auth/logout",
+      {
+        method: "POST",
+        body: JSON.stringify({ refreshToken })
+      },
+      false
+    );
+  },
+  async updateMe(input: { displayName?: string; avatarUrl?: string | null }) {
+    return request<{ user: User }>("/me", {
+      method: "PATCH",
+      body: JSON.stringify(input)
+    });
+  },
+  async changePassword(input: { currentPassword: string; newPassword: string }) {
+    return request<{ user: User; accessToken: string; refreshToken: string }>("/me/password", {
+      method: "PUT",
+      body: JSON.stringify(input)
+    });
   },
   async searchManga(params: {
     q?: string;
