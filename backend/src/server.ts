@@ -36,7 +36,9 @@ export async function buildApp() {
         : true
   });
 
-  await app.register(helmet);
+  await app.register(helmet, {
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+  });
   await app.register(cors, {
     origin: env.CORS_ORIGIN.split(",").map((origin) => origin.trim()),
     credentials: true

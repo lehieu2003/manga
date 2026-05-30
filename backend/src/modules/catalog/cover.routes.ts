@@ -23,6 +23,7 @@ export async function coverRoutes(app: FastifyInstance) {
 
     const bytes = Buffer.from(await response.arrayBuffer());
     reply.header("Cache-Control", "public, max-age=86400");
+    reply.header("Cross-Origin-Resource-Policy", "cross-origin");
     reply.header("Content-Type", response.headers.get("content-type") ?? "image/jpeg");
     return reply.send(bytes);
   });
