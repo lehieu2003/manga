@@ -66,6 +66,9 @@ Stack hiện tại:
 - Library page hiển thị card có cover, title, status, last read và continue link nếu có progress.
 - Library có tabs Reading, Favorites, Completed, Paused.
 - Có quick action favorite, đổi status, remove khỏi library.
+- Library có search theo title, tag, manga status hoặc library status.
+- Library có sort theo last read, recently updated, title A-Z, status và favorite first.
+- Library có filter summary hiển thị shelf view, visible count, sort mode và search query.
 
 ### Reading Progress
 
@@ -73,6 +76,8 @@ Stack hiện tại:
 - Progress được lưu debounce khi đọc và khi rời trang.
 - Mở reader sẽ resume page gần nhất nếu chapter trùng progress hiện tại.
 - Manga detail có Continue Reading card nếu user đã login và có progress.
+- Home có Continue Reading global cho user đã login.
+- Home có Recently Read dựa trên library/progress hiện có.
 - Continue Reading hiển thị manga title, chapter hiện tại, page hiện tại/tổng page và link đọc tiếp.
 - Backend trả progress mới nhất theo manga, toàn bộ progress của manga, và cached chapter của progress mới nhất.
 
@@ -155,12 +160,9 @@ Stack hiện tại:
 
 ### Library Và Personalization
 
-- Recently Read toàn app trên home hoặc library.
 - Bookmark chapter riêng biệt với follow manga.
 - Favorite chapter.
 - Custom reading statuses chi tiết hơn.
-- Sort/filter library theo last read, title, status, favorite.
-- Continue reading global ở Home.
 - Reading streak hoặc reading activity.
 
 ### Manga Discovery
