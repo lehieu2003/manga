@@ -42,7 +42,7 @@ export function SearchPage() {
         <label className="mb-2 block text-sm font-bold text-[var(--muted)]" htmlFor="manga-search">
           {routeGenre ? `Browse ${routeGenre}` : "Search MangaDex"}
         </label>
-        <div className="flex items-center gap-3 rounded-lg border border-[var(--line)] bg-[#0d1116] px-3">
+        <div className="control flex items-center gap-3 rounded-lg px-3">
           <Search size={20} color="var(--accent)" />
           <input
             id="manga-search"

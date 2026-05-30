@@ -59,7 +59,7 @@ export function LibraryPage() {
         <div className="grid gap-3 md:grid-cols-2">
           {items.map((item) => (
             <article key={item.id} className="surface grid grid-cols-[74px_1fr] gap-4 rounded-lg p-3">
-              <Link to={`/manga/${item.mangaId}`} className="aspect-[2/3] overflow-hidden rounded-md bg-[#101418]">
+              <Link to={`/manga/${item.mangaId}`} className="manga-cover-frame rounded-md">
                 {item.manga?.coverUrl ? <img className="h-full w-full object-cover" src={assetUrl(item.manga.coverUrl)} alt={item.manga.title} /> : null}
               </Link>
               <div className="min-w-0 space-y-3">

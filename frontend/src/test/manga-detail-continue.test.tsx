@@ -1,7 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { api } from "../lib/api";
 import { MangaDetailPage } from "../pages/MangaDetailPage";
 
 vi.mock("../state/auth", () => ({
@@ -73,5 +75,23 @@ describe("MangaDetailPage continue reading", () => {
     expect(screen.getAllByText("The Beginning After The End").length).toBeGreaterThan(0);
     expect(screen.getByText("Chapter 53 · Page 17 / 32")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Read next/ })).toHaveAttribute("href", "/read/chapter-53?mangaId=manga-1");
+  });
+
+  it("refetches chapter feed when language filters change", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={["/manga/manga-1"]}>
+          <Routes>
+            <Route path="/manga/:mangaId" element={<MangaDetailPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByLabelText("EN")).toBeChecked();
+    await userEvent.click(screen.getByLabelText("VI"));
+
+    expect(api.getChapters).toHaveBeenLastCalledWith("manga-1", { limit: 100, offset: 0, translatedLanguage: ["en"] });
   });
 });

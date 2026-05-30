@@ -4,6 +4,7 @@ dist
 .env.local
 .DS_Store
 coverage
+.tmp
 *.log
 backend/prisma/dev.db
 .agents

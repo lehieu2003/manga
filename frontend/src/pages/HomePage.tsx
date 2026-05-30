@@ -15,11 +15,11 @@ export function HomePage() {
   return (
     <div className="space-y-8">
       <section className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
-        <div className="surface rounded-lg p-6 md:p-8">
+        <div className="surface manga-hero rounded-lg p-6 md:p-8">
           <div className="mb-8 flex items-start justify-between gap-5">
             <div>
-              <p className="mb-2 text-xs font-bold uppercase tracking-[0.24em] text-[var(--accent)]">Reader-first MangaDex</p>
-              <h1 className="max-w-3xl text-3xl font-black leading-tight md:text-5xl">Read, track, and continue chapters without losing your place.</h1>
+              <p className="mb-2 text-xs font-bold uppercase tracking-[0.24em] text-[var(--accent)]">Manga cafe reader</p>
+              <h1 className="max-w-3xl text-3xl font-black leading-tight md:text-5xl">A warm shelf for reading, tracking, and continuing every chapter.</h1>
             </div>
             <Sparkles className="hidden shrink-0 text-[var(--accent)] md:block" size={34} />
           </div>
@@ -34,8 +34,8 @@ export function HomePage() {
             </Link>
           </div>
         </div>
-        <div className="surface rounded-lg p-5">
-          <p className="mb-3 text-sm font-bold uppercase tracking-[0.18em] text-[var(--accent)]">Reading system</p>
+        <div className="surface shelf-panel rounded-lg p-5">
+          <p className="mb-3 text-sm font-bold uppercase tracking-[0.18em] text-[var(--accent)]">Shelf notes</p>
           <div className="grid gap-3 text-sm text-[var(--muted)]">
             <div className="rounded-md border border-[var(--line)] p-3">VI + EN chapter preference</div>
             <div className="rounded-md border border-[var(--line)] p-3">Bookmarks and reading progress</div>

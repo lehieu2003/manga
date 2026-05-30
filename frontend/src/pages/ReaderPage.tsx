@@ -181,7 +181,7 @@ export function ReaderPage() {
 
   return (
     <div className="reader-page -mx-4 md:mx-0">
-      <div className="sticky top-16 z-30 mb-4 border-y border-[var(--line)] bg-[rgba(8,10,13,0.9)] px-4 py-3 backdrop-blur-xl md:rounded-lg md:border">
+      <div className="reader-toolbar sticky top-16 z-30 mb-4 border-y px-4 py-3 backdrop-blur-xl md:rounded-lg md:border">
         <div className="container-x flex items-center justify-between gap-3 px-0">
           <Link className="btn min-h-9" to={mangaId ? `/manga/${mangaId}` : "/search"}>
             <ArrowLeft size={17} />

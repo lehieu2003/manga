@@ -44,6 +44,13 @@ Stack hiện tại:
 - Search page có genre chips, active filters và clear filter.
 - Route `/genres/:genre` dùng lại Search layout để browse theo thể loại.
 
+### Theme Và Visual Direction
+
+- UI dùng theme Wibu Manga Cafe ấm, tối, reader-first.
+- Palette chính là nâu than, giấy ấm, amber accent và sakura accent nhỏ.
+- Header, manga cards, chapter rows, reader toolbar, genre chips và filter labels đã dùng visual language manga shelf/cafe.
+- Theme không dùng neon cyberpunk, mascot, emoji icon hoặc decorative blobs.
+
 ### Cover Và Page Image Proxy
 
 - Cover URL từ MangaDex được normalize thành local backend URL.
@@ -83,7 +90,11 @@ Stack hiện tại:
 - Chapter mới nhất có badge NEW.
 - Language badge dùng dạng `[EN]`, `[VI]`.
 - Chapter hierarchy đã tách chapter number và title riêng để scan dễ hơn.
-- Chapter list load mỗi lần 100 chapter và có nút Load more chapters.
+- Chapter list load mỗi lần 100 chapter và có infinite scroll kèm fallback Load more.
+- Search chapter tự fetch thêm batch khi chưa thấy kết quả trong chapters đã load.
+- Có filter language bằng checkbox cho Vietnamese và English.
+- Có filter scanlation group bằng checkbox dựa trên các group đã load.
+- Có Clear filters để reset search, language và scanlation filters.
 
 ### Reader
 
@@ -117,11 +128,11 @@ Stack hiện tại:
 
 - Genre filter dùng cached tags trong PostgreSQL, chưa gọi MangaDex tag registry để map tag name sang tag ID live.
 - Search theo genre luôn trả từ cache, không gọi live MangaDex.
-- Chapter list hiện load bằng nút Load more, chưa có infinite scroll tự động.
-- Search chapter chỉ lọc trong danh sách chapters đã load; muốn tìm chapter nằm ngoài 100 chapter đầu thì cần load thêm.
-- Reading stats dựa trên chapters đã load và total từ feed; một số số liệu như scanlation/language detail chưa đầy đủ như dashboard.
+- Search chapter toàn feed đang dùng auto-fetch client-side, chưa có query server-side riêng.
+- Scanlation filter chỉ đầy đủ theo các chapter đã load; option list mở rộng dần khi infinite scroll load thêm.
+- Reading stats dựa trên chapters đã load và total từ feed; một số số liệu như scanlation detail chưa đầy đủ như dashboard.
 - Reader chapter navigation cần `mangaId` trên URL; nếu thiếu `mangaId`, reader vẫn đọc được chapter hiện tại nhưng disable previous/next và selector.
-- UI chưa có bộ lọc language/scanlation trong chapter list.
+- Theme hiện là một static visual direction, chưa có theme switcher hoặc per-user appearance setting.
 - Settings page hiện là placeholder hoặc chưa có chức năng đáng kể.
 - Logout endpoint backend có nhưng UI chưa có luồng logout đầy đủ trong settings/header.
 - Search history được ghi khi search có token, nhưng chưa có UI hiển thị lịch sử search.
@@ -137,10 +148,6 @@ Stack hiện tại:
 
 ### Chapter List Nâng Cao
 
-- Infinite scroll tự động thay vì nút Load more.
-- Search chapter toàn bộ feed server-side hoặc auto fetch đến khi tìm thấy.
-- Filter language bằng checkbox.
-- Filter scanlation group bằng checkbox.
 - Collapse/expand latest chapters cho manga có quá nhiều chapter.
 - Group chapter theo volume.
 - Deduplicate chapter theo language/scanlation preference.
@@ -239,8 +246,8 @@ Library/progress:
 
 ## Ưu Tiên Tiếp Theo Đề Xuất
 
-1. Hoàn thiện reader navigation: next/previous chapter, chapter selector, preload next chapter.
-2. Hoàn thiện chapter filtering: language checkbox, scanlation group filter, server-side chapter search.
-3. Thêm global Recently Read ở Home và Library.
-4. Thêm logout/settings account thật.
-5. Thêm CI và production Docker build để chuẩn bị deploy VPS.
+1. Thêm global Recently Read ở Home và Library.
+2. Thêm logout/settings account thật.
+3. Hoàn thiện Chapter List nâng cao phần còn lại: group theo volume, deduplicate preference, latest badge theo language.
+4. Thêm CI và production Docker build để chuẩn bị deploy VPS.
+5. Thêm reader quality toggle và mobile gestures.

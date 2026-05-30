@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookmarkCheck, BookmarkPlus, Heart, Library, Play, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ChapterList } from "../components/ChapterList";
 import { api, assetUrl } from "../lib/api";
@@ -11,16 +12,17 @@ export function MangaDetailPage() {
   const { user } = useAuth();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
+  const [selectedLanguages, setSelectedLanguages] = useState(["vi", "en"]);
   const manga = useQuery({ queryKey: ["manga", mangaId], queryFn: () => api.getManga(mangaId), enabled: Boolean(mangaId) });
   const chapters = useInfiniteQuery({
-    queryKey: ["chapters", mangaId],
-    queryFn: ({ pageParam }) => api.getChapters(mangaId, { limit: 100, offset: pageParam }),
+    queryKey: ["chapters", mangaId, selectedLanguages],
+    queryFn: ({ pageParam }) => api.getChapters(mangaId, { limit: 100, offset: pageParam, translatedLanguage: selectedLanguages }),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => {
       const nextOffset = lastPage.offset + lastPage.limit;
       return nextOffset < lastPage.total ? nextOffset : undefined;
     },
-    enabled: Boolean(mangaId)
+    enabled: Boolean(mangaId && selectedLanguages.length)
   });
   const progress = useQuery({
     queryKey: ["progress", "manga", mangaId],
@@ -79,6 +81,7 @@ export function MangaDetailPage() {
   const chapterTotal = chapterPages[0]?.total ?? chapterItems.length;
   const continueChapter = chapterItems.find((chapter) => chapter.id === progress.data?.progress?.chapterId) ?? progress.data?.chapter;
   const languages = new Set(chapterItems.map((chapter) => chapter.translatedLanguage.toUpperCase())).size;
+  const visibleLanguageCount = selectedLanguages.length;
   const latestPublishAt = chapterItems
     .map((chapter) => new Date(chapter.publishAt).getTime())
     .filter(Number.isFinite)
@@ -87,7 +90,7 @@ export function MangaDetailPage() {
   return (
     <div className="space-y-6">
       <section className="surface grid gap-6 rounded-lg p-5 md:grid-cols-[220px_1fr]">
-        <div className="overflow-hidden rounded-lg bg-[#101418]">
+        <div className="manga-cover-frame rounded-lg">
           {manga.data.coverUrl ? <img className="w-full object-cover" src={assetUrl(manga.data.coverUrl)} alt={manga.data.title} /> : null}
         </div>
         <div className="space-y-5">
@@ -149,12 +152,23 @@ export function MangaDetailPage() {
             <h2 className="text-xl font-black">Chapters</h2>
             <div className="mt-2 flex flex-wrap gap-2 text-xs font-bold text-[var(--muted)]">
               <span className="rounded-md border border-[var(--line)] px-2.5 py-1">{chapterTotal} Chapters</span>
-              <span className="rounded-md border border-[var(--line)] px-2.5 py-1">{languages || 0} Languages</span>
+              <span className="rounded-md border border-[var(--line)] px-2.5 py-1">{chapterItems.length} Loaded</span>
+              <span className="rounded-md border border-[var(--line)] px-2.5 py-1">{visibleLanguageCount} Selected Languages</span>
+              <span className="rounded-md border border-[var(--line)] px-2.5 py-1">{languages || 0} Loaded Languages</span>
               <span className="rounded-md border border-[var(--line)] px-2.5 py-1">Last updated {latestPublishAt ? new Date(latestPublishAt).toLocaleDateString() : "unknown"}</span>
             </div>
           </div>
         </div>
-        {chapters.isLoading ? (
+        {!selectedLanguages.length ? (
+          <ChapterList
+            chapters={[]}
+            mangaId={mangaId}
+            currentProgress={progress.data?.progress}
+            chaptersProgress={progress.data?.chaptersProgress}
+            selectedLanguages={selectedLanguages}
+            onSelectedLanguagesChange={setSelectedLanguages}
+          />
+        ) : chapters.isLoading ? (
           <div className="surface rounded-lg p-6 text-[var(--muted)]">Loading chapters...</div>
         ) : chapters.isError ? (
           <div className="surface rounded-lg p-6 text-[var(--danger)]">{chapters.error.message}</div>
@@ -164,6 +178,8 @@ export function MangaDetailPage() {
             mangaId={mangaId}
             currentProgress={progress.data?.progress}
             chaptersProgress={progress.data?.chaptersProgress}
+            selectedLanguages={selectedLanguages}
+            onSelectedLanguagesChange={setSelectedLanguages}
             hasMore={chapters.hasNextPage}
             isLoadingMore={chapters.isFetchingNextPage}
             onLoadMore={() => chapters.fetchNextPage()}

@@ -15,19 +15,19 @@ export function AppLayout() {
 
   return (
     <div className="shell">
-      <header className="sticky top-0 z-40 border-b border-[var(--line)] bg-[rgba(8,10,13,0.86)] backdrop-blur-xl">
+      <header className="app-header sticky top-0 z-40">
         <div className="container-x flex h-16 items-center justify-between gap-4">
           <button className="flex items-center gap-3" onClick={() => navigate("/")} aria-label="Go home">
-            <span className="grid size-9 place-items-center rounded-lg border border-[var(--line)] bg-[var(--surface-strong)]">
+            <span className="grid size-9 place-items-center rounded-lg border border-[var(--line)] bg-[var(--surface-strong)] shadow-[0_8px_22px_rgba(255,184,107,0.08)]">
               <BookOpen size={19} color="var(--accent)" />
             </span>
             <span className="hidden text-left sm:block">
-              <span className="block text-sm font-black uppercase tracking-[0.18em] text-[var(--accent)]">Reader</span>
+              <span className="block text-sm font-black uppercase tracking-[0.18em] text-[var(--accent)]">Manga Shelf</span>
               <span className="block text-xs text-[var(--muted)]">MangaDex powered</span>
             </span>
           </button>
 
-          <nav className="flex items-center gap-1 rounded-xl border border-[var(--line)] bg-[#0b0f13] p-1">
+          <nav className="flex items-center gap-1 rounded-xl border border-[var(--line)] bg-[rgba(18,13,10,0.78)] p-1">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
