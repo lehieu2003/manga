@@ -18,6 +18,11 @@ export type MangaSummary = {
   coverUrl?: string;
 };
 
+export type GenreSummary = {
+  name: string;
+  count: number;
+};
+
 export type ChapterSummary = {
   id: string;
   title: string;

@@ -122,6 +122,49 @@ img {
   gap: 1rem;
 }
 
+.genre-chip {
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid color-mix(in srgb, var(--line), transparent 8%);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-strong), transparent 14%);
+  padding: 0.42rem 0.74rem;
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 800;
+  line-height: 1;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.genre-chip:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent), var(--line) 36%);
+}
+
+.genre-chip span {
+  display: inline-grid;
+  min-width: 1.45rem;
+  height: 1.45rem;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.genre-chip-active {
+  border-color: rgba(231, 185, 93, 0.72);
+  background: rgba(231, 185, 93, 0.14);
+  color: var(--accent-strong);
+}
+
 .reader-page img {
   width: min(100%, 960px);
   height: auto;

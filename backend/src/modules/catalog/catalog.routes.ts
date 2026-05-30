@@ -3,7 +3,7 @@ import { z } from "zod";
 import { cached, makeCacheKey } from "../../lib/cache.js";
 import { prisma } from "../../lib/prisma.js";
 import { getChapters, getManga, getReader, searchManga } from "../mangadex/mangadex.client.js";
-import { getCachedChapters, getCachedManga, saveChapterBatch, saveManga, saveMangaBatch, searchCachedManga } from "./catalog-cache.service.js";
+import { getCachedChapters, getCachedGenres, getCachedManga, saveChapterBatch, saveManga, saveMangaBatch, searchCachedManga } from "./catalog-cache.service.js";
 
 const uuidSchema = z.string().uuid();
 const csv = (fallback: string[] = []) =>
@@ -20,9 +20,12 @@ export async function catalogRoutes(app: FastifyInstance) {
         limit: z.coerce.number().int().min(1).max(50).default(24),
         offset: z.coerce.number().int().min(0).default(0),
         languages: csv(["vi", "en"]),
-        tags: csv()
+        tags: csv(),
+        genre: z.string().trim().optional(),
+        genres: csv()
       })
       .parse(request.query);
+    const genres = [...new Set([...(query.genre ? [query.genre] : []), ...query.genres])];
 
     if (request.headers.authorization && query.q) {
       try {
@@ -33,17 +36,26 @@ export async function catalogRoutes(app: FastifyInstance) {
       }
     }
 
+    if (genres.length) {
+      const fallback = await searchCachedManga({ q: query.q, limit: query.limit, offset: query.offset, genres });
+      return { ...fallback, source: "cache" as const };
+    }
+
     return cached(makeCacheKey("manga:search", query), 600, async () => {
       try {
         const result = await searchManga(query);
         await saveMangaBatch(result.data);
         return { ...result, source: "live" as const };
       } catch (error) {
-        const fallback = await searchCachedManga(query);
+        const fallback = await searchCachedManga({ q: query.q, limit: query.limit, offset: query.offset });
         if (fallback.data.length > 0) return { ...fallback, source: "cache" as const };
         throw error;
       }
     });
+  });
+
+  app.get("/genres", async () => {
+    return { data: await cached("genres:list", 300, getCachedGenres) };
   });
 
   app.get("/manga/:id", async (request) => {

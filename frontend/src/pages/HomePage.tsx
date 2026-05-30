@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Compass, History, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
+import { GenreChips } from "../components/GenreChips";
 import { MangaCard } from "../components/MangaCard";
 import { api } from "../lib/api";
 import { useAuth } from "../state/auth";
@@ -9,6 +10,7 @@ export function HomePage() {
   const { user } = useAuth();
   const popular = useQuery({ queryKey: ["manga", "popular"], queryFn: () => api.searchManga({ limit: 18 }) });
   const latest = useQuery({ queryKey: ["manga", "latest"], queryFn: () => api.searchManga({ q: "one", limit: 12 }) });
+  const genres = useQuery({ queryKey: ["genres"], queryFn: api.getGenres });
 
   return (
     <div className="space-y-8">
@@ -40,6 +42,24 @@ export function HomePage() {
             <div className="rounded-md border border-[var(--line)] p-3">Backend cache for MangaDex metadata</div>
           </div>
         </div>
+      </section>
+
+      <section className="surface rounded-lg p-5">
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <h2 className="text-xl font-black">Browse by genre</h2>
+          <Link className="text-sm text-[var(--accent)]" to="/search">
+            More filters
+          </Link>
+        </div>
+        {genres.isLoading ? (
+          <div className="flex flex-wrap gap-2">
+            {Array.from({ length: 12 }).map((_, index) => (
+              <span key={index} className="h-9 w-24 animate-pulse rounded-full border border-[var(--line)] bg-[var(--surface-strong)]" />
+            ))}
+          </div>
+        ) : (
+          <GenreChips genres={genres.data?.data ?? []} limit={12} />
+        )}
       </section>
 
       <section>

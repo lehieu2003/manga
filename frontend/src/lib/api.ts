@@ -1,4 +1,4 @@
-import type { ChapterSummary, LibraryItem, MangaSummary, Paginated, ReaderPayload, ReadingProgress, User } from "../types";
+import type { ChapterSummary, GenreSummary, LibraryItem, MangaSummary, Paginated, ReaderPayload, ReadingProgress, User } from "../types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000/api";
 const API_ORIGIN = new URL(API_URL).origin;
@@ -86,13 +86,17 @@ export const api = {
   async refresh() {
     return refreshSession();
   },
-  async searchManga(params: { q?: string; limit?: number; offset?: number; languages?: string }) {
+  async searchManga(params: { q?: string; limit?: number; offset?: number; languages?: string; genres?: string[] }) {
     const query = new URLSearchParams();
     if (params.q) query.set("q", params.q);
     query.set("limit", String(params.limit ?? 24));
     query.set("offset", String(params.offset ?? 0));
     query.set("languages", params.languages ?? "vi,en");
+    if (params.genres?.length) query.set("genres", params.genres.join(","));
     return request<Paginated<MangaSummary>>(`/manga/search?${query}`);
+  },
+  async getGenres() {
+    return request<{ data: GenreSummary[] }>("/genres");
   },
   async getManga(id: string) {
     return request<MangaSummary>(`/manga/${id}`);

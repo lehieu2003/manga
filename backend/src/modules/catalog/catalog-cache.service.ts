@@ -28,15 +28,20 @@ export async function saveChapterBatch(mangaId: string, chapters: ChapterSummary
   );
 }
 
-export async function searchCachedManga(input: { q?: string; limit: number; offset: number }) {
-  const where: Prisma.CachedMangaWhereInput = input.q
-    ? {
-        OR: [
-          { title: { contains: input.q, mode: "insensitive" } },
-          { description: { contains: input.q, mode: "insensitive" } }
-        ]
-      }
-    : {};
+export async function searchCachedManga(input: { q?: string; limit: number; offset: number; genres?: string[] }) {
+  const filters: Prisma.CachedMangaWhereInput[] = [];
+  if (input.q) {
+    filters.push({
+      OR: [
+        { title: { contains: input.q, mode: "insensitive" } },
+        { description: { contains: input.q, mode: "insensitive" } }
+      ]
+    });
+  }
+  if (input.genres?.length) {
+    filters.push({ tags: { hasSome: input.genres } });
+  }
+  const where: Prisma.CachedMangaWhereInput = filters.length ? { AND: filters } : {};
 
   const [data, total] = await prisma.$transaction([
     prisma.cachedManga.findMany({
@@ -54,6 +59,24 @@ export async function searchCachedManga(input: { q?: string; limit: number; offs
     total,
     data: data.map(fromCachedManga)
   };
+}
+
+export async function getCachedGenres() {
+  const manga = await prisma.cachedManga.findMany({ select: { tags: true } });
+  return countGenres(manga);
+}
+
+export function countGenres(manga: { tags: string[] }[]) {
+  const counts = new Map<string, number>();
+  for (const item of manga) {
+    for (const tag of item.tags) {
+      counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+  }
+
+  return [...counts.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 }
 
 export async function getCachedManga(id: string) {
