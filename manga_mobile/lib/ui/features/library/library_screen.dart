@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -14,7 +15,9 @@ class LibraryScreen extends StatefulWidget {
 }
 
 class _LibraryScreenState extends State<LibraryScreen> {
+  late AppState _app;
   late Future<List<LibraryItem>> _future;
+  bool _initialized = false;
   final _query = TextEditingController();
   String _tab = 'READING';
   String _sort = 'lastRead';
@@ -22,7 +25,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
   @override
   void initState() {
     super.initState();
-    _future = _load();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _app = AppScope.of(context);
+    if (!_initialized) {
+      _future = _load();
+      _initialized = true;
+    }
   }
 
   @override
@@ -31,15 +43,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
     super.dispose();
   }
 
-  Future<List<LibraryItem>> _load() =>
-      AppScope.of(context).libraryRepository.all();
+  Future<List<LibraryItem>> _load() => _app.libraryRepository.all();
 
   Future<void> _update(
     LibraryItem item, {
     String? status,
     bool? favorite,
   }) async {
-    await AppScope.of(context).libraryRepository.upsert(
+    await _app.libraryRepository.upsert(
       item.mangaId,
       status: status ?? item.status,
       isFavorite: favorite ?? item.isFavorite,
@@ -48,7 +59,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Future<void> _remove(String mangaId) async {
-    await AppScope.of(context).libraryRepository.remove(mangaId);
+    await _app.libraryRepository.remove(mangaId);
     setState(() => _future = _load());
   }
 
@@ -142,6 +153,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               ...items.map(
                 (item) => _LibraryTile(
                   item: item,
+                  assetUrl: _app.catalogRepository.assetUrl,
                   onUpdate: _update,
                   onRemove: _remove,
                 ),
@@ -185,11 +197,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
 class _LibraryTile extends StatelessWidget {
   const _LibraryTile({
     required this.item,
+    required this.assetUrl,
     required this.onUpdate,
     required this.onRemove,
   });
 
   final LibraryItem item;
+  final String Function(String? url) assetUrl;
   final Future<void> Function(
     LibraryItem item, {
     String? status,
@@ -201,84 +215,170 @@ class _LibraryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final chapterId = item.readingProgress?.chapterId ?? item.lastChapterId;
+    final cover = assetUrl(item.manga?.coverUrl);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(10),
-        child: Column(
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.menu_book, color: MangaTheme.amber),
-              title: Text(
-                _title(item),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              subtitle: Text(
-                '${item.status} · ${_formatDate(_activityTime(item))}',
-              ),
-              trailing: IconButton(
-                onPressed: () => onUpdate(item, favorite: !item.isFavorite),
-                icon: Icon(
-                  item.isFavorite ? Icons.favorite : Icons.favorite_border,
-                  color: MangaTheme.sakura,
-                ),
-              ),
+            InkWell(
+              borderRadius: BorderRadius.circular(8),
               onTap: () => context.push('/manga/${item.mangaId}'),
+              child: _LibraryCover(coverUrl: cover),
             ),
-            Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value: item.status,
-                    decoration: const InputDecoration(isDense: true),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'READING',
-                        child: Text('Reading'),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: () => context.push('/manga/${item.mangaId}'),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _title(item),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.w800),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${item.status} · ${_formatDate(_activityTime(item))}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(color: MangaTheme.muted),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
-                      DropdownMenuItem(
-                        value: 'PLAN_TO_READ',
-                        child: Text('Plan'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'COMPLETED',
-                        child: Text('Completed'),
-                      ),
-                      DropdownMenuItem(value: 'PAUSED', child: Text('Paused')),
-                      DropdownMenuItem(
-                        value: 'DROPPED',
-                        child: Text('Dropped'),
+                      IconButton(
+                        tooltip: item.isFavorite ? 'Unfavorite' : 'Favorite',
+                        onPressed: () =>
+                            onUpdate(item, favorite: !item.isFavorite),
+                        icon: Icon(
+                          item.isFavorite
+                              ? Icons.favorite
+                              : Icons.favorite_border,
+                          color: MangaTheme.sakura,
+                        ),
                       ),
                     ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        onUpdate(item, status: value);
-                      }
-                    },
                   ),
-                ),
-                IconButton(
-                  tooltip: 'Remove',
-                  onPressed: () => onRemove(item.mangaId),
-                  icon: const Icon(Icons.delete_outline),
-                ),
-                if (chapterId != null)
-                  IconButton(
-                    tooltip: 'Continue',
-                    onPressed: () => context.push(
-                      '/read/$chapterId?mangaId=${item.mangaId}',
-                    ),
-                    icon: const Icon(
-                      Icons.play_circle_fill,
-                      color: MangaTheme.amber,
-                    ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: item.status,
+                          decoration: const InputDecoration(isDense: true),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'READING',
+                              child: Text('Reading'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'PLAN_TO_READ',
+                              child: Text('Plan'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'COMPLETED',
+                              child: Text('Completed'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'PAUSED',
+                              child: Text('Paused'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'DROPPED',
+                              child: Text('Dropped'),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) {
+                              onUpdate(item, status: value);
+                            }
+                          },
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Remove',
+                        onPressed: () => onRemove(item.mangaId),
+                        icon: const Icon(Icons.delete_outline),
+                      ),
+                      if (chapterId != null)
+                        IconButton(
+                          tooltip: 'Continue',
+                          onPressed: () => context.push(
+                            '/read/$chapterId?mangaId=${item.mangaId}',
+                          ),
+                          icon: const Icon(
+                            Icons.play_circle_fill,
+                            color: MangaTheme.amber,
+                          ),
+                        ),
+                    ],
                   ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _LibraryCover extends StatelessWidget {
+  const _LibraryCover({required this.coverUrl});
+
+  final String coverUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: SizedBox(
+        width: 72,
+        height: 104,
+        child: coverUrl.isEmpty
+            ? const ColoredBox(
+                color: MangaTheme.panelStrong,
+                child: Icon(Icons.menu_book_outlined, color: MangaTheme.amber),
+              )
+            : CachedNetworkImage(
+                imageUrl: coverUrl,
+                fit: BoxFit.cover,
+                placeholder: (_, _) => const ColoredBox(
+                  color: MangaTheme.panelStrong,
+                  child: Center(
+                    child: SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                ),
+                errorWidget: (_, _, _) => const ColoredBox(
+                  color: MangaTheme.panelStrong,
+                  child: Icon(
+                    Icons.broken_image_outlined,
+                    color: MangaTheme.muted,
+                  ),
+                ),
+              ),
       ),
     );
   }

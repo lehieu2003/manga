@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
 import 'token_store.dart';
@@ -28,6 +29,8 @@ class ApiClient {
   static String get defaultApiUrl {
     const fromDefine = String.fromEnvironment('API_URL');
     if (fromDefine.isNotEmpty) return fromDefine;
+    final fromEnv = dotenv.isInitialized ? dotenv.maybeGet('API_URL') : null;
+    if (fromEnv != null && fromEnv.isNotEmpty) return fromEnv;
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       return 'http://10.0.2.2:4000/api';
     }

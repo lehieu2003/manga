@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'data/repositories/repositories.dart';
 import 'data/services/api_client.dart';
@@ -6,7 +7,10 @@ import 'ui/app_router.dart';
 import 'ui/app_state.dart';
 import 'ui/core/theme.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: '.env', isOptional: true);
+
   final apiClient = ApiClient();
   final appState = AppState(
     authRepository: AuthRepository(apiClient),

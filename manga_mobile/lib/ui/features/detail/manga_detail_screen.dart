@@ -17,7 +17,9 @@ class MangaDetailScreen extends StatefulWidget {
 }
 
 class _MangaDetailScreenState extends State<MangaDetailScreen> {
+  late AppState _app;
   late Future<void> _future;
+  bool _initialized = false;
   MangaSummary? _manga;
   LibraryItem? _libraryItem;
   MangaProgressPayload? _progress;
@@ -33,23 +35,31 @@ class _MangaDetailScreenState extends State<MangaDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _future = _load();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _app = AppScope.of(context);
+    if (!_initialized) {
+      _future = _load();
+      _initialized = true;
+    }
   }
 
   Future<void> _load() async {
-    final app = AppScope.of(context);
     final results = await Future.wait([
-      app.catalogRepository.manga(widget.mangaId),
-      app.catalogRepository.chapters(
+      _app.catalogRepository.manga(widget.mangaId),
+      _app.catalogRepository.chapters(
         widget.mangaId,
         translatedLanguage: _languages,
       ),
-      if (app.isSignedIn)
-        app.libraryRepository.item(widget.mangaId)
+      if (_app.isSignedIn)
+        _app.libraryRepository.item(widget.mangaId)
       else
         Future.value(null),
-      if (app.isSignedIn)
-        app.libraryRepository.mangaProgress(widget.mangaId)
+      if (_app.isSignedIn)
+        _app.libraryRepository.mangaProgress(widget.mangaId)
       else
         Future.value(null),
     ]);
@@ -70,7 +80,7 @@ class _MangaDetailScreenState extends State<MangaDetailScreen> {
       _chapterOffset = 0;
       _chapterTotal = 0;
     });
-    final page = await AppScope.of(context).catalogRepository.chapters(
+    final page = await _app.catalogRepository.chapters(
       widget.mangaId,
       translatedLanguage: _languages,
     );
@@ -84,7 +94,7 @@ class _MangaDetailScreenState extends State<MangaDetailScreen> {
   Future<void> _loadMoreChapters() async {
     setState(() => _loadingMore = true);
     try {
-      final page = await AppScope.of(context).catalogRepository.chapters(
+      final page = await _app.catalogRepository.chapters(
         widget.mangaId,
         offset: _chapterOffset,
         translatedLanguage: _languages,
@@ -100,7 +110,7 @@ class _MangaDetailScreenState extends State<MangaDetailScreen> {
 
   Future<void> _follow() async {
     try {
-      final item = await AppScope.of(context).libraryRepository.upsert(
+      final item = await _app.libraryRepository.upsert(
         widget.mangaId,
         status: 'READING',
         isFavorite: true,
@@ -112,7 +122,7 @@ class _MangaDetailScreenState extends State<MangaDetailScreen> {
   }
 
   Future<void> _remove() async {
-    await AppScope.of(context).libraryRepository.remove(widget.mangaId);
+    await _app.libraryRepository.remove(widget.mangaId);
     setState(() => _libraryItem = null);
   }
 

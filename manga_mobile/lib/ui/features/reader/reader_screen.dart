@@ -20,7 +20,9 @@ class ReaderScreen extends StatefulWidget {
 }
 
 class _ReaderScreenState extends State<ReaderScreen> {
+  late AppState _app;
   late Future<void> _future;
+  bool _initialized = false;
   List<String> _pages = [];
   List<ChapterSummary> _chapters = [];
   MangaProgressPayload? _progress;
@@ -32,7 +34,16 @@ class _ReaderScreenState extends State<ReaderScreen> {
   @override
   void initState() {
     super.initState();
-    _future = _load();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _app = AppScope.of(context);
+    if (!_initialized) {
+      _future = _load();
+      _initialized = true;
+    }
   }
 
   @override
@@ -52,17 +63,16 @@ class _ReaderScreenState extends State<ReaderScreen> {
   }
 
   Future<void> _load() async {
-    final app = AppScope.of(context);
-    final reader = await app.catalogRepository.reader(widget.chapterId);
+    final reader = await _app.catalogRepository.reader(widget.chapterId);
     _pages = reader.dataSaverPageUrls
-        .map(app.catalogRepository.assetUrl)
+        .map(_app.catalogRepository.assetUrl)
         .where((url) => url.isNotEmpty)
         .toList();
     if (widget.mangaId != null) {
       final results = await Future.wait([
-        app.catalogRepository.chapters(widget.mangaId!),
-        if (app.isSignedIn)
-          app.libraryRepository.mangaProgress(widget.mangaId!)
+        _app.catalogRepository.chapters(widget.mangaId!),
+        if (_app.isSignedIn)
+          _app.libraryRepository.mangaProgress(widget.mangaId!)
         else
           Future.value(null),
       ]);
@@ -90,9 +100,8 @@ class _ReaderScreenState extends State<ReaderScreen> {
   }
 
   Future<void> _saveProgress() async {
-    final app = AppScope.of(context);
-    if (!app.isSignedIn || widget.mangaId == null || _pages.isEmpty) return;
-    await app.libraryRepository.saveProgress(
+    if (!_app.isSignedIn || widget.mangaId == null || _pages.isEmpty) return;
+    await _app.libraryRepository.saveProgress(
       widget.chapterId,
       mangaId: widget.mangaId!,
       pageIndex: _pageIndex,

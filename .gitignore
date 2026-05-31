@@ -3,6 +3,7 @@ dist
 .env
 .env.local
 .env.prod
+!manga_mobile/.env
 .DS_Store
 coverage
 .tmp
