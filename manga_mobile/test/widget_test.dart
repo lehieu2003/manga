@@ -1,30 +1,23 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:manga_mobile/data/repositories/repositories.dart';
+import 'package:manga_mobile/data/services/api_client.dart';
 import 'package:manga_mobile/main.dart';
+import 'package:manga_mobile/ui/app_state.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('renders manga app shell', (tester) async {
+    final apiClient = ApiClient(baseUrl: 'http://localhost:4000/api');
+    final appState = AppState(
+      authRepository: AuthRepository(apiClient),
+      catalogRepository: CatalogRepository(apiClient),
+      libraryRepository: LibraryRepository(apiClient),
+    )..isBooting = false;
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    await tester.pumpWidget(MyApp(appState: appState));
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('Manga Cafe'), findsOneWidget);
+    expect(find.byIcon(Icons.home), findsOneWidget);
   });
 }
