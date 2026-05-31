@@ -2,6 +2,7 @@ node_modules
 dist
 .env
 .env.local
+.env.prod
 .DS_Store
 coverage
 .tmp
@@ -11,3 +12,5 @@ backend/prisma/dev.db
 .claude
 .cortex
 skills-lock.json
+
+.env.prod

@@ -33,6 +33,17 @@ npm run test --workspaces
 npm run build --workspaces
 ```
 
+## Production Compose
+
+```bash
+copy .env.prod.example .env
+docker compose -f docker-compose.prod.yml build
+docker compose -f docker-compose.prod.yml up -d
+curl http://localhost/health/ready
+```
+
+Set `JWT_SECRET`, `POSTGRES_PASSWORD`, and `CORS_ORIGIN` in `.env` for the VPS environment before starting the production stack.
+
 ## Notes
 
 - MangaDex metadata is requested through the backend and cached in Redis.
@@ -52,3 +63,4 @@ npm run build --workspaces
 - [Library personalization plan](docs/LIBRARY_PERSONALIZATION_PLAN.md): Home continue reading, recently read, and library search/sort MVP.
 - [Manga discovery plan](docs/MANGA_DISCOVERY_PLAN.md): advanced search filters, sort modes, discovery routes, and cache fallback behavior.
 - [Auth and account plan](docs/AUTH_ACCOUNT_PLAN.md): account settings, profile updates, password change, and backend logout behavior.
+- [Backend/Ops deploy plan](docs/BACKEND_OPS_PLAN.md): production Docker Compose, CI checks, health readiness, and VPS runbook.

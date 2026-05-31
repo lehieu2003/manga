@@ -129,6 +129,14 @@ Stack hiện tại:
 - Docker Compose cung cấp PostgreSQL và Redis.
 - PostgreSQL local đang expose trên host port `55432`.
 
+### Backend/Ops
+
+- Có production Docker Compose cho VPS với PostgreSQL, Redis, backend và frontend.
+- Backend production container chạy Prisma migration trước khi start server.
+- Frontend production container serve static build qua nginx và proxy `/api` về backend.
+- Có liveness `/health` và readiness `/health/ready` kiểm tra PostgreSQL/Redis.
+- Có GitHub Actions CI chạy Prisma generate, typecheck, tests và build cho workspaces.
+
 ### Tests Và Verification
 
 - Có backend tests cho auth password hashing, cache key, reader URL mapping, genre count, progress manga endpoint.
@@ -186,10 +194,7 @@ Stack hiện tại:
 
 ### Backend/Ops
 
-- Production Docker build hoàn chỉnh cho backend/frontend.
-- CI workflow cho typecheck, tests, build.
 - Structured API docs hoặc OpenAPI.
-- Health check sâu cho PostgreSQL/Redis/MangaDex.
 - Better outbound MangaDex queue/rate-limit policy.
 - Background job scheduler cho periodic sync.
 - Cache invalidation hoặc refresh endpoint cho admin/dev.
@@ -205,6 +210,11 @@ Stack hiện tại:
 - Content preference controls beyond current safe/suggestive API query.
 
 ## API Surface Hiện Có
+
+Health:
+
+- `GET /health`
+- `GET /health/ready`
 
 Public/catalog:
 
