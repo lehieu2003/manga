@@ -353,18 +353,20 @@ export const catalogRouteSchemas = {
 export const mediaRouteSchemas = {
   cover: {
     summary: "Proxy a MangaDex cover image",
-    description: "Returns cover image bytes with long-lived public cache headers.",
+    description:
+      "Streams cover image bytes from MangaDex with public cache headers. Forwards ETag and Last-Modified when available and supports 304 passthrough for conditional requests.",
     tags: ["Media"],
     params: {
       type: "object",
       required: ["mangaId", "fileName"],
       properties: { mangaId: uuid, fileName: { type: "string" } }
     },
-    response: { 200: { type: "string", format: "binary" }, ...errors }
+    response: { 200: { type: "string", format: "binary" }, 304: { description: "Image was not modified" }, ...errors }
   },
   page: {
     summary: "Proxy a MangaDex chapter page image",
-    description: "Returns chapter page image bytes for data or data-saver reader modes.",
+    description:
+      "Streams chapter page image bytes for data or data-saver reader modes. Forwards cache validators and uses public cache headers suitable for CDN edge caching.",
     tags: ["Media"],
     params: {
       type: "object",
@@ -375,7 +377,7 @@ export const mediaRouteSchemas = {
         fileName: { type: "string" }
       }
     },
-    response: { 200: { type: "string", format: "binary" }, ...errors }
+    response: { 200: { type: "string", format: "binary" }, 304: { description: "Image was not modified" }, ...errors }
   }
 } as const;
 

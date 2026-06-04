@@ -117,6 +117,11 @@ Mobile hiện là MVP client của backend, chưa có cùng mức test coverage 
 - Chapter reader dùng local backend page URLs thay vì direct AtHome URL.
 - Backend proxy ảnh chapter theo chapter id, mode và file name.
 - Proxy ảnh giúp tránh CORS/CORP và domain blocking trong local/dev environments.
+- Backend media proxy đã stream ảnh thay vì buffer toàn bộ bytes trong memory.
+- Media proxy forward `ETag`, `Last-Modified`, `Content-Length`, `Content-Type` khi MangaDex cung cấp.
+- Media proxy forward conditional request headers `If-None-Match` và `If-Modified-Since`, và passthrough `304 Not Modified`.
+- Media routes có route-level rate limit: covers 600 req/phút/client, pages 300 req/phút/client.
+- Kế hoạch scale image traffic bằng streaming proxy, Cloudflare CDN và optional object storage được ghi ở `docs/IMAGE_TRAFFIC_SCALE_PLAN.md`.
 
 ### Library
 
@@ -214,6 +219,7 @@ Mobile hiện là MVP client của backend, chưa có cùng mức test coverage 
 - Domain events chưa được phát ra runtime.
 - Queue/storage/email infrastructure chưa có implementation thật.
 - Swagger/OpenAPI schemas hiện được khai báo riêng với Zod runtime validators, nên cần giữ hai bên đồng bộ khi đổi request/response contract.
+- Image traffic đã xong Phase 1 backend hardening; Cloudflare cache rules, media subdomain và object storage cache chưa triển khai production.
 - Không có admin dashboard, cache dashboard hoặc manual cache invalidation UI.
 - Mobile app chưa được liệt kê trong CI verification như web/backend.
 
@@ -258,6 +264,9 @@ Mobile hiện là MVP client của backend, chưa có cùng mức test coverage 
 
 ### Backend/Ops
 
+- Cloudflare CDN cache rules cho `/api/covers/*` và `/api/pages/*`.
+- Media subdomain nếu image traffic bắt đầu ảnh hưởng API latency.
+- Object storage cache như Cloudflare R2 nếu CDN cache miss vẫn quá tốn origin traffic.
 - Better outbound MangaDex queue/rate-limit policy.
 - Background job scheduler cho periodic sync.
 - Cache invalidation hoặc refresh endpoint cho admin/dev.

@@ -4,33 +4,35 @@ import { HttpError } from "../../../shared/errors/http-error.js";
 import { getReader } from "../../../infrastructure/mangadex/mangadex.client.js";
 import { pageParamsSchema } from "../../validators/media.validator.js";
 import { mediaRouteSchemas } from "../../docs/route-schemas.js";
+import { mediaCacheControl, proxyMangaDexImage } from "../../services/media-proxy.service.js";
 
 export async function pageRoutes(app: FastifyInstance) {
-  app.get("/pages/:chapterId/:mode/:fileName", { schema: mediaRouteSchemas.page }, async (request, reply) => {
-    const { chapterId, mode, fileName } = pageParamsSchema.parse(request.params);
-    const reader = await cached(makeCacheKey("chapter:reader:origin", { chapterId }), 300, () => getReader(chapterId));
-    const availablePages = mode === "data" ? reader.pages : reader.dataSaverPages;
+  app.get(
+    "/pages/:chapterId/:mode/:fileName",
+    {
+      schema: mediaRouteSchemas.page,
+      config: { rateLimit: { max: 300, timeWindow: "1 minute" } }
+    },
+    async (request, reply) => {
+      const { chapterId, mode, fileName } = pageParamsSchema.parse(request.params);
+      const reader = await cached(makeCacheKey("chapter:reader:origin", { chapterId }), 300, () => getReader(chapterId));
+      const availablePages = mode === "data" ? reader.pages : reader.dataSaverPages;
 
-    if (!availablePages.includes(fileName)) {
-      throw new HttpError(404, "Chapter page was not found", "PAGE_NOT_FOUND");
-    }
-
-    const url = `${reader.baseUrl}/${mode}/${reader.hash}/${fileName}`;
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "mangadex-reader/0.1",
-        Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
+      if (!availablePages.includes(fileName)) {
+        throw new HttpError(404, "Chapter page was not found", "PAGE_NOT_FOUND");
       }
-    });
 
-    if (!response.ok) {
-      throw new HttpError(response.status, "Unable to fetch MangaDex page", "PAGE_FETCH_FAILED");
+      const url = `${reader.baseUrl}/${mode}/${reader.hash}/${fileName}`;
+      return proxyMangaDexImage({
+        request,
+        reply,
+        url,
+        timeoutMs: 15_000,
+        cacheControl: mediaCacheControl.page,
+        fetchFailedMessage: "Unable to fetch MangaDex page",
+        fetchFailedCode: "PAGE_FETCH_FAILED",
+        timeoutCode: "PAGE_FETCH_TIMEOUT"
+      });
     }
-
-    const bytes = Buffer.from(await response.arrayBuffer());
-    reply.header("Cache-Control", "public, max-age=86400");
-    reply.header("Cross-Origin-Resource-Policy", "cross-origin");
-    reply.header("Content-Type", response.headers.get("content-type") ?? "image/jpeg");
-    return reply.send(bytes);
-  });
+  );
 }
