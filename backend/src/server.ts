@@ -2,19 +2,18 @@ import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import jwt from "@fastify/jwt";
 import rateLimit from "@fastify/rate-limit";
-import Fastify, { type FastifyError, type FastifyReply, type FastifyRequest } from "fastify";
-import { ZodError } from "zod";
-import { env } from "./config.js";
-import { HttpError } from "./lib/http-error.js";
-import { connectRedis, redis } from "./lib/redis.js";
-import { authRoutes } from "./modules/auth/auth.routes.js";
-import { catalogRoutes } from "./modules/catalog/catalog.routes.js";
-import { coverRoutes } from "./modules/catalog/cover.routes.js";
-import { pageRoutes } from "./modules/catalog/page.routes.js";
-import { healthRoutes } from "./modules/health/health.routes.js";
-import { libraryRoutes } from "./modules/library/library.routes.js";
-import { progressRoutes } from "./modules/progress/progress.routes.js";
-import { syncMangaDexCatalog } from "./modules/catalog/sync.service.js";
+import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
+import { env } from "./shared/configs/app.config.js";
+import { connectRedis, redis } from "./infrastructure/cache/client.js";
+import { errorMiddleware, registerAuthMiddleware } from "./app/middlewares/index.js";
+import { authRoutes } from "./app/routes/v1/auth.routes.js";
+import { catalogRoutes } from "./app/routes/v1/catalog.routes.js";
+import { coverRoutes } from "./app/routes/v1/cover.routes.js";
+import { pageRoutes } from "./app/routes/v1/page.routes.js";
+import { healthRoutes } from "./app/routes/health.routes.js";
+import { libraryRoutes } from "./app/routes/v1/library.routes.js";
+import { progressRoutes } from "./app/routes/v1/progress.routes.js";
+import { syncMangaDexCatalog } from "./domain/services/catalog-sync.service.js";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -54,47 +53,8 @@ export async function buildApp() {
     ...(hasRedis ? { redis } : {})
   });
 
-  app.decorate("authenticate", async (request: FastifyRequest) => {
-    await request.jwtVerify();
-  });
-
-  app.setErrorHandler((error: FastifyError, _request, reply) => {
-    if (error instanceof ZodError) {
-      return reply.code(400).send({
-        error: {
-          code: "VALIDATION_ERROR",
-          message: "Request validation failed",
-          details: error.flatten()
-        }
-      });
-    }
-
-    if (error instanceof HttpError) {
-      return reply.code(error.statusCode).send({
-        error: {
-          code: error.code,
-          message: error.message
-        }
-      });
-    }
-
-    if ("statusCode" in error && typeof error.statusCode === "number") {
-      return reply.code(error.statusCode).send({
-        error: {
-          code: error.code ?? "REQUEST_ERROR",
-          message: error.message
-        }
-      });
-    }
-
-    app.log.error(error);
-    return reply.code(500).send({
-      error: {
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Unexpected server error"
-      }
-    });
-  });
+  registerAuthMiddleware(app);
+  app.setErrorHandler(errorMiddleware);
 
   await app.register(healthRoutes);
   await app.register(authRoutes, { prefix: "/api" });

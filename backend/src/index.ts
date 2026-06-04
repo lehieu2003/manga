@@ -1,6 +1,6 @@
-import { env } from "./config.js";
-import { prisma } from "./lib/prisma.js";
-import { redis } from "./lib/redis.js";
+import { env } from "./shared/configs/app.config.js";
+import { prisma } from "./infrastructure/database/client.js";
+import { redis } from "./infrastructure/cache/client.js";
 import { buildApp } from "./server.js";
 
 const app = await buildApp();

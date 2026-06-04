@@ -1,7 +1,7 @@
-import { prisma } from "../lib/prisma.js";
-import { redis } from "../lib/redis.js";
-import { saveChapterBatch, saveMangaBatch } from "../modules/catalog/catalog-cache.service.js";
-import type { ChapterSummary, MangaSummary } from "../modules/mangadex/mangadex.types.js";
+import { prisma } from "../infrastructure/database/client.js";
+import { redis } from "../infrastructure/cache/client.js";
+import { saveChapterBatch, saveMangaBatch } from "../domain/services/catalog-cache.service.js";
+import type { ChapterSummary, MangaSummary } from "../infrastructure/mangadex/mangadex.types.js";
 
 const manga: MangaSummary[] = [
   {

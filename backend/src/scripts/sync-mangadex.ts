@@ -1,7 +1,7 @@
-import { env } from "../config.js";
-import { prisma } from "../lib/prisma.js";
-import { redis } from "../lib/redis.js";
-import { syncMangaDexCatalog } from "../modules/catalog/sync.service.js";
+import { env } from "../shared/configs/app.config.js";
+import { prisma } from "../infrastructure/database/client.js";
+import { redis } from "../infrastructure/cache/client.js";
+import { syncMangaDexCatalog } from "../domain/services/catalog-sync.service.js";
 
 const limitArg = Number(process.argv.find((arg) => arg.startsWith("--limit="))?.split("=")[1]);
 const chaptersLimitArg = Number(process.argv.find((arg) => arg.startsWith("--chapters-limit="))?.split("=")[1]);

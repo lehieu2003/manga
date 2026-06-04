@@ -1,14 +1,14 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import { AppLayout } from "./components/AppLayout";
-import { ProtectedRoute } from "./components/ProtectedRoute";
-import { HomePage } from "./pages/HomePage";
-import { LibraryPage } from "./pages/LibraryPage";
-import { LoginPage } from "./pages/LoginPage";
-import { MangaDetailPage } from "./pages/MangaDetailPage";
-import { ReaderPage } from "./pages/ReaderPage";
-import { RegisterPage } from "./pages/RegisterPage";
-import { SearchPage } from "./pages/SearchPage";
-import { SettingsPage } from "./pages/SettingsPage";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
+import { HomePage } from "@/features/catalog/pages/HomePage";
+import { LibraryPage } from "@/features/library/pages/LibraryPage";
+import { LoginPage } from "@/features/auth/pages/LoginPage";
+import { MangaDetailPage } from "@/features/catalog/pages/MangaDetailPage";
+import { ReaderPage } from "@/features/catalog/pages/ReaderPage";
+import { RegisterPage } from "@/features/auth/pages/RegisterPage";
+import { SearchPage } from "@/features/catalog/pages/SearchPage";
+import { SettingsPage } from "@/features/profile/pages/SettingsPage";
 
 export function App() {
   return (
