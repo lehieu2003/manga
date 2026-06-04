@@ -73,7 +73,9 @@ Implemented details:
 
 ## Phase 2: Cloudflare CDN Rules
 
-Status: planned.
+Status: ready for external Cloudflare configuration.
+
+Runbook: `docs/CLOUDFLARE_MEDIA_CACHE_RUNBOOK.md`.
 
 Cloudflare cache rules:
 
@@ -160,7 +162,7 @@ Track Cloudflare metrics:
 2. Backend route-level media rate limits. Done.
 3. Tests for media proxy behavior. Done.
 4. Swagger/docs updates for media cache behavior. Done.
-5. Cloudflare DNS and cache rules.
+5. Cloudflare DNS and cache rules. Ready in runbook; requires production domain/account configuration.
 6. Monitor cache hit ratio and origin traffic.
 7. Add media subdomain if API latency is affected.
 8. Add R2/object storage cache only if CDN cache is not enough.

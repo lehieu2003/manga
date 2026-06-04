@@ -68,3 +68,4 @@ Set `JWT_SECRET`, `POSTGRES_PASSWORD`, and `CORS_ORIGIN` in `.env` for the VPS e
 - [Auth and account plan](docs/AUTH_ACCOUNT_PLAN.md): account settings, profile updates, password change, and backend logout behavior.
 - [Backend/Ops deploy plan](docs/BACKEND_OPS_PLAN.md): production Docker Compose, CI checks, health readiness, and VPS runbook.
 - [Image traffic scale plan](docs/IMAGE_TRAFFIC_SCALE_PLAN.md): backend media proxy hardening, Cloudflare CDN rules, and future object storage cache.
+- [Cloudflare media cache runbook](docs/CLOUDFLARE_MEDIA_CACHE_RUNBOOK.md): exact cache rules, bypass rules, rate limits, and verification steps for media traffic.

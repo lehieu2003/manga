@@ -122,6 +122,7 @@ Mobile hiện là MVP client của backend, chưa có cùng mức test coverage 
 - Media proxy forward conditional request headers `If-None-Match` và `If-Modified-Since`, và passthrough `304 Not Modified`.
 - Media routes có route-level rate limit: covers 600 req/phút/client, pages 300 req/phút/client.
 - Kế hoạch scale image traffic bằng streaming proxy, Cloudflare CDN và optional object storage được ghi ở `docs/IMAGE_TRAFFIC_SCALE_PLAN.md`.
+- Cloudflare media cache runbook đã có ở `docs/CLOUDFLARE_MEDIA_CACHE_RUNBOOK.md`; cần cấu hình thật trên Cloudflare account/domain production.
 
 ### Library
 
@@ -219,7 +220,7 @@ Mobile hiện là MVP client của backend, chưa có cùng mức test coverage 
 - Domain events chưa được phát ra runtime.
 - Queue/storage/email infrastructure chưa có implementation thật.
 - Swagger/OpenAPI schemas hiện được khai báo riêng với Zod runtime validators, nên cần giữ hai bên đồng bộ khi đổi request/response contract.
-- Image traffic đã xong Phase 1 backend hardening; Cloudflare cache rules, media subdomain và object storage cache chưa triển khai production.
+- Image traffic đã xong Phase 1 backend hardening; Phase 2 Cloudflare runbook đã sẵn sàng nhưng cache rules chưa được apply trên Cloudflare production.
 - Không có admin dashboard, cache dashboard hoặc manual cache invalidation UI.
 - Mobile app chưa được liệt kê trong CI verification như web/backend.
 
