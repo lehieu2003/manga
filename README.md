@@ -23,6 +23,8 @@ Backend: `http://localhost:4000`
 
 Frontend: `http://localhost:5173`
 
+Swagger UI: `http://localhost:4000/docs`
+
 PostgreSQL is exposed on host port `55432` to avoid conflicts with a local PostgreSQL service on `5432`.
 
 ## Useful Commands
@@ -53,6 +55,7 @@ Set `JWT_SECRET`, `POSTGRES_PASSWORD`, and `CORS_ORIGIN` in `.env` for the VPS e
 - Set `SYNC_ON_STARTUP=true` in `backend/.env` to run a non-blocking catalog sync when the backend starts.
 - Reader image URLs are resolved through MangaDex AtHome metadata and proxied through the backend for local reliability.
 - Default translated languages are Vietnamese and English.
+- Backend OpenAPI JSON is available at `/docs/json`; Swagger UI is available at `/docs`.
 
 ## Documentation
 

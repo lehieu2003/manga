@@ -3,9 +3,10 @@ import { cached, makeCacheKey } from "../../../infrastructure/cache/cache.servic
 import { HttpError } from "../../../shared/errors/http-error.js";
 import { getReader } from "../../../infrastructure/mangadex/mangadex.client.js";
 import { pageParamsSchema } from "../../validators/media.validator.js";
+import { mediaRouteSchemas } from "../../docs/route-schemas.js";
 
 export async function pageRoutes(app: FastifyInstance) {
-  app.get("/pages/:chapterId/:mode/:fileName", async (request, reply) => {
+  app.get("/pages/:chapterId/:mode/:fileName", { schema: mediaRouteSchemas.page }, async (request, reply) => {
     const { chapterId, mode, fileName } = pageParamsSchema.parse(request.params);
     const reader = await cached(makeCacheKey("chapter:reader:origin", { chapterId }), 300, () => getReader(chapterId));
     const availablePages = mode === "data" ? reader.pages : reader.dataSaverPages;

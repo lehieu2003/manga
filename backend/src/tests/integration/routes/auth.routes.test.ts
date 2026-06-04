@@ -132,12 +132,21 @@ async function makeAuthApp() {
   });
   app.decorate("jwt", { sign: () => "access-token" } as never);
   app.setErrorHandler((error, _request, reply) => {
-    if (error instanceof ZodError) return reply.code(400).send({ error: { message: "Request validation failed" } });
+    if (error instanceof ZodError) return reply.code(400).send({ error: { code: "VALIDATION_ERROR", message: "Request validation failed" } });
     if (error instanceof HttpError) return reply.code(error.statusCode).send({ error: { message: error.message, code: error.code } });
-    return reply.code(500).send({ error: { message: error instanceof Error ? error.message : "Unexpected server error" } });
+    if (isStatusError(error)) {
+      return reply
+        .code(error.statusCode)
+        .send({ error: { code: typeof error.code === "string" ? error.code : "REQUEST_ERROR", message: typeof error.message === "string" ? error.message : "Request error" } });
+    }
+    return reply.code(500).send({ error: { code: "INTERNAL_SERVER_ERROR", message: error instanceof Error ? error.message : "Unexpected server error" } });
   });
   await app.register(authRoutes, { prefix: "/api" });
   return app;
+}
+
+function isStatusError(error: unknown): error is { statusCode: number; code?: unknown; message?: unknown } {
+  return typeof error === "object" && error !== null && "statusCode" in error && typeof (error as { statusCode?: unknown }).statusCode === "number";
 }
 
 function makeUser(overrides: Partial<ReturnType<typeof makeBaseUser>> = {}) {

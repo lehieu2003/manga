@@ -5,6 +5,7 @@ import rateLimit from "@fastify/rate-limit";
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
 import { env } from "./shared/configs/app.config.js";
 import { connectRedis, redis } from "./infrastructure/cache/client.js";
+import { registerSwagger } from "./app/docs/swagger.js";
 import { errorMiddleware, registerAuthMiddleware } from "./app/middlewares/index.js";
 import { authRoutes } from "./app/routes/v1/auth.routes.js";
 import { catalogRoutes } from "./app/routes/v1/catalog.routes.js";
@@ -56,6 +57,7 @@ export async function buildApp() {
   registerAuthMiddleware(app);
   app.setErrorHandler(errorMiddleware);
 
+  await registerSwagger(app);
   await app.register(healthRoutes);
   await app.register(authRoutes, { prefix: "/api" });
   await app.register(catalogRoutes, { prefix: "/api" });

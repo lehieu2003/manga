@@ -2,9 +2,10 @@ import type { FastifyInstance } from "fastify";
 import { HttpError } from "../../../shared/errors/http-error.js";
 import { getMangaDexUploadsBaseUrl } from "../../../infrastructure/mangadex/mangadex.client.js";
 import { coverParamsSchema } from "../../validators/media.validator.js";
+import { mediaRouteSchemas } from "../../docs/route-schemas.js";
 
 export async function coverRoutes(app: FastifyInstance) {
-  app.get("/covers/:mangaId/:fileName", async (request, reply) => {
+  app.get("/covers/:mangaId/:fileName", { schema: mediaRouteSchemas.cover }, async (request, reply) => {
     const { mangaId, fileName } = coverParamsSchema.parse(request.params);
     const url = `${getMangaDexUploadsBaseUrl()}/covers/${mangaId}/${fileName}`;
     const response = await fetch(url, {

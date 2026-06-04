@@ -29,8 +29,26 @@ describe("progressRoutes", () => {
     await app.register(progressRoutes, { prefix: "/api" });
 
     findMany.mockResolvedValue([
-      { id: "progress-2", userId: "user-1", mangaId: "32d76d19-8a05-4db0-9fc2-e0b0648fe9d0", chapterId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", pageIndex: 16, completed: false },
-      { id: "progress-1", userId: "user-1", mangaId: "32d76d19-8a05-4db0-9fc2-e0b0648fe9d0", chapterId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", pageIndex: 31, completed: true }
+      {
+        id: "progress-2",
+        userId: "user-1",
+        mangaId: "32d76d19-8a05-4db0-9fc2-e0b0648fe9d0",
+        chapterId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        pageIndex: 16,
+        completed: false,
+        createdAt: new Date("2024-01-01T00:00:00.000Z"),
+        updatedAt: new Date("2024-01-02T00:00:00.000Z")
+      },
+      {
+        id: "progress-1",
+        userId: "user-1",
+        mangaId: "32d76d19-8a05-4db0-9fc2-e0b0648fe9d0",
+        chapterId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+        pageIndex: 31,
+        completed: true,
+        createdAt: new Date("2024-01-01T00:00:00.000Z"),
+        updatedAt: new Date("2024-01-01T12:00:00.000Z")
+      }
     ]);
     findUnique.mockResolvedValue({
       id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",

@@ -4,9 +4,10 @@ import { getChapters, getManga, getReader, searchManga } from "../../../infrastr
 import { getCachedChapters, getCachedGenres, getCachedManga, saveChapterBatch, saveManga, saveMangaBatch, searchCachedManga } from "../../../domain/services/catalog-cache.service.js";
 import { searchHistoryRepository } from "../../../domain/repositories/index.js";
 import { chapterParamsSchema, chaptersQuerySchema, mangaParamsSchema, mangaSearchQuerySchema } from "../../validators/catalog.validator.js";
+import { catalogRouteSchemas } from "../../docs/route-schemas.js";
 
 export async function catalogRoutes(app: FastifyInstance) {
-  app.get("/manga/search", async (request) => {
+  app.get("/manga/search", { schema: catalogRouteSchemas.search }, async (request) => {
     const query = mangaSearchQuerySchema.parse(request.query);
     const genres = [...new Set([...(query.genre ? [query.genre] : []), ...query.genres, ...query.includedTags])];
     const cacheFilters = {
@@ -48,11 +49,11 @@ export async function catalogRoutes(app: FastifyInstance) {
     });
   });
 
-  app.get("/genres", async () => {
+  app.get("/genres", { schema: catalogRouteSchemas.genres }, async () => {
     return { data: await cached("genres:list", 300, getCachedGenres) };
   });
 
-  app.get("/manga/:id", async (request) => {
+  app.get("/manga/:id", { schema: catalogRouteSchemas.mangaDetail }, async (request) => {
     const { id } = mangaParamsSchema.parse(request.params);
     return cached(makeCacheKey("manga:detail", { id }), 3600, async () => {
       try {
@@ -67,7 +68,7 @@ export async function catalogRoutes(app: FastifyInstance) {
     });
   });
 
-  app.get("/manga/:id/chapters", async (request) => {
+  app.get("/manga/:id/chapters", { schema: catalogRouteSchemas.chapters }, async (request) => {
     const { id } = mangaParamsSchema.parse(request.params);
     const query = chaptersQuerySchema.parse(request.query);
 
@@ -84,7 +85,7 @@ export async function catalogRoutes(app: FastifyInstance) {
     });
   });
 
-  app.get("/chapters/:id/reader", async (request) => {
+  app.get("/chapters/:id/reader", { schema: catalogRouteSchemas.reader }, async (request) => {
     const { id } = chapterParamsSchema.parse(request.params);
     return cached(makeCacheKey("chapter:reader", { id }), 300, () => getReader(id));
   });

@@ -3,6 +3,7 @@ import { HttpError } from "../../../shared/errors/http-error.js";
 import { hashPassword, hashToken, issueTokenPair, revokeUserRefreshSessions, rotateRefreshToken, verifyPassword } from "../../../domain/services/auth.service.js";
 import { userRepository, refreshSessionRepository } from "../../../domain/repositories/index.js";
 import { changePasswordSchema, loginSchema, refreshSchema, registerSchema, updateProfileSchema } from "../../validators/auth.validator.js";
+import { authRouteSchemas } from "../../docs/route-schemas.js";
 
 function publicUser(user: { id: string; email: string; displayName: string; avatarUrl: string | null; createdAt: Date }) {
   return {
@@ -15,7 +16,7 @@ function publicUser(user: { id: string; email: string; displayName: string; avat
 }
 
 export async function authRoutes(app: FastifyInstance) {
-  app.post("/auth/register", async (request, reply) => {
+  app.post("/auth/register", { schema: authRouteSchemas.register }, async (request, reply) => {
     const body = registerSchema.parse(request.body);
     const existing = await userRepository.findByEmail(body.email);
     if (existing) {
@@ -32,7 +33,7 @@ export async function authRoutes(app: FastifyInstance) {
     return reply.code(201).send({ user: publicUser(user), ...tokens });
   });
 
-  app.post("/auth/login", async (request) => {
+  app.post("/auth/login", { schema: authRouteSchemas.login }, async (request) => {
     const body = loginSchema.parse(request.body);
     const user = await userRepository.findByEmail(body.email);
     if (!user || !(await verifyPassword(body.password, user.passwordHash))) {
@@ -43,24 +44,24 @@ export async function authRoutes(app: FastifyInstance) {
     return { user: publicUser(user), ...tokens };
   });
 
-  app.post("/auth/refresh", async (request) => {
+  app.post("/auth/refresh", { schema: authRouteSchemas.refresh }, async (request) => {
     const body = refreshSchema.parse(request.body);
     const payload = await rotateRefreshToken(app, body.refreshToken);
     return { ...payload, user: publicUser(payload.user) };
   });
 
-  app.post("/auth/logout", async (request) => {
+  app.post("/auth/logout", { schema: authRouteSchemas.logout }, async (request) => {
     const body = refreshSchema.parse(request.body);
     await refreshSessionRepository.revokeByTokenHash(hashToken(body.refreshToken));
     return { ok: true };
   });
 
-  app.get("/me", { preHandler: app.authenticate }, async (request) => {
+  app.get("/me", { schema: authRouteSchemas.me, preHandler: app.authenticate }, async (request) => {
     const user = await userRepository.findByIdOrThrow(request.user.sub);
     return { user: publicUser(user) };
   });
 
-  app.patch("/me", { preHandler: app.authenticate }, async (request) => {
+  app.patch("/me", { schema: authRouteSchemas.updateMe, preHandler: app.authenticate }, async (request) => {
     const body = updateProfileSchema.parse(request.body);
     if (body.displayName === undefined && body.avatarUrl === undefined) {
       throw new HttpError(400, "At least one profile field is required", "EMPTY_PROFILE_UPDATE");
@@ -73,7 +74,7 @@ export async function authRoutes(app: FastifyInstance) {
     return { user: publicUser(user) };
   });
 
-  app.put("/me/password", { preHandler: app.authenticate }, async (request) => {
+  app.put("/me/password", { schema: authRouteSchemas.changePassword, preHandler: app.authenticate }, async (request) => {
     const body = changePasswordSchema.parse(request.body);
     const user = await userRepository.findByIdOrThrow(request.user.sub);
     if (!(await verifyPassword(body.currentPassword, user.passwordHash))) {
