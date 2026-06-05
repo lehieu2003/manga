@@ -8,6 +8,8 @@ dist
 coverage
 .tmp
 *.log
+__pycache__/
+*.pyc
 backend/prisma/dev.db
 .agents
 .claude
