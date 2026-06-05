@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { cachedCatalogRepository, libraryRepository } from "../../../domain/repositories/index.js";
+import { normalizeCoverProxyUrl } from "../../../shared/utils/media-url.js";
 import { libraryParamsSchema, upsertLibrarySchema } from "../../validators/library.validator.js";
 import { libraryRouteSchemas } from "../../docs/route-schemas.js";
 
@@ -23,7 +24,7 @@ export async function libraryRoutes(app: FastifyInstance) {
             ? {
                 id: cached.id,
                 title: cached.title,
-                coverUrl: cached.coverUrl,
+                coverUrl: normalizeCoverProxyUrl(cached.coverUrl),
                 status: cached.status,
                 year: cached.year,
                 tags: cached.tags

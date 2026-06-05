@@ -1,5 +1,6 @@
 import { env } from "../../shared/configs/app.config.js";
 import { HttpError } from "../../shared/errors/http-error.js";
+import { buildPageProxyUrl } from "../../shared/utils/media-url.js";
 import type { ChapterSummary, MangaDexListResponse, MangaDexSingleResponse, MangaSummary, ReaderPayload } from "./mangadex.types.js";
 
 const USER_AGENT = "mangadex-reader/0.1 (+https://github.com/local/mangadex-reader)";
@@ -230,7 +231,7 @@ export async function getReader(chapterId: string): Promise<ReaderPayload> {
     hash: chapter.hash,
     pages: chapter.data,
     dataSaverPages: chapter.dataSaver,
-    pageUrls: chapter.data.map((page) => `/api/pages/${chapterId}/data/${page}`),
-    dataSaverPageUrls: chapter.dataSaver.map((page) => `/api/pages/${chapterId}/data-saver/${page}`)
+    pageUrls: chapter.data.map((page) => buildPageProxyUrl(chapterId, "data", page)),
+    dataSaverPageUrls: chapter.dataSaver.map((page) => buildPageProxyUrl(chapterId, "data-saver", page))
   };
 }

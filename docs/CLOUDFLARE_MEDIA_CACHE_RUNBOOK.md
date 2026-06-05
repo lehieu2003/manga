@@ -22,6 +22,7 @@ Do not cache private or dynamic API routes:
 
 - The production domain is managed by Cloudflare DNS.
 - The backend is reachable through a proxied Cloudflare hostname.
+- Backend `PUBLIC_MEDIA_BASE_URL` is configured when media URLs should be absolute CDN URLs.
 - The backend media proxy has Phase 1 headers enabled:
   - streaming image responses
   - `Cache-Control`
@@ -35,6 +36,7 @@ For a single API domain:
 ```txt
 api.example.com -> backend origin
 Proxy status: Proxied
+PUBLIC_MEDIA_BASE_URL=https://api.example.com
 ```
 
 For a future split media domain:
@@ -43,9 +45,12 @@ For a future split media domain:
 api.example.com   -> backend API origin
 media.example.com -> backend media origin
 Proxy status: Proxied
+PUBLIC_MEDIA_BASE_URL=https://media.example.com
 ```
 
 Start with the single API domain unless image traffic begins affecting normal API latency.
+
+If `PUBLIC_MEDIA_BASE_URL` is empty, backend responses keep relative media paths such as `/api/pages/...`; the web frontend will prepend `VITE_API_URL` origin. Set `PUBLIC_MEDIA_BASE_URL` in production when the desired media origin is a Cloudflare-proxied hostname.
 
 ## Cache Rules
 

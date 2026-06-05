@@ -7,6 +7,8 @@ try {
   // Production deployments may inject environment variables without a .env file.
 }
 
+const optionalUrl = z.preprocess((value) => (value === "" ? undefined : value), z.string().url().optional());
+
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(4000),
@@ -17,7 +19,8 @@ const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().default("15m"),
   REFRESH_TOKEN_DAYS: z.coerce.number().int().positive().default(30),
   MANGADEX_BASE_URL: z.string().url().default("https://api.mangadex.org"),
-  MANGADEX_UPLOADS_BASE_URL: z.string().url().optional(),
+  MANGADEX_UPLOADS_BASE_URL: optionalUrl,
+  PUBLIC_MEDIA_BASE_URL: optionalUrl,
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
   SYNC_ON_STARTUP: z.coerce.boolean().default(false),
   SYNC_LIMIT: z.coerce.number().int().min(1).max(100).default(48)

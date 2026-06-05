@@ -123,6 +123,7 @@ Mobile hiện là MVP client của backend, chưa có cùng mức test coverage 
 - Media routes có route-level rate limit: covers 600 req/phút/client, pages 300 req/phút/client.
 - Kế hoạch scale image traffic bằng streaming proxy, Cloudflare CDN và optional object storage được ghi ở `docs/IMAGE_TRAFFIC_SCALE_PLAN.md`.
 - Cloudflare media cache runbook đã có ở `docs/CLOUDFLARE_MEDIA_CACHE_RUNBOOK.md`; cần cấu hình thật trên Cloudflare account/domain production.
+- Backend có `PUBLIC_MEDIA_BASE_URL` để trả absolute media URLs qua Cloudflare-proxied API/media hostname trong production.
 
 ### Library
 

@@ -77,6 +77,8 @@ Status: ready for external Cloudflare configuration.
 
 Runbook: `docs/CLOUDFLARE_MEDIA_CACHE_RUNBOOK.md`.
 
+Backend supports `PUBLIC_MEDIA_BASE_URL` so catalog covers and reader page URLs can be emitted as absolute Cloudflare-proxied media URLs. Leave it empty for local development.
+
 Cloudflare cache rules:
 
 - `/api/covers/*`

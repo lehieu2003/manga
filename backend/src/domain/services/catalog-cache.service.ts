@@ -1,8 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../../infrastructure/database/client.js";
 import type { ChapterSummary, MangaSummary } from "../../infrastructure/mangadex/mangadex.types.js";
-
-const UPLOADS_PATTERN = /^https:\/\/uploads\.mangadex\.(org|dev)\/covers\/([^/]+)\/(.+)$/;
+import { normalizeCoverProxyUrl } from "../../shared/utils/media-url.js";
 
 export async function saveMangaBatch(manga: MangaSummary[]) {
   await Promise.all(manga.map((item) => saveManga(item)));
@@ -146,7 +145,7 @@ function toCachedMangaData(manga: MangaSummary) {
     year: manga.year,
     contentRating: manga.contentRating,
     tags: manga.tags,
-    coverUrl: toLocalCoverUrl(manga.coverUrl),
+    coverUrl: normalizeCoverProxyUrl(manga.coverUrl),
     fetchedAt: new Date()
   };
 }
@@ -186,7 +185,7 @@ function fromCachedManga(manga: {
     year: manga.year ?? undefined,
     contentRating: manga.contentRating ?? undefined,
     tags: manga.tags,
-    coverUrl: toLocalCoverUrl(manga.coverUrl ?? undefined)
+    coverUrl: normalizeCoverProxyUrl(manga.coverUrl)
   };
 }
 
@@ -210,11 +209,4 @@ function fromCachedChapter(chapter: {
     pages: chapter.pages,
     scanlationGroup: chapter.scanlationGroup ?? undefined
   };
-}
-
-function toLocalCoverUrl(coverUrl: string | undefined) {
-  if (!coverUrl) return undefined;
-  const match = coverUrl.match(UPLOADS_PATTERN);
-  if (!match) return coverUrl;
-  return `/api/covers/${match[2]}/${match[3]}`;
 }

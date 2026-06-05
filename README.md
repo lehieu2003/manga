@@ -44,7 +44,7 @@ docker compose -f docker-compose.prod.yml up -d
 curl http://localhost/health/ready
 ```
 
-Set `JWT_SECRET`, `POSTGRES_PASSWORD`, and `CORS_ORIGIN` in `.env` for the VPS environment before starting the production stack.
+Set `JWT_SECRET`, `POSTGRES_PASSWORD`, and `CORS_ORIGIN` in `.env` for the VPS environment before starting the production stack. Set `PUBLIC_MEDIA_BASE_URL` to the Cloudflare-proxied API or media hostname when enabling CDN media caching.
 
 ## Notes
 
