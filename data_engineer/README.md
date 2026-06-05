@@ -145,6 +145,23 @@ Generated files:
 - `genre_popularity.json`
 - `top_search_queries.json`
 
+## Dashboard Commands
+
+Serve the static dashboard from the dashboard folder:
+
+```powershell
+cd data_engineer/dashboard
+python -m http.server 18083 --bind 127.0.0.1
+```
+
+Open:
+
+```text
+http://127.0.0.1:18083
+```
+
+The dashboard uses plain HTML, CSS, and JavaScript. It reads the exported JSON files from `data/gold`.
+
 ## Architecture Summary
 
 The planned pipeline is:

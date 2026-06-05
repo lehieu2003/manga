@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Manga Reading Analytics</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Data Engineering Report</p>
+          <h1>Manga Reading Analytics</h1>
+        </div>
+        <div class="pipeline-status" aria-label="Pipeline status">
+          <span class="status-dot"></span>
+          <span id="generatedAt">Loading data</span>
+        </div>
+      </header>
+
+      <section class="kpi-grid" aria-label="Summary KPIs">
+        <article class="kpi">
+          <span class="kpi-label">Total Events</span>
+          <strong id="totalEvents">-</strong>
+          <small>Validated Silver events</small>
+        </article>
+        <article class="kpi">
+          <span class="kpi-label">Active Users</span>
+          <strong id="activeUsers">-</strong>
+          <small>Distinct readers in stream</small>
+        </article>
+        <article class="kpi">
+          <span class="kpi-label">Reading Time</span>
+          <strong id="readingTime">-</strong>
+          <small>Total chapter duration</small>
+        </article>
+        <article class="kpi">
+          <span class="kpi-label">Top Genre</span>
+          <strong id="topGenre">-</strong>
+          <small id="topGenreMeta">Popularity signal</small>
+        </article>
+      </section>
+
+      <section class="insight-strip" aria-label="Top insights">
+        <div>
+          <span>Top Manga</span>
+          <strong id="topManga">-</strong>
+        </div>
+        <div>
+          <span>Top Search</span>
+          <strong id="topSearch">-</strong>
+        </div>
+        <div>
+          <span>Chapter Reads</span>
+          <strong id="chapterReads">-</strong>
+        </div>
+        <div>
+          <span>Manga With Events</span>
+          <strong id="mangaWithEvents">-</strong>
+        </div>
+      </section>
+
+      <section class="chart-grid" aria-label="Analytics charts">
+        <article class="panel wide">
+          <div class="panel-heading">
+            <h2>Trending Manga</h2>
+            <p>Weighted score from views, reads, likes, and follows.</p>
+          </div>
+          <div class="chart-frame">
+            <canvas id="trendingChart"></canvas>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading">
+            <h2>Genre Popularity</h2>
+            <p>Top genres ranked by engagement score.</p>
+          </div>
+          <div class="chart-frame">
+            <canvas id="genreChart"></canvas>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading">
+            <h2>Search Demand</h2>
+            <p>Most repeated search queries.</p>
+          </div>
+          <div class="chart-frame">
+            <canvas id="searchChart"></canvas>
+          </div>
+        </article>
+      </section>
+
+      <section class="table-grid" aria-label="Detailed tables">
+        <article class="panel">
+          <div class="panel-heading">
+            <h2>Reading Duration</h2>
+            <p>Manga with the highest reading time.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Manga</th>
+                  <th>Reads</th>
+                  <th>Readers</th>
+                  <th>Total Time</th>
+                </tr>
+              </thead>
+              <tbody id="durationRows"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading">
+            <h2>Active User Windows</h2>
+            <p>Hourly activity from Gold aggregation.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Hour</th>
+                  <th>Users</th>
+                  <th>Events</th>
+                </tr>
+              </thead>
+              <tbody id="activeRows"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <footer class="footer">
+        <span>Source: Gold JSON export from Spark analytics marts</span>
+        <span>Bronze -> Silver -> Gold -> Dashboard</span>
+      </footer>
+    </main>
+  </body>
+</html>
