@@ -1,0 +1,6 @@
+confluent-kafka==2.6.1
+Faker==33.1.0
+jsonschema==4.23.0
+psycopg[binary]==3.2.3
+python-dotenv==1.0.1
+requests==2.32.3

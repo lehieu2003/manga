@@ -28,7 +28,8 @@ When a step is completed:
 
 Original source:
 
-- Synthetic relational source data in PostgreSQL: users, manga, chapters, genres.
+- Real manga catalog source data loaded from MangaDex into PostgreSQL: manga, chapters, genres.
+- Synthetic relational source data in PostgreSQL: users.
 - Synthetic real-time behavior events generated from that source data.
 
 Streaming layer:
@@ -47,9 +48,9 @@ No Airflow is used in v1. Spark streaming runs as the main processing job. Batch
 
 | Step | Status | Detail Doc | Output |
 | --- | --- | --- | --- |
-| 01. Project scaffold and config | Not Started | [STEP-01](steps/STEP-01-project-scaffold.md) | Folder structure, env config, base docs |
-| 02. Docker infrastructure | Not Started | [STEP-02](steps/STEP-02-docker-infrastructure.md) | PostgreSQL, Kafka, Spark, MinIO stack |
-| 03. Synthetic source database | Not Started | [STEP-03](steps/STEP-03-synthetic-source-db.md) | Seeded source DB dimensions |
+| 01. Project scaffold and config | Done | [STEP-01](steps/STEP-01-project-scaffold.md) | Folder structure, env config, base docs |
+| 02. Docker infrastructure | Done | [STEP-02](steps/STEP-02-docker-infrastructure.md) | PostgreSQL, Kafka, Spark, MinIO stack |
+| 03. Source database with real manga catalog | Done | [STEP-03](steps/STEP-03-synthetic-source-db.md) | Real manga catalog plus synthetic users |
 | 04. Event schema and producer | Not Started | [STEP-04](steps/STEP-04-event-schema-producer.md) | JSON event schema and Kafka producer |
 | 05. Spark Bronze and Silver | Not Started | [STEP-05](steps/STEP-05-spark-bronze-silver.md) | Raw and cleaned Parquet layers |
 | 06. Spark Gold analytics | Not Started | [STEP-06](steps/STEP-06-spark-gold-analytics.md) | Aggregated analytics marts |
@@ -62,4 +63,3 @@ No Airflow is used in v1. Spark streaming runs as the main processing job. Batch
 Implement the steps in order. Do not start a later step until the previous step is `Done`, unless the step document explicitly says it can be worked in parallel.
 
 The recommended first implementation target is Step 01.
-

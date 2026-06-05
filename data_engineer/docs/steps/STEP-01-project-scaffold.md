@@ -1,8 +1,8 @@
 # STEP-01: Project Scaffold And Config
 
-Status: Not Started
+Status: Done
 
-Completion date: N/A
+Completion date: 2026-06-05
 
 ## Objective
 
@@ -44,5 +44,8 @@ Do not implement producer logic, Spark logic, or dashboard logic in this step.
 
 ## Verification Evidence
 
-Record evidence here after implementation.
-
+- Created implementation folders for SQL, producer scripts, schemas, Spark jobs/config, and dashboard data.
+- Added `.env.example` with demo-only local service configuration and no production secrets.
+- Added `requirements.txt` with Kafka, PostgreSQL, data generation, dotenv, and JSON schema validation dependencies.
+- Verified with recursive file listing under `data_engineer`.
+- Verified roadmap status now marks Step 01 as `Done`.

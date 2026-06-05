@@ -6,18 +6,67 @@ The project is intentionally isolated from the main application code. All Data E
 
 ## Current Status
 
-Planning docs have been created. Implementation has not started yet.
+Planning docs have been created. Step 01 project scaffold and config is complete. The runnable pipeline implementation has not started yet.
 
 Start here:
 
 - [Implementation Roadmap](docs/IMPLEMENTATION_ROADMAP.md)
+
+## Local Config
+
+Copy `.env.example` to `.env` when running the Data Engineering stack locally. The example uses local demo credentials only and should not be reused for production systems.
+
+## Local Infrastructure Ports
+
+The Data Engineering Compose stack uses separate host ports from the main application stack:
+
+- PostgreSQL source DB: `localhost:15432`
+- Kafka external listener: `localhost:29092`
+- Spark master UI: `http://localhost:18080`
+- Spark worker UI: `http://localhost:18081`
+- MinIO API: `http://localhost:19000`
+- MinIO console: `http://localhost:19001`
+
+## Infrastructure Commands
+
+Run these commands from the repository root:
+
+```powershell
+docker compose -f data_engineer/docker-compose.yml --env-file data_engineer/.env.example up -d
+docker compose -f data_engineer/docker-compose.yml --env-file data_engineer/.env.example ps
+docker compose -f data_engineer/docker-compose.yml --env-file data_engineer/.env.example down
+```
+
+The Compose stack creates Kafka topic `manga.user_events` and MinIO bucket `manga-analytics` through one-shot init services.
+
+## Source Database Commands
+
+Initialize the source schema:
+
+```powershell
+python data_engineer/producer/init_source_db.py
+```
+
+Load real MangaDex catalog data and synthetic users:
+
+```powershell
+python data_engineer/producer/seed_source_db.py
+```
+
+For a smaller smoke-test load:
+
+```powershell
+python data_engineer/producer/seed_source_db.py --manga-target 50 --chapters-per-manga 5 --users 200
+```
+
+The loader is rerunnable. Manga, chapters, genres, and users are inserted with stable conflict handling so repeated runs do not create uncontrolled duplicates.
 
 ## Architecture Summary
 
 The planned pipeline is:
 
 ```txt
-PostgreSQL synthetic source database
+PostgreSQL source database with real MangaDex catalog and synthetic users
   -> Synthetic behavior producer
   -> Kafka user event topic
   -> Spark Structured Streaming
@@ -26,5 +75,4 @@ PostgreSQL synthetic source database
   -> Static HTML/CSS/JS dashboard
 ```
 
-PostgreSQL is the synthetic operational source database. MinIO is the analytical data lake and warehouse layer for this demo.
-
+PostgreSQL is the operational source database for real manga catalog data and synthetic users. MinIO is the analytical data lake and warehouse layer for this demo.
