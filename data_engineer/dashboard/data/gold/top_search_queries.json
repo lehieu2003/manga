@@ -1,0 +1,50 @@
+[
+  {
+    "event_date": "2026-06-05",
+    "query": "police manga",
+    "search_count": 5,
+    "unique_users": 2
+  },
+  {
+    "event_date": "2026-06-05",
+    "query": "gore manga",
+    "search_count": 3,
+    "unique_users": 2
+  },
+  {
+    "event_date": "2026-06-05",
+    "query": "superhero completed manga",
+    "search_count": 3,
+    "unique_users": 1
+  },
+  {
+    "event_date": "2026-06-05",
+    "query": "best comedy",
+    "search_count": 1,
+    "unique_users": 1
+  },
+  {
+    "event_date": "2026-06-05",
+    "query": "best supernatural",
+    "search_count": 1,
+    "unique_users": 1
+  },
+  {
+    "event_date": "2026-06-05",
+    "query": "best vampires",
+    "search_count": 1,
+    "unique_users": 1
+  },
+  {
+    "event_date": "2026-06-05",
+    "query": "new monsters chapters",
+    "search_count": 1,
+    "unique_users": 1
+  },
+  {
+    "event_date": "2026-06-05",
+    "query": "new slice of life chapters",
+    "search_count": 1,
+    "unique_users": 1
+  }
+]

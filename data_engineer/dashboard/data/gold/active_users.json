@@ -1,0 +1,26 @@
+[
+  {
+    "event_date": "2026-06-05",
+    "event_hour": 6,
+    "event_count": 45,
+    "active_users": 29,
+    "read_event_count": 14,
+    "search_event_count": 4
+  },
+  {
+    "event_date": "2026-06-05",
+    "event_hour": 7,
+    "event_count": 64,
+    "active_users": 40,
+    "read_event_count": 16,
+    "search_event_count": 10
+  },
+  {
+    "event_date": "2026-06-05",
+    "event_hour": 8,
+    "event_count": 10,
+    "active_users": 9,
+    "read_event_count": 3,
+    "search_event_count": 2
+  }
+]

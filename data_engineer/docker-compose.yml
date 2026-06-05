@@ -96,6 +96,7 @@ services:
     volumes:
       - ./spark/jobs:/opt/manga/jobs
       - ./spark/conf:/opt/manga/conf
+      - ./dashboard/data/gold:/opt/manga/dashboard/data/gold
     networks:
       - manga_de
 
@@ -110,6 +111,7 @@ services:
     volumes:
       - ./spark/jobs:/opt/manga/jobs
       - ./spark/conf:/opt/manga/conf
+      - ./dashboard/data/gold:/opt/manga/dashboard/data/gold
     networks:
       - manga_de
 

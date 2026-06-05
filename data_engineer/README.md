@@ -122,6 +122,29 @@ Inspect Gold mart row counts:
 docker exec manga-de-spark-master /opt/spark/bin/spark-submit --properties-file /opt/manga/conf/spark-defaults.conf --master spark://spark-master:7077 /opt/manga/jobs/inspect_gold.py
 ```
 
+## Dashboard Data Export Commands
+
+Export Gold marts from MinIO Parquet into browser-readable JSON files:
+
+```powershell
+docker exec manga-de-spark-master /opt/spark/bin/spark-submit --properties-file /opt/manga/conf/spark-defaults.conf --master spark://spark-master:7077 /opt/manga/jobs/export_gold_to_dashboard.py
+```
+
+The export writes dashboard data to:
+
+```text
+data_engineer/dashboard/data/gold/
+```
+
+Generated files:
+
+- `summary_kpis.json`
+- `trending_manga.json`
+- `active_users.json`
+- `reading_duration.json`
+- `genre_popularity.json`
+- `top_search_queries.json`
+
 ## Architecture Summary
 
 The planned pipeline is:

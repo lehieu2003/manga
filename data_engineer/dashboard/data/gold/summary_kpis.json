@@ -1,0 +1,40 @@
+{
+  "generated_at": "2026-06-05T09:15:44Z",
+  "total_events": 119,
+  "active_users": 58,
+  "manga_with_events": 32,
+  "chapter_reads": 33,
+  "search_events": 16,
+  "total_reading_seconds": 46783,
+  "top_manga": {
+    "manga_id": "77bee52c-d2d6-44ad-a33a-1734c1fe696a",
+    "manga_title": "Kage no Jitsuryokusha ni Naritakute!",
+    "event_count": 11,
+    "view_count": 5,
+    "read_count": 5,
+    "like_count": 0,
+    "follow_count": 1,
+    "completed_read_count": 2,
+    "total_reading_seconds": 7572,
+    "unique_users": 7,
+    "completion_rate": 0.4,
+    "trending_score": 27
+  },
+  "top_genre": {
+    "event_date": "2026-06-05",
+    "genre": "Comedy",
+    "event_count": 79,
+    "view_count": 40,
+    "read_count": 26,
+    "like_count": 4,
+    "follow_count": 9,
+    "unique_users": 42,
+    "popularity_score": 201
+  },
+  "top_search_query": {
+    "event_date": "2026-06-05",
+    "query": "police manga",
+    "search_count": 5,
+    "unique_users": 2
+  }
+}
