@@ -22,6 +22,7 @@ The Data Engineering Compose stack uses separate host ports from the main applic
 
 - PostgreSQL source DB: `localhost:15432`
 - Kafka external listener: `localhost:29092`
+- Kafka UI: `http://localhost:18082`
 - Spark master UI: `http://localhost:18080`
 - Spark worker UI: `http://localhost:18081`
 - MinIO API: `http://localhost:19000`
@@ -60,6 +61,32 @@ python data_engineer/producer/seed_source_db.py --manga-target 50 --chapters-per
 ```
 
 The loader is rerunnable. Manga, chapters, genres, and users are inserted with stable conflict handling so repeated runs do not create uncontrolled duplicates.
+
+## Event Producer Commands
+
+Publish synthetic behavior events to Kafka from the PostgreSQL source data:
+
+```powershell
+python data_engineer/producer/synthetic_event_producer.py
+```
+
+For a small smoke-test run:
+
+```powershell
+python data_engineer/producer/synthetic_event_producer.py --events 100 --events-per-second 500 --invalid-event-rate 0.02
+```
+
+Inspect Kafka messages:
+
+```powershell
+docker exec manga-de-kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic manga.user_events --from-beginning --max-messages 5 --timeout-ms 10000
+```
+
+Or open Kafka UI:
+
+```txt
+http://localhost:18082
+```
 
 ## Architecture Summary
 

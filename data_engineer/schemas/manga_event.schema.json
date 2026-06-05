@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://manga.local/schemas/manga_event.schema.json",
+  "title": "MangaUserBehaviorEvent",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "event_type",
+    "event_ts",
+    "user_id",
+    "session_id",
+    "manga_id",
+    "manga_title",
+    "chapter_id",
+    "genres",
+    "query",
+    "duration_seconds",
+    "pages_read",
+    "completed",
+    "device_type",
+    "country",
+    "source"
+  ],
+  "properties": {
+    "event_id": { "type": "string", "format": "uuid" },
+    "event_type": { "type": "string", "enum": ["manga_view", "chapter_read", "like", "follow", "search"] },
+    "event_ts": { "type": "string", "format": "date-time" },
+    "user_id": { "type": "string", "format": "uuid" },
+    "session_id": { "type": "string", "format": "uuid" },
+    "manga_id": { "type": ["string", "null"], "format": "uuid" },
+    "manga_title": { "type": ["string", "null"] },
+    "chapter_id": { "type": ["string", "null"], "format": "uuid" },
+    "genres": { "type": "array", "items": { "type": "string" } },
+    "query": { "type": ["string", "null"] },
+    "duration_seconds": { "type": ["integer", "null"] },
+    "pages_read": { "type": ["integer", "null"] },
+    "completed": { "type": ["boolean", "null"] },
+    "device_type": { "type": "string", "enum": ["mobile", "desktop", "tablet"] },
+    "country": { "type": "string", "minLength": 2, "maxLength": 2 },
+    "source": { "type": "string", "const": "synthetic_producer" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "event_type": { "const": "search" } } },
+      "then": {
+        "properties": {
+          "query": { "type": "string", "minLength": 1 },
+          "manga_id": { "type": "null" },
+          "chapter_id": { "type": "null" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "chapter_read" } } },
+      "then": {
+        "properties": {
+          "manga_id": { "type": "string", "format": "uuid" },
+          "chapter_id": { "type": "string", "format": "uuid" },
+          "duration_seconds": { "type": "integer", "minimum": 1 },
+          "pages_read": { "type": "integer", "minimum": 1 },
+          "completed": { "type": "boolean" }
+        }
+      }
+    }
+  ]
+}
+

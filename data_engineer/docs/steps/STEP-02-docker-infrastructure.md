@@ -44,13 +44,14 @@ Keep this Compose file separate from the main application Compose files.
 ## Verification Evidence
 
 - Added a dedicated Docker Compose stack under `data_engineer`.
-- Added PostgreSQL source DB, Kafka, Kafka topic initialization, Spark master/worker, MinIO, and MinIO bucket initialization services.
+- Added PostgreSQL source DB, Kafka, Kafka topic initialization, Kafka UI, Spark master/worker, MinIO, and MinIO bucket initialization services.
 - Configured host ports that do not collide with the main application stack.
 - Verified Compose syntax with `docker compose -f data_engineer/docker-compose.yml --env-file data_engineer/.env.example config`.
 - Verified all services start with `docker compose -f data_engineer/docker-compose.yml --env-file data_engineer/.env.example up -d`.
 - Verified service health/status with `docker compose -f data_engineer/docker-compose.yml --env-file data_engineer/.env.example ps`.
 - Verified PostgreSQL readiness: `/var/run/postgresql:5432 - accepting connections`.
 - Verified Kafka topic exists: `manga.user_events`.
+- Verified Kafka UI returns HTTP 200 at `http://localhost:18082`.
 - Verified MinIO bucket exists: `manga-analytics/`.
 - Verified Spark master UI returns HTTP 200 at `http://localhost:18080`.
 - Verified MinIO console returns HTTP 200 at `http://localhost:19001`.

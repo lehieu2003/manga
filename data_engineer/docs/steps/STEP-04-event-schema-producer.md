@@ -1,8 +1,8 @@
 # STEP-04: Event Schema And Producer
 
-Status: Not Started
+Status: Done
 
-Completion date: N/A
+Completion date: 2026-06-05
 
 ## Objective
 
@@ -59,5 +59,16 @@ Implement a producer that:
 
 ## Verification Evidence
 
-Record evidence here after implementation.
-
+- Added JSON schema for manga behavior events at `data_engineer/schemas/manga_event.schema.json`.
+- Added source snapshot loader that reads users, manga, chapters, and genres from PostgreSQL.
+- Added event generator for `manga_view`, `chapter_read`, `like`, `follow`, and `search`.
+- Added Kafka publisher using `confluent-kafka`.
+- Added producer CLI: `python data_engineer/producer/synthetic_event_producer.py`.
+- Producer supports event count, event rate, invalid event rate, random seed, topic, and bootstrap server options.
+- Verified schema JSON parses with `python -m json.tool`.
+- Verified Python syntax with `python -m compileall data_engineer/producer`.
+- Verified Kafka topic description for `manga.user_events` shows 3 partitions and replication factor 1.
+- Ran smoke test: `python data_engineer/producer/synthetic_event_producer.py --events 100 --events-per-second 500 --invalid-event-rate 0.02`.
+- Smoke test result: sent `100`, delivered `100`, failed `0`.
+- Consumed 5 messages from Kafka; payloads included real MangaDex titles such as `Tensei Shitara Slime datta Ken`, `Kage no Jitsuryokusha ni Naritakute!`, and `Kumo desu ga, Nani ka?`.
+- Added Kafka UI access for browser-based topic/message inspection at `http://localhost:18082`.
