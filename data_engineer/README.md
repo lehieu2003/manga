@@ -88,6 +88,26 @@ Or open Kafka UI:
 http://localhost:18082
 ```
 
+## Spark Bronze/Silver Commands
+
+Run the Kafka to Bronze/Silver streaming job in available-now mode:
+
+```powershell
+docker exec manga-de-spark-master /opt/spark/bin/spark-submit --properties-file /opt/manga/conf/spark-defaults.conf --master spark://spark-master:7077 /opt/manga/jobs/stream_events.py
+```
+
+Inspect MinIO outputs:
+
+```powershell
+docker run --rm --network manga_de --entrypoint /bin/sh minio/mc:RELEASE.2025-04-16T18-13-26Z -c "mc alias set local http://minio:9000 minioadmin minioadmin >/dev/null && mc ls --recursive local/manga-analytics"
+```
+
+Count Bronze/Silver rows and basic Silver quality checks:
+
+```powershell
+docker exec manga-de-spark-master /opt/spark/bin/spark-submit --properties-file /opt/manga/conf/spark-defaults.conf --master spark://spark-master:7077 /opt/manga/jobs/inspect_lake.py
+```
+
 ## Architecture Summary
 
 The planned pipeline is:
