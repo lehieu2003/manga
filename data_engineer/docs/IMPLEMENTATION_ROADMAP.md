@@ -53,7 +53,7 @@ No Airflow is used in v1. Spark streaming runs as the main processing job. Batch
 | 03. Source database with real manga catalog | Done | [STEP-03](steps/STEP-03-synthetic-source-db.md) | Real manga catalog plus synthetic users |
 | 04. Event schema and producer | Done | [STEP-04](steps/STEP-04-event-schema-producer.md) | JSON event schema and Kafka producer |
 | 05. Spark Bronze and Silver | Done | [STEP-05](steps/STEP-05-spark-bronze-silver.md) | Raw and cleaned Parquet layers |
-| 06. Spark Gold analytics | Not Started | [STEP-06](steps/STEP-06-spark-gold-analytics.md) | Aggregated analytics marts |
+| 06. Spark Gold analytics | Done | [STEP-06](steps/STEP-06-spark-gold-analytics.md) | Aggregated analytics marts |
 | 07. Gold export and dashboard data | Not Started | [STEP-07](steps/STEP-07-gold-export-dashboard-data.md) | Dashboard-ready JSON files |
 | 08. HTML/CSS/JS dashboard | Not Started | [STEP-08](steps/STEP-08-dashboard.md) | Static report dashboard |
 | 09. End-to-end runbook and polish | Not Started | [STEP-09](steps/STEP-09-runbook-polish.md) | Complete demo runbook and verification |

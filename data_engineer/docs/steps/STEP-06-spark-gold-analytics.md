@@ -1,8 +1,8 @@
 # STEP-06: Spark Gold Analytics
 
-Status: Not Started
+Status: Done
 
-Completion date: N/A
+Completion date: 2026-06-05
 
 ## Objective
 
@@ -38,5 +38,19 @@ Use Spark aggregations over Silver events. Gold outputs should be optimized for 
 
 ## Verification Evidence
 
-Record evidence here after implementation.
-
+- Added Gold analytics Spark job: `gold_analytics.py`.
+- Added Gold inspection helper: `inspect_gold.py`.
+- Added README commands for building and inspecting Gold marts.
+- Verified Python syntax with `python -m py_compile data_engineer/spark/jobs/gold_analytics.py data_engineer/spark/jobs/inspect_gold.py`.
+- Verified Gold job and inspection helper are mounted inside the Spark master container.
+- Built Gold analytics with:
+  `docker exec manga-de-spark-master /opt/spark/bin/spark-submit --properties-file /opt/manga/conf/spark-defaults.conf --master spark://spark-master:7077 /opt/manga/jobs/gold_analytics.py`.
+- Gold build output:
+  `trending_manga_count=32`,
+  `active_users_count=3`,
+  `reading_duration_count=13`,
+  `genre_popularity_count=42`,
+  `top_search_queries_count=8`,
+  `completion_rate_count=13`.
+- Verified Gold Parquet objects exist in MinIO under `manga-analytics/gold`.
+- Verified each Gold dataset has a `_SUCCESS` marker and Parquet output.

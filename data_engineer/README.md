@@ -108,6 +108,20 @@ Count Bronze/Silver rows and basic Silver quality checks:
 docker exec manga-de-spark-master /opt/spark/bin/spark-submit --properties-file /opt/manga/conf/spark-defaults.conf --master spark://spark-master:7077 /opt/manga/jobs/inspect_lake.py
 ```
 
+## Spark Gold Analytics Commands
+
+Build Gold analytics marts from Silver events:
+
+```powershell
+docker exec manga-de-spark-master /opt/spark/bin/spark-submit --properties-file /opt/manga/conf/spark-defaults.conf --master spark://spark-master:7077 /opt/manga/jobs/gold_analytics.py
+```
+
+Inspect Gold mart row counts:
+
+```powershell
+docker exec manga-de-spark-master /opt/spark/bin/spark-submit --properties-file /opt/manga/conf/spark-defaults.conf --master spark://spark-master:7077 /opt/manga/jobs/inspect_gold.py
+```
+
 ## Architecture Summary
 
 The planned pipeline is:
