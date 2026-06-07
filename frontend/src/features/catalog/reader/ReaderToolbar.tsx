@@ -4,6 +4,7 @@ import type { ChapterSummary } from "@/types";
 import type { ReaderChapterNavItem, ReaderFit, ReaderMode } from "./reader.types";
 
 export function ReaderToolbar({
+  isVisible,
   mangaId,
   pageIndex,
   pagesLength,
@@ -21,8 +22,10 @@ export function ReaderToolbar({
   onFetchMoreChapters,
   onModeChange,
   onSwitchToPagedMode,
-  onFitToggle
+  onFitToggle,
+  onReveal
 }: {
+  isVisible: boolean;
   mangaId: string;
   pageIndex: number;
   pagesLength: number;
@@ -41,23 +44,23 @@ export function ReaderToolbar({
   onModeChange: (mode: ReaderMode) => void;
   onSwitchToPagedMode: () => void;
   onFitToggle: () => void;
+  onReveal: () => void;
 }) {
   return (
-    <div className="reader-toolbar sticky top-16 z-30 mb-4 border-y px-4 py-3 backdrop-blur-xl md:rounded-lg md:border">
-      <div className="container-x flex items-center justify-between gap-3 px-0">
-        <Link className="btn min-h-9" to={mangaId ? `/manga/${mangaId}` : "/search"}>
+    <div className={`reader-toolbar ${isVisible ? "reader-toolbar-visible" : "reader-toolbar-hidden"}`} onPointerDown={onReveal} onFocus={onReveal}>
+      <div className="reader-toolbar-inner">
+        <Link className="btn reader-toolbar-button" to={mangaId ? `/manga/${mangaId}` : "/search"}>
           <ArrowLeft size={17} />
           <span className="hidden sm:inline">Back</span>
         </Link>
-        <div className="text-sm text-[var(--muted)]">
+        <div className="reader-page-count">
           Page {Math.min(pageIndex + 1, pagesLength)} / {pagesLength}
         </div>
-        <div className="flex flex-1 flex-wrap items-center justify-end gap-2">
-          <button className="btn min-h-9 px-2" disabled={!previousChapter} onClick={() => previousChapter && onGoToChapter(previousChapter.id)} aria-label="Previous chapter" type="button">
+        <div className="reader-toolbar-actions">
+          <button className="btn reader-icon-button" disabled={!previousChapter} onClick={() => previousChapter && onGoToChapter(previousChapter.id)} aria-label="Previous chapter" type="button">
             <ChevronLeft size={17} />
-            <span className="hidden lg:inline">Prev Chapter</span>
           </button>
-          <label className="min-w-[12rem] flex-1 sm:flex-none">
+          <label className="reader-chapter-select">
             <span className="sr-only">Select chapter</span>
             <select
               className="control min-h-9 w-full rounded-lg px-3 text-sm"
@@ -77,22 +80,21 @@ export function ReaderToolbar({
             </select>
           </label>
           {hasMoreChapters && currentChapterLoaded ? (
-            <button className="btn min-h-9 px-2 text-sm" disabled={isFetchingMoreChapters} onClick={onFetchMoreChapters} type="button">
+            <button className="btn reader-load-button" disabled={isFetchingMoreChapters} onClick={onFetchMoreChapters} type="button">
               {isFetchingMoreChapters ? "Loading..." : "Load more"}
             </button>
           ) : null}
-          <button className="btn min-h-9 px-2" disabled={!nextChapter} onClick={() => nextChapter && onGoToChapter(nextChapter.id)} aria-label="Next chapter" type="button">
-            <span className="hidden lg:inline">Next Chapter</span>
+          <button className="btn reader-icon-button" disabled={!nextChapter} onClick={() => nextChapter && onGoToChapter(nextChapter.id)} aria-label="Next chapter" type="button">
             <ChevronRight size={17} />
           </button>
-          <div className="flex rounded-lg border border-[var(--line)] p-1">
-            <button className={`btn min-h-8 border-0 px-2 ${mode === "vertical" ? "bg-[var(--surface-strong)]" : ""}`} onClick={() => onModeChange("vertical")} aria-label="Vertical mode" type="button">
+          <div className="reader-mode-group">
+            <button className={`btn reader-icon-button border-0 ${mode === "vertical" ? "bg-[var(--surface-strong)]" : ""}`} onClick={() => onModeChange("vertical")} aria-label="Vertical mode" type="button">
               <Rows3 size={17} />
             </button>
-            <button className={`btn min-h-8 border-0 px-2 ${mode === "paged" ? "bg-[var(--surface-strong)]" : ""}`} onClick={onSwitchToPagedMode} aria-label="Paged mode" type="button">
+            <button className={`btn reader-icon-button border-0 ${mode === "paged" ? "bg-[var(--surface-strong)]" : ""}`} onClick={onSwitchToPagedMode} aria-label="Paged mode" type="button">
               <Columns2 size={17} />
             </button>
-            <button className={`btn min-h-8 border-0 px-2 ${fit === "contain" ? "bg-[var(--surface-strong)]" : ""}`} onClick={onFitToggle} aria-label="Toggle image fit" type="button">
+            <button className={`btn reader-icon-button border-0 ${fit === "contain" ? "bg-[var(--surface-strong)]" : ""}`} onClick={onFitToggle} aria-label="Toggle image fit" type="button">
               <Maximize2 size={17} />
             </button>
           </div>

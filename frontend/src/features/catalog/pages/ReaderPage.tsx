@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/features/auth/stores/auth.store";
 import { ReaderCanvas } from "@/features/catalog/reader/ReaderCanvas";
@@ -26,8 +26,17 @@ export function ReaderPage() {
   const [fit, setFit] = useState<ReaderFit>("width");
   const [quality] = useState<ReaderQuality>("data-saver");
   const [pageIndex, setPageIndex] = useState(0);
+  const [isToolbarVisible, setIsToolbarVisible] = useState(true);
   const imageRefs = useRef<Array<HTMLImageElement | null>>([]);
+  const lastScrollYRef = useRef(0);
+  const toolbarTimerRef = useRef<number | null>(null);
   const data = useReaderData({ chapterId, mangaId, user, quality });
+
+  const showToolbarBriefly = useCallback(() => {
+    setIsToolbarVisible(true);
+    if (toolbarTimerRef.current !== null) window.clearTimeout(toolbarTimerRef.current);
+    toolbarTimerRef.current = window.setTimeout(() => setIsToolbarVisible(false), 2600);
+  }, []);
 
   const goToChapter = (id: string) => {
     if (!id || id === chapterId) return;
@@ -49,6 +58,35 @@ export function ReaderPage() {
     setMode("paged");
     preloadPages(data.pages, pageIndex);
   }, [data.pages, pageIndex]);
+
+  useEffect(() => {
+    showToolbarBriefly();
+    return () => {
+      if (toolbarTimerRef.current !== null) window.clearTimeout(toolbarTimerRef.current);
+    };
+  }, [chapterId, showToolbarBriefly]);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const currentY = window.scrollY;
+      const scrollingUp = currentY < lastScrollYRef.current;
+      lastScrollYRef.current = currentY;
+      if (scrollingUp || currentY < 24) {
+        showToolbarBriefly();
+        return;
+      }
+      if (currentY > 140) setIsToolbarVisible(false);
+    };
+    const onPointerMove = (event: PointerEvent) => {
+      if (event.clientY < 150) showToolbarBriefly();
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("pointermove", onPointerMove);
+    };
+  }, [showToolbarBriefly]);
 
   useReaderChapterReset({ chapterId, imageRefs, setPageIndex });
   useReaderInitialProgress({
@@ -88,8 +126,9 @@ export function ReaderPage() {
     );
 
   return (
-    <div className="reader-page -mx-4 md:mx-0">
+    <div className="reader-page">
       <ReaderToolbar
+        isVisible={isToolbarVisible}
         mangaId={mangaId}
         pageIndex={pageIndex}
         pagesLength={data.pages.length}
@@ -108,8 +147,9 @@ export function ReaderPage() {
         onModeChange={setMode}
         onSwitchToPagedMode={switchToPagedMode}
         onFitToggle={() => setFit((value) => (value === "width" ? "contain" : "width"))}
+        onReveal={showToolbarBriefly}
       />
-      <ReaderCanvas mode={mode} fit={fit} pages={data.pages} pageIndex={pageIndex} imageRefs={imageRefs} onGoToPage={goToPage} />
+      <ReaderCanvas mode={mode} fit={fit} pages={data.pages} pageIndex={pageIndex} imageRefs={imageRefs} onGoToPage={goToPage} onRevealControls={showToolbarBriefly} />
     </div>
   );
 }
