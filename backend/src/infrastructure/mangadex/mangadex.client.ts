@@ -204,6 +204,8 @@ export async function getChapters(input: { mangaId: string; limit: number; offse
   const params = new URLSearchParams({
     limit: String(input.limit),
     offset: String(input.offset),
+    includeEmptyPages: "0",
+    includeExternalUrl: "0",
     "order[volume]": "asc",
     "order[chapter]": "asc"
   });
@@ -215,7 +217,7 @@ export async function getChapters(input: { mangaId: string; limit: number; offse
     limit: result.limit,
     offset: result.offset,
     total: result.total,
-    data: result.data.map(normalizeChapter)
+    data: result.data.map(normalizeChapter).filter((chapter) => chapter.pages > 0)
   };
 }
 
