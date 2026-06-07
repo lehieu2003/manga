@@ -7,7 +7,8 @@ export function ReaderCanvas({
   pages,
   pageIndex,
   imageRefs,
-  onGoToPage
+  onGoToPage,
+  onRevealControls
 }: {
   mode: ReaderMode;
   fit: ReaderFit;
@@ -15,13 +16,14 @@ export function ReaderCanvas({
   pageIndex: number;
   imageRefs: RefObject<Array<HTMLImageElement | null>>;
   onGoToPage: (getNextIndex: (value: number) => number) => void;
+  onRevealControls: () => void;
 }) {
   const visiblePage = pages[pageIndex];
   const imageClass = fit === "contain" ? "max-h-[calc(100vh-11rem)] w-auto max-w-full object-contain" : "";
 
   if (mode === "vertical") {
     return (
-      <div className="space-y-2">
+      <div className="reader-pages" onClick={onRevealControls}>
         {pages.length ? (
           pages.map((page, index) => (
             <img
@@ -44,7 +46,7 @@ export function ReaderCanvas({
   }
 
   return (
-    <div className="grid min-h-[70vh] place-items-center">
+    <div className="reader-paged-canvas" onClick={onRevealControls}>
       {visiblePage ? <img className={imageClass} src={visiblePage} alt={`Page ${pageIndex + 1}`} /> : null}
       <div className="mt-4 flex gap-3">
         <button className="btn" onClick={() => onGoToPage((value) => Math.max(value - 1, 0))} type="button">

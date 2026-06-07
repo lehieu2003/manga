@@ -1,5 +1,5 @@
 import { BookOpen, Library, Search, Settings, UserRound } from "lucide-react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/stores/auth.store";
 
 const navItems = [
@@ -11,10 +11,13 @@ const navItems = [
 
 export function AppLayout() {
   const { user, logout } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
+  const isReaderRoute = location.pathname.startsWith("/read/");
 
   return (
-    <div className="shell">
+    <div className={`shell ${isReaderRoute ? "shell-reader" : ""}`}>
+      {!isReaderRoute ? (
       <header className="app-header sticky top-0 z-40">
         <div className="container-x flex h-16 items-center justify-between gap-4">
           <button className="flex items-center gap-3" onClick={() => navigate("/")} aria-label="Go home" type="button">
@@ -54,7 +57,8 @@ export function AppLayout() {
           )}
         </div>
       </header>
-      <main className="container-x py-6">
+      ) : null}
+      <main className={isReaderRoute ? "reader-main" : "container-x py-6"}>
         <Outlet />
       </main>
     </div>

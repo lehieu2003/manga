@@ -8,6 +8,7 @@ dist
 coverage
 .tmp
 *.log
+logs/
 __pycache__/
 *.pyc
 backend/prisma/dev.db
