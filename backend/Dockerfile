@@ -9,6 +9,11 @@ COPY tsconfig.json ./
 COPY src ./src
 RUN npm run prisma:generate && npm run build
 
+FROM deps AS dev
+COPY . .
+EXPOSE 4000
+CMD ["sh", "-c", "npm run prisma:deploy && npm run dev"]
+
 FROM node:24-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
