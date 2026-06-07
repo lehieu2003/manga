@@ -22,6 +22,8 @@ const envSchema = z.object({
   MANGADEX_UPLOADS_BASE_URL: optionalUrl,
   PUBLIC_MEDIA_BASE_URL: optionalUrl,
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
+  LOG_FILE: z.string().min(1).optional(),
+  LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
   SYNC_ON_STARTUP: z.coerce.boolean().default(false),
   SYNC_LIMIT: z.coerce.number().int().min(1).max(100).default(48)
 });

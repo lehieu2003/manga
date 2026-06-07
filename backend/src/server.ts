@@ -2,7 +2,9 @@ import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import jwt from "@fastify/jwt";
 import rateLimit from "@fastify/rate-limit";
-import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
+import { createWriteStream, mkdirSync, type WriteStream } from "node:fs";
+import { dirname } from "node:path";
+import Fastify, { type FastifyReply, type FastifyRequest, type FastifyServerOptions } from "fastify";
 import { env } from "./shared/configs/app.config.js";
 import { connectRedis, redis } from "./infrastructure/cache/client.js";
 import { registerSwagger } from "./app/docs/swagger.js";
@@ -22,19 +24,37 @@ declare module "fastify" {
   }
 }
 
+function createLoggerOptions(): FastifyServerOptions["logger"] {
+  if (!env.LOG_FILE) {
+    return env.NODE_ENV === "development"
+      ? {
+          transport: {
+            target: "pino-pretty",
+            options: { colorize: true }
+          }
+        }
+      : true;
+  }
+
+  mkdirSync(dirname(env.LOG_FILE), { recursive: true });
+  const logFileStream: WriteStream = createWriteStream(env.LOG_FILE, { flags: "a" });
+
+  return {
+    level: env.LOG_LEVEL,
+    stream: {
+      write(message: string) {
+        process.stdout.write(message);
+        logFileStream.write(message);
+      }
+    }
+  };
+}
+
 export async function buildApp() {
   const hasRedis = await connectRedis();
 
   const app = Fastify({
-    logger:
-      env.NODE_ENV === "development"
-        ? {
-            transport: {
-              target: "pino-pretty",
-              options: { colorize: true }
-            }
-          }
-        : true
+    logger: createLoggerOptions()
   });
 
   await app.register(helmet, {

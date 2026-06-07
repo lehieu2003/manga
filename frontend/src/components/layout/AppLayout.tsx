@@ -17,7 +17,7 @@ export function AppLayout() {
     <div className="shell">
       <header className="app-header sticky top-0 z-40">
         <div className="container-x flex h-16 items-center justify-between gap-4">
-          <button className="flex items-center gap-3" onClick={() => navigate("/")} aria-label="Go home">
+          <button className="flex items-center gap-3" onClick={() => navigate("/")} aria-label="Go home" type="button">
             <span className="grid size-9 place-items-center rounded-lg border border-[var(--line)] bg-[var(--surface-strong)] shadow-[0_8px_22px_rgba(255,184,107,0.08)]">
               <BookOpen size={19} color="var(--accent)" />
             </span>
@@ -43,12 +43,12 @@ export function AppLayout() {
           </nav>
 
           {user ? (
-            <button className="btn min-h-9 text-sm" onClick={logout}>
+            <button className="btn min-h-9 text-sm" onClick={logout} type="button">
               <UserRound size={17} />
               <span className="hidden sm:inline">{user.displayName}</span>
             </button>
           ) : (
-            <button className="btn btn-primary min-h-9 text-sm" onClick={() => navigate("/login")}>
+            <button className="btn btn-primary min-h-9 text-sm" onClick={() => navigate("/login")} type="button">
               Login
             </button>
           )}

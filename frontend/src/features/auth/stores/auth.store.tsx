@@ -1,18 +1,20 @@
 import {
   createContext,
+  use,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
-  useState,
+  useReducer,
+  useSyncExternalStore,
   type ReactNode,
 } from 'react';
 import {
   api,
   clearTokens,
-  getAccessToken,
+  getAuthTokenSnapshot,
   getRefreshToken,
   setTokens,
+  subscribeAuthTokens,
 } from '@/api';
 import type { User } from '@/types';
 
@@ -39,33 +41,54 @@ type AuthState = {
   changePassword: (input: ChangePasswordInput) => Promise<void>;
 };
 
+type AuthProviderState = {
+  user: User | null;
+  isLoading: boolean;
+};
+
+type AuthAction =
+  | { type: 'sessionLoading' }
+  | { type: 'sessionLoaded'; user: User }
+  | { type: 'sessionCleared' }
+  | { type: 'userUpdated'; user: User };
+
 const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(Boolean(getAccessToken()));
+  const hasAccessToken = useSyncExternalStore(
+    subscribeAuthTokens,
+    getAuthTokenSnapshot,
+    () => false,
+  );
+  const [state, dispatch] = useReducer(authReducer, {
+    user: null,
+    isLoading: hasAccessToken,
+  });
 
   useEffect(() => {
-    if (!getAccessToken()) return;
+    if (!hasAccessToken) {
+      dispatch({ type: 'sessionCleared' });
+      return;
+    }
+    if (state.user) return;
+    let isCurrent = true;
+    dispatch({ type: 'sessionLoading' });
     api
       .me()
-      .then((payload) => setUser(payload.user))
-      .catch(() => clearTokens())
-      .finally(() => setIsLoading(false));
-  }, []);
-
-  useEffect(() => {
-    const onAuthCleared = () => setUser(null);
-    window.addEventListener('manga:auth-cleared', onAuthCleared);
-    return () =>
-      window.removeEventListener('manga:auth-cleared', onAuthCleared);
-  }, []);
+      .then((payload) => {
+        if (isCurrent) dispatch({ type: 'sessionLoaded', user: payload.user });
+      })
+      .catch(() => clearTokens());
+    return () => {
+      isCurrent = false;
+    };
+  }, [hasAccessToken, state.user]);
 
   const login = useCallback(
     async (input: { email: string; password: string }) => {
       const payload = await api.login(input);
+      dispatch({ type: 'sessionLoaded', user: payload.user });
       setTokens(payload.accessToken, payload.refreshToken);
-      setUser(payload.user);
     },
     [],
   );
@@ -73,8 +96,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(
     async (input: { email: string; password: string; displayName: string }) => {
       const payload = await api.register(input);
+      dispatch({ type: 'sessionLoaded', user: payload.user });
       setTokens(payload.accessToken, payload.refreshToken);
-      setUser(payload.user);
     },
     [],
   );
@@ -87,38 +110,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Local logout must not be blocked by a stale or already-revoked refresh token.
     } finally {
       clearTokens();
-      setUser(null);
+      dispatch({ type: 'sessionCleared' });
     }
   }, []);
 
   const updateProfile = useCallback(async (input: UpdateProfileInput) => {
     const payload = await api.updateMe(input);
-    setUser(payload.user);
+    dispatch({ type: 'userUpdated', user: payload.user });
   }, []);
 
   const changePassword = useCallback(async (input: ChangePasswordInput) => {
     const payload = await api.changePassword(input);
+    dispatch({ type: 'sessionLoaded', user: payload.user });
     setTokens(payload.accessToken, payload.refreshToken);
-    setUser(payload.user);
   }, []);
 
   const value = useMemo(
     () => ({
-      user,
-      isLoading,
+      user: state.user,
+      isLoading: state.isLoading,
       login,
       register,
       logout,
       updateProfile,
       changePassword,
     }),
-    [user, isLoading, login, register, logout, updateProfile, changePassword],
+    [
+      state.user,
+      state.isLoading,
+      login,
+      register,
+      logout,
+      updateProfile,
+      changePassword,
+    ],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
+  const context = use(AuthContext);
   if (!context) throw new Error('useAuth must be used inside AuthProvider');
   return context;
+}
+
+function authReducer(
+  state: AuthProviderState,
+  action: AuthAction,
+): AuthProviderState {
+  switch (action.type) {
+    case 'sessionLoading':
+      return { ...state, isLoading: true };
+    case 'sessionLoaded':
+      return { user: action.user, isLoading: false };
+    case 'sessionCleared':
+      return { user: null, isLoading: false };
+    case 'userUpdated':
+      return { ...state, user: action.user };
+    default:
+      return state;
+  }
 }

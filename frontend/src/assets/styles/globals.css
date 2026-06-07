@@ -427,12 +427,14 @@ img {
 }
 
 .toast-title {
+  display: block;
   margin: 0;
   font-size: 0.92rem;
   font-weight: 800;
 }
 
 .toast-description {
+  display: block;
   margin: 0.25rem 0 0;
   color: var(--muted);
   font-size: 0.82rem;
