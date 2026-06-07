@@ -49,7 +49,7 @@ export function LibraryPage() {
       </div>
       <div className="flex flex-wrap gap-2">
         {tabs.map((item) => (
-          <button key={item.value} className={`btn min-h-9 text-sm ${tab === item.value ? "bg-[var(--surface-strong)] text-[var(--accent)]" : ""}`} onClick={() => setTab(item.value)}>
+          <button key={item.value} className={`btn min-h-9 text-sm ${tab === item.value ? "bg-[var(--surface-strong)] text-[var(--accent)]" : ""}`} onClick={() => setTab(item.value)} type="button">
             {item.label}
           </button>
         ))}
@@ -114,7 +114,7 @@ export function LibraryPage() {
                   ) : null}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <button className="btn min-h-8 px-2 text-xs" onClick={() => updateLibrary.mutate({ mangaId: item.mangaId, input: { isFavorite: !item.isFavorite, status: item.status } })}>
+                  <button className="btn min-h-8 px-2 text-xs" onClick={() => updateLibrary.mutate({ mangaId: item.mangaId, input: { isFavorite: !item.isFavorite, status: item.status } })} type="button">
                     <Heart size={14} fill={item.isFavorite ? "currentColor" : "none"} />
                     Favorite
                   </button>
@@ -129,7 +129,7 @@ export function LibraryPage() {
                     <option value="PAUSED">Paused</option>
                     <option value="DROPPED">Dropped</option>
                   </select>
-                  <button className="btn min-h-8 px-2 text-xs text-[var(--danger)]" onClick={() => removeLibrary.mutate(item.mangaId)}>
+                  <button className="btn min-h-8 px-2 text-xs text-[var(--danger)]" onClick={() => removeLibrary.mutate(item.mangaId)} type="button">
                     <Trash2 size={14} />
                     Remove
                   </button>
@@ -153,7 +153,7 @@ function filterLibraryItems(items: LibraryItem[], query: string) {
 }
 
 function sortLibraryItems(items: LibraryItem[], sortMode: LibrarySortMode) {
-  return [...items].sort((a, b) => {
+  return items.toSorted((a, b) => {
     if (sortMode === "title") return getLibraryTitle(a).localeCompare(getLibraryTitle(b));
     if (sortMode === "status") return a.status.localeCompare(b.status) || getLibraryTitle(a).localeCompare(getLibraryTitle(b));
     if (sortMode === "favorite") return Number(b.isFavorite) - Number(a.isFavorite) || getLibraryActivityTime(b) - getLibraryActivityTime(a);

@@ -1,63 +1,76 @@
 import { KeyRound, LogOut, Save, ShieldCheck, UserRound } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useReducer, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/stores/auth.store";
+
+type ProfileFormState = {
+  displayName: string;
+  avatarUrl: string;
+  status: string;
+  error: string;
+  isSaving: boolean;
+};
+
+type PasswordFormState = {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+  status: string;
+  error: string;
+  isChanging: boolean;
+};
+
+type ProfileFormAction =
+  | { type: "loaded"; displayName: string; avatarUrl: string }
+  | { type: "displayNameChanged"; value: string }
+  | { type: "avatarUrlChanged"; value: string }
+  | { type: "saveStarted" }
+  | { type: "saveSucceeded" }
+  | { type: "saveFailed"; error: string };
+
+type PasswordFormAction =
+  | { type: "currentPasswordChanged"; value: string }
+  | { type: "newPasswordChanged"; value: string }
+  | { type: "confirmPasswordChanged"; value: string }
+  | { type: "changeStarted" }
+  | { type: "validationFailed"; error: string }
+  | { type: "changeSucceeded" }
+  | { type: "changeFailed"; error: string };
 
 export function SettingsPage() {
   const { user, updateProfile, changePassword, logout } = useAuth();
   const navigate = useNavigate();
-  const [displayName, setDisplayName] = useState(user?.displayName ?? "");
-  const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl ?? "");
-  const [profileStatus, setProfileStatus] = useState("");
-  const [profileError, setProfileError] = useState("");
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordStatus, setPasswordStatus] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [profileForm, dispatchProfile] = useReducer(profileFormReducer, createProfileFormState(user?.displayName ?? "", user?.avatarUrl ?? ""));
+  const [passwordForm, dispatchPassword] = useReducer(passwordFormReducer, createPasswordFormState());
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
-    setDisplayName(user?.displayName ?? "");
-    setAvatarUrl(user?.avatarUrl ?? "");
+    dispatchProfile({ type: "loaded", displayName: user?.displayName ?? "", avatarUrl: user?.avatarUrl ?? "" });
   }, [user?.avatarUrl, user?.displayName]);
 
   const saveProfile = async (event: FormEvent) => {
     event.preventDefault();
-    setProfileStatus("");
-    setProfileError("");
-    setIsSavingProfile(true);
+    dispatchProfile({ type: "saveStarted" });
     try {
-      await updateProfile({ displayName, avatarUrl: avatarUrl.trim() || null });
-      setProfileStatus("Profile saved.");
+      await updateProfile({ displayName: profileForm.displayName, avatarUrl: profileForm.avatarUrl.trim() || null });
+      dispatchProfile({ type: "saveSucceeded" });
     } catch (error) {
-      setProfileError(error instanceof Error ? error.message : "Unable to save profile");
-    } finally {
-      setIsSavingProfile(false);
+      dispatchProfile({ type: "saveFailed", error: error instanceof Error ? error.message : "Unable to save profile" });
     }
   };
 
   const savePassword = async (event: FormEvent) => {
     event.preventDefault();
-    setPasswordStatus("");
-    setPasswordError("");
-    if (newPassword !== confirmPassword) {
-      setPasswordError("New password confirmation does not match.");
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      dispatchPassword({ type: "validationFailed", error: "New password confirmation does not match." });
       return;
     }
-    setIsChangingPassword(true);
+    dispatchPassword({ type: "changeStarted" });
     try {
-      await changePassword({ currentPassword, newPassword });
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setPasswordStatus("Password changed. Other refresh sessions were revoked.");
+      await changePassword({ currentPassword: passwordForm.currentPassword, newPassword: passwordForm.newPassword });
+      dispatchPassword({ type: "changeSucceeded" });
     } catch (error) {
-      setPasswordError(error instanceof Error ? error.message : "Unable to change password");
-    } finally {
-      setIsChangingPassword(false);
+      dispatchPassword({ type: "changeFailed", error: error instanceof Error ? error.message : "Unable to change password" });
     }
   };
 
@@ -100,18 +113,18 @@ export function SettingsPage() {
             </label>
             <label>
               <span className="mb-2 block text-sm font-bold text-[var(--muted)]">Display name</span>
-              <input className="control min-h-11 w-full rounded-lg px-3" value={displayName} onChange={(event) => setDisplayName(event.target.value)} minLength={2} maxLength={40} required />
+              <input className="control min-h-11 w-full rounded-lg px-3" value={profileForm.displayName} onChange={(event) => dispatchProfile({ type: "displayNameChanged", value: event.target.value })} minLength={2} maxLength={40} required />
             </label>
             <label>
               <span className="mb-2 block text-sm font-bold text-[var(--muted)]">Avatar URL</span>
-              <input className="control min-h-11 w-full rounded-lg px-3" value={avatarUrl} onChange={(event) => setAvatarUrl(event.target.value)} placeholder="https://example.com/avatar.png" />
+              <input className="control min-h-11 w-full rounded-lg px-3" value={profileForm.avatarUrl} onChange={(event) => dispatchProfile({ type: "avatarUrlChanged", value: event.target.value })} placeholder="https://example.com/avatar.png" />
             </label>
           </div>
 
-          <FormMessage error={profileError} status={profileStatus} />
-          <button className="btn btn-primary mt-5" disabled={isSavingProfile} type="submit">
+          <FormMessage error={profileForm.error} status={profileForm.status} />
+          <button className="btn btn-primary mt-5" disabled={profileForm.isSaving} type="submit">
             <Save size={17} />
-            {isSavingProfile ? "Saving..." : "Save profile"}
+            {profileForm.isSaving ? "Saving..." : "Save profile"}
           </button>
         </form>
 
@@ -127,15 +140,15 @@ export function SettingsPage() {
           </div>
 
           <div className="grid gap-4">
-            <PasswordField label="Current password" value={currentPassword} onChange={setCurrentPassword} autoComplete="current-password" />
-            <PasswordField label="New password" value={newPassword} onChange={setNewPassword} autoComplete="new-password" minLength={8} />
-            <PasswordField label="Confirm new password" value={confirmPassword} onChange={setConfirmPassword} autoComplete="new-password" minLength={8} />
+            <PasswordField label="Current password" value={passwordForm.currentPassword} onChange={(value) => dispatchPassword({ type: "currentPasswordChanged", value })} autoComplete="current-password" />
+            <PasswordField label="New password" value={passwordForm.newPassword} onChange={(value) => dispatchPassword({ type: "newPasswordChanged", value })} autoComplete="new-password" minLength={8} />
+            <PasswordField label="Confirm new password" value={passwordForm.confirmPassword} onChange={(value) => dispatchPassword({ type: "confirmPasswordChanged", value })} autoComplete="new-password" minLength={8} />
           </div>
 
-          <FormMessage error={passwordError} status={passwordStatus} />
-          <button className="btn btn-primary mt-5" disabled={isChangingPassword} type="submit">
+          <FormMessage error={passwordForm.error} status={passwordForm.status} />
+          <button className="btn btn-primary mt-5" disabled={passwordForm.isChanging} type="submit">
             <KeyRound size={17} />
-            {isChangingPassword ? "Changing..." : "Change password"}
+            {passwordForm.isChanging ? "Changing..." : "Change password"}
           </button>
         </form>
       </section>
@@ -168,4 +181,52 @@ function PasswordField({ label, value, onChange, autoComplete, minLength }: { la
 function FormMessage({ error, status }: { error: string; status: string }) {
   if (!error && !status) return null;
   return <p className={`mt-4 rounded-lg border px-3 py-2 text-sm ${error ? "border-[rgba(255,122,168,0.58)] text-[var(--danger)]" : "border-[rgba(255,184,107,0.58)] text-[var(--accent)]"}`}>{error || status}</p>;
+}
+
+function createProfileFormState(displayName: string, avatarUrl: string): ProfileFormState {
+  return { displayName, avatarUrl, status: "", error: "", isSaving: false };
+}
+
+function createPasswordFormState(): PasswordFormState {
+  return { currentPassword: "", newPassword: "", confirmPassword: "", status: "", error: "", isChanging: false };
+}
+
+function profileFormReducer(state: ProfileFormState, action: ProfileFormAction): ProfileFormState {
+  switch (action.type) {
+    case "loaded":
+      return { ...state, displayName: action.displayName, avatarUrl: action.avatarUrl };
+    case "displayNameChanged":
+      return { ...state, displayName: action.value };
+    case "avatarUrlChanged":
+      return { ...state, avatarUrl: action.value };
+    case "saveStarted":
+      return { ...state, status: "", error: "", isSaving: true };
+    case "saveSucceeded":
+      return { ...state, status: "Profile saved.", error: "", isSaving: false };
+    case "saveFailed":
+      return { ...state, status: "", error: action.error, isSaving: false };
+    default:
+      return state;
+  }
+}
+
+function passwordFormReducer(state: PasswordFormState, action: PasswordFormAction): PasswordFormState {
+  switch (action.type) {
+    case "currentPasswordChanged":
+      return { ...state, currentPassword: action.value };
+    case "newPasswordChanged":
+      return { ...state, newPassword: action.value };
+    case "confirmPasswordChanged":
+      return { ...state, confirmPassword: action.value };
+    case "changeStarted":
+      return { ...state, status: "", error: "", isChanging: true };
+    case "validationFailed":
+      return { ...state, status: "", error: action.error, isChanging: false };
+    case "changeSucceeded":
+      return { ...createPasswordFormState(), status: "Password changed. Other refresh sessions were revoked." };
+    case "changeFailed":
+      return { ...state, status: "", error: action.error, isChanging: false };
+    default:
+      return state;
+  }
 }

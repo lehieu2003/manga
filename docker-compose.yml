@@ -35,8 +35,12 @@ services:
       DATABASE_URL: postgresql://manga:manga@postgres:5432/manga_reader?schema=public
       REDIS_URL: redis://redis:6379
       CORS_ORIGIN: http://localhost:5173
+      LOG_FILE: /app/logs/backend.log
+      LOG_LEVEL: info
     ports:
       - "4000:4000"
+    volumes:
+      - ./logs/backend:/app/logs
     depends_on:
       postgres:
         condition: service_healthy

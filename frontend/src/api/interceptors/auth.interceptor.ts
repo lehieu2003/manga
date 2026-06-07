@@ -1,10 +1,24 @@
 import type { User } from "@/types";
 
-export const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000/api";
+const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000/api";
 export const API_ORIGIN = new URL(API_URL).origin;
 
 const ACCESS_TOKEN_KEY = "manga.accessToken";
 const REFRESH_TOKEN_KEY = "manga.refreshToken";
+const authTokenListeners = new Set<() => void>();
+
+export function subscribeAuthTokens(listener: () => void) {
+  authTokenListeners.add(listener);
+  return () => authTokenListeners.delete(listener);
+}
+
+export function getAuthTokenSnapshot() {
+  return Boolean(getAccessToken());
+}
+
+function emitAuthTokenChange() {
+  for (const listener of authTokenListeners) listener();
+}
 
 export function getAccessToken() {
   return localStorage.getItem(ACCESS_TOKEN_KEY);
@@ -17,12 +31,13 @@ export function getRefreshToken() {
 export function setTokens(accessToken: string, refreshToken: string) {
   localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
   localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  emitAuthTokenChange();
 }
 
 export function clearTokens() {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
-  window.dispatchEvent(new Event("manga:auth-cleared"));
+  emitAuthTokenChange();
 }
 
 export async function refreshSession() {

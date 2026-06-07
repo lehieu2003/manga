@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import type { GenreSummary } from "@/types";
 
+const EMPTY_SELECTED_GENRES: string[] = [];
+
 export function GenreChips({
   genres,
-  selected = [],
+  selected = EMPTY_SELECTED_GENRES,
   onToggle,
   limit
 }: {
