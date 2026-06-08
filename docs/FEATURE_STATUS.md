@@ -207,7 +207,7 @@ Mobile hiện là MVP client của backend, chưa có cùng mức test coverage 
 
 ## Giới Hạn Hiện Tại
 
-- Catalog read routes and MangaDex sync/import responsibilities are currently mixed in the backend. The planned separation is tracked in `docs/catalog-data-workflow/README.md`.
+- Catalog chapter reads are now DB-first, while MangaDex import/sync is handled by scripts and admin sync endpoints. The completed separation is tracked in `docs/catalog-data-workflow/README.md`.
 - Genre filter dùng cached tags trong PostgreSQL, chưa gọi MangaDex tag registry để map tag name sang tag ID live.
 - Search theo cached tag/genre luôn trả từ cache, không gọi live MangaDex tag registry.
 - Included/excluded tag filter hiện dựa trên tag name đã cache; chưa có UI tag ID registry đầy đủ từ MangaDex.
@@ -309,6 +309,12 @@ Public/catalog:
 - `GET /api/covers/:mangaId/:fileName`
 - `GET /api/pages/:chapterId/:mode/:fileName`
 
+Admin/catalog:
+
+- `POST /api/admin/catalog/manga/:id/import`
+- `POST /api/admin/catalog/manga/:id/chapters/import`
+- `POST /api/admin/catalog/sync`
+
 Auth:
 
 - `POST /api/auth/register`
@@ -356,10 +362,9 @@ Library/progress:
 
 ## Ưu Tiên Tiếp Theo Đề Xuất
 
-1. Tách catalog read API khỏi MangaDex import/sync workflow theo `docs/catalog-data-workflow/README.md`.
-2. Hoàn thiện MangaDex tag registry để live tag filtering dùng tag ID thay vì cached tag name.
-3. Thêm reader quality toggle original/data-saver và mobile/web gestures.
-4. Tách tiếp route handlers backend thành thin controllers cho auth, catalog, library và progress.
-5. Implement background sync scheduler/queue và MangaDex outbound rate-limit policy.
-6. Bổ sung OpenAPI response examples và contract coverage cho docs.
-7. Bổ sung mobile CI và mobile flow tests.
+1. Hoàn thiện MangaDex tag registry để live tag filtering dùng tag ID thay vì cached tag name.
+2. Thêm reader quality toggle original/data-saver và mobile/web gestures.
+3. Tách tiếp route handlers backend thành thin controllers cho auth, catalog, library và progress.
+4. Implement background sync scheduler/queue và MangaDex outbound rate-limit policy.
+5. Bổ sung OpenAPI response examples và contract coverage cho docs.
+6. Bổ sung mobile CI và mobile flow tests.

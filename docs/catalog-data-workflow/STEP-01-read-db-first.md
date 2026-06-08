@@ -1,6 +1,11 @@
 # Step 01: Read API DB-First
 
-Status: planned
+Status: done
+
+Completed verification:
+
+- `npm --workspace backend test -- catalog.routes catalog-cache.service`
+- `npm --workspace backend run typecheck`
 
 ## Goal
 

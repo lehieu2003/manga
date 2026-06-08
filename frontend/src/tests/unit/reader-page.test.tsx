@@ -147,6 +147,45 @@ describe("ReaderPage", () => {
       expect(api.saveProgress).toHaveBeenCalledWith("chapter-2", { mangaId: "manga-1", pageIndex: 2, completed: true });
     }, { timeout: 1500 });
   });
+
+  it("offers another source when the selected chapter is unavailable", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getReader).mockRejectedValueOnce(new Error("MangaDex request failed: Not Found"));
+    vi.mocked(api.getChapters).mockResolvedValueOnce({
+      data: [...chapters, { ...chapters[1], id: "chapter-2-alt", scanlationGroup: "Group B" }],
+      limit: 100,
+      offset: 0,
+      total: 4
+    });
+
+    renderReader("/read/chapter-2?mangaId=manga-1");
+
+    expect(await screen.findByRole("heading", { name: "This chapter source cannot be opened right now." })).toBeInTheDocument();
+    expect(screen.getByText("MangaDex request failed: Not Found")).toBeInTheDocument();
+    expect(screen.getByText("Why did this happen?")).toBeInTheDocument();
+    expect(api.getReader).toHaveBeenCalledWith("chapter-2");
+    await user.click(screen.getByRole("button", { name: "Open another source" }));
+    expect(await screen.findByTestId("location")).toHaveTextContent("/read/chapter-2-alt?mangaId=manga-1");
+  });
+
+  it("links back to chapters when an unavailable direct reader URL has no fallback source", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getReader).mockRejectedValueOnce(new Error("MangaDex request failed: Not Found"));
+    vi.mocked(api.getChapters).mockResolvedValueOnce({
+      data: chapters.filter((chapter) => chapter.id !== "chapter-2"),
+      limit: 100,
+      offset: 0,
+      total: 2
+    });
+
+    renderReader("/read/chapter-2?mangaId=manga-1");
+
+    expect(await screen.findByRole("heading", { name: "This chapter source cannot be opened right now." })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open another source" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Back to chapters" }));
+    expect(await screen.findByTestId("location")).toHaveTextContent("/manga/manga-1");
+    expect(api.getReader).toHaveBeenCalledWith("chapter-2");
+  });
 });
 
 function LocationProbe() {
@@ -169,6 +208,7 @@ function renderReader(initialEntry: string) {
               </>
             }
           />
+          <Route path="/manga/:mangaId" element={<LocationProbe />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>

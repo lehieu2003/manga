@@ -9,13 +9,15 @@ export function ChapterRows({
   mangaId,
   metadata,
   selectedLanguages,
-  isSearchingMore
+  isSearchingMore,
+  needsSync
 }: {
   chapters: ChapterSummary[];
   mangaId: string;
   metadata: ChapterListMetadata;
   selectedLanguages: string[];
   isSearchingMore: boolean;
+  needsSync?: boolean;
 }) {
   return (
     <div className="overflow-hidden rounded-lg border border-[var(--line)]">
@@ -23,7 +25,13 @@ export function ChapterRows({
         chapters.map((chapter) => <ChapterRow key={chapter.id} chapter={chapter} mangaId={mangaId} metadata={metadata} />)
       ) : (
         <div className="bg-[rgba(23,17,13,0.78)] p-6 text-center text-[var(--muted)]">
-          {!selectedLanguages.length ? "Select at least one language to load chapters." : isSearchingMore ? "Searching more chapters..." : "No chapter matches your filters."}
+          {!selectedLanguages.length
+            ? "Select at least one language to load chapters."
+            : needsSync
+              ? "Chapter data is not synced yet."
+              : isSearchingMore
+                ? "Searching more chapters..."
+                : "No chapter matches your filters."}
         </div>
       )}
     </div>

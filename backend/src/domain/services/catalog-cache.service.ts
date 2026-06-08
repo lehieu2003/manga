@@ -27,6 +27,16 @@ export async function saveChapterBatch(mangaId: string, chapters: ChapterSummary
   );
 }
 
+export async function markCachedChapterUnreadable(chapterId: string) {
+  await prisma.cachedChapter.updateMany({
+    where: { id: chapterId },
+    data: {
+      pages: 0,
+      fetchedAt: new Date()
+    }
+  });
+}
+
 export async function searchCachedManga(input: {
   q?: string;
   limit: number;
@@ -114,7 +124,8 @@ export async function getCachedManga(id: string) {
 export async function getCachedChapters(input: { mangaId: string; limit: number; offset: number; translatedLanguage: string[] }) {
   const where: Prisma.CachedChapterWhereInput = {
     mangaId: input.mangaId,
-    translatedLanguage: { in: input.translatedLanguage }
+    translatedLanguage: { in: input.translatedLanguage },
+    pages: { gt: 0 }
   };
 
   const [data, total] = await prisma.$transaction([
@@ -131,7 +142,9 @@ export async function getCachedChapters(input: { mangaId: string; limit: number;
     limit: input.limit,
     offset: input.offset,
     total,
-    data: data.map(fromCachedChapter)
+    data: data.map(fromCachedChapter),
+    source: "db" as const,
+    needsSync: total === 0
   };
 }
 

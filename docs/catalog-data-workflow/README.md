@@ -29,11 +29,11 @@ Scripts or admin sync API
 
 | Step | File | Status |
 | --- | --- | --- |
-| 01 | [Read API DB-first](STEP-01-read-db-first.md) | planned |
-| 02 | [Import service](STEP-02-import-service.md) | planned |
-| 03 | [Admin sync API](STEP-03-admin-sync-api.md) | planned |
-| 04 | [Frontend sync state](STEP-04-frontend-sync-state.md) | planned |
-| 05 | [Tests and ops](STEP-05-tests-and-ops.md) | planned |
+| 01 | [Read API DB-first](STEP-01-read-db-first.md) | done |
+| 02 | [Import service](STEP-02-import-service.md) | done |
+| 03 | [Admin sync API](STEP-03-admin-sync-api.md) | done |
+| 04 | [Frontend sync state](STEP-04-frontend-sync-state.md) | done |
+| 05 | [Tests and ops](STEP-05-tests-and-ops.md) | done |
 
 Update this table during implementation. Each step file also has its own status field and must be updated before marking the step complete.
 

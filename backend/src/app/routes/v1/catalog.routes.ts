@@ -1,8 +1,9 @@
 import type { FastifyInstance } from "fastify";
-import { cached, makeCacheKey } from "../../../infrastructure/cache/cache.service.js";
-import { getChapters, getManga, getReader, searchManga } from "../../../infrastructure/mangadex/mangadex.client.js";
-import { getCachedChapters, getCachedGenres, getCachedManga, saveChapterBatch, saveManga, saveMangaBatch, searchCachedManga } from "../../../domain/services/catalog-cache.service.js";
+import { cached, clearCacheByPrefix, makeCacheKey } from "../../../infrastructure/cache/cache.service.js";
+import { getManga, getReader, searchManga } from "../../../infrastructure/mangadex/mangadex.client.js";
+import { getCachedChapters, getCachedGenres, getCachedManga, markCachedChapterUnreadable, saveManga, saveMangaBatch, searchCachedManga } from "../../../domain/services/catalog-cache.service.js";
 import { searchHistoryRepository } from "../../../domain/repositories/index.js";
+import { HttpError } from "../../../shared/errors/http-error.js";
 import { chapterParamsSchema, chaptersQuerySchema, mangaParamsSchema, mangaSearchQuerySchema } from "../../validators/catalog.validator.js";
 import { catalogRouteSchemas } from "../../docs/route-schemas.js";
 
@@ -68,25 +69,29 @@ export async function catalogRoutes(app: FastifyInstance) {
     });
   });
 
-  app.get("/manga/:id/chapters", { schema: catalogRouteSchemas.chapters }, async (request) => {
+  app.get("/manga/:id/chapters", { schema: catalogRouteSchemas.chapters }, async (request, reply) => {
     const { id } = mangaParamsSchema.parse(request.params);
     const query = chaptersQuerySchema.parse(request.query);
 
-    return cached(makeCacheKey("manga:chapters", { id, ...query }), 900, async () => {
-      try {
-        const result = await getChapters({ mangaId: id, limit: query.limit, offset: query.offset, translatedLanguage: query.translatedLanguage });
-        await saveChapterBatch(id, result.data);
-        return result;
-      } catch (error) {
-        const fallback = await getCachedChapters({ mangaId: id, limit: query.limit, offset: query.offset, translatedLanguage: query.translatedLanguage });
-        if (fallback.data.length > 0) return fallback;
-        throw error;
-      }
-    });
+    const result = await cached(makeCacheKey("manga:chapters", { id, ...query }), 900, () =>
+      getCachedChapters({ mangaId: id, limit: query.limit, offset: query.offset, translatedLanguage: query.translatedLanguage })
+    );
+    if (result.needsSync) {
+      reply.code(202);
+    }
+    return result;
   });
 
   app.get("/chapters/:id/reader", { schema: catalogRouteSchemas.reader }, async (request) => {
     const { id } = chapterParamsSchema.parse(request.params);
-    return cached(makeCacheKey("chapter:reader", { id }), 300, () => getReader(id));
+    try {
+      return await cached(makeCacheKey("chapter:reader", { id }), 300, () => getReader(id));
+    } catch (error) {
+      if (error instanceof HttpError && error.statusCode === 404) {
+        await markCachedChapterUnreadable(id);
+        await clearCacheByPrefix("manga:chapters:");
+      }
+      throw error;
+    }
   });
 }

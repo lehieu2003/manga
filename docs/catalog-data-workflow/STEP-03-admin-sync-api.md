@@ -1,6 +1,11 @@
 # Step 03: Admin Sync API
 
-Status: planned
+Status: done
+
+Completed verification:
+
+- `npm --workspace backend test -- admin.catalog.routes catalog-import.service catalog.routes swagger.routes`
+- `npm --workspace backend run typecheck`
 
 ## Goal
 

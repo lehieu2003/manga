@@ -39,7 +39,8 @@ export type Paginated<T> = {
   limit: number;
   offset: number;
   total: number;
-  source?: "live" | "cache";
+  source?: "live" | "cache" | "db";
+  needsSync?: boolean;
 };
 
 export type ReaderPayload = {

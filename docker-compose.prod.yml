@@ -40,6 +40,7 @@ services:
       MANGADEX_BASE_URL: ${MANGADEX_BASE_URL:-https://api.mangadex.org}
       MANGADEX_UPLOADS_BASE_URL: ${MANGADEX_UPLOADS_BASE_URL:-https://uploads.mangadex.org}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
+      ADMIN_SYNC_TOKEN: ${ADMIN_SYNC_TOKEN:-}
       SYNC_ON_STARTUP: ${SYNC_ON_STARTUP:-false}
       SYNC_LIMIT: ${SYNC_LIMIT:-48}
     depends_on:

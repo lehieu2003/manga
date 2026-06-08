@@ -6,7 +6,7 @@ import { useChapterListState } from "@/features/catalog/chapter-list/useChapterL
 import type { ChapterListProps } from "@/features/catalog/chapter-list/chapter-list.types";
 
 export function ChapterList(props: ChapterListProps) {
-  const { chapters, mangaId, currentProgress, chaptersProgress, selectedLanguages, onSelectedLanguagesChange, hasMore, isLoadingMore, onLoadMore } = props;
+  const { chapters, mangaId, currentProgress, chaptersProgress, selectedLanguages, onSelectedLanguagesChange, hasMore, isLoadingMore, onLoadMore, needsSync } = props;
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const state = useChapterListState({ chapters, selectedLanguages, onSelectedLanguagesChange, hasMore, isLoadingMore, onLoadMore });
   const metadata = useChapterListMetadata(chapters, currentProgress, chaptersProgress);
@@ -46,6 +46,7 @@ export function ChapterList(props: ChapterListProps) {
         metadata={metadata}
         selectedLanguages={selectedLanguages}
         isSearchingMore={state.isSearchingMore}
+        needsSync={needsSync}
       />
       {selectedLanguages.length && hasMore ? (
         <div ref={sentinelRef} className="flex justify-center">

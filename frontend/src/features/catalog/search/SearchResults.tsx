@@ -5,7 +5,7 @@ import type { MangaSummary, Paginated } from "@/types";
 type SearchResultsProps = {
   result: UseInfiniteQueryResult<{ pages: Array<Paginated<MangaSummary>>; pageParams: unknown[] }, Error>;
   manga: MangaSummary[];
-  source: "live" | "cache" | undefined;
+  source: Paginated<MangaSummary>["source"];
   hasFilters: boolean;
   hasTagFilters: boolean;
 };
@@ -36,7 +36,7 @@ export function SearchResults({ result, manga, source, hasFilters, hasTagFilters
   );
 }
 
-function SourceBanner({ source, hasTagFilters }: { source: "live" | "cache" | undefined; hasTagFilters: boolean }) {
+function SourceBanner({ source, hasTagFilters }: { source: Paginated<MangaSummary>["source"]; hasTagFilters: boolean }) {
   if (source !== "cache") return null;
   return <div className="surface rounded-lg p-4 text-sm text-[var(--accent)]">{hasTagFilters ? "Showing cached manga for tag filters. Sync more MangaDex data if the shelf feels sparse." : "Showing cached data while MangaDex is unavailable."}</div>;
 }

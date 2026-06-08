@@ -133,8 +133,60 @@ const pagination = <TItem extends object>(item: TItem) =>
     }
   }) as const;
 
+const chapterPagination = {
+  type: "object",
+  required: ["data", "limit", "offset", "total", "source", "needsSync"],
+  properties: {
+    data: { type: "array", items: chapterSummary },
+    limit: { type: "integer" },
+    offset: { type: "integer" },
+    total: { type: "integer" },
+    source: { type: "string", enum: ["db"] },
+    needsSync: { type: "boolean" }
+  }
+} as const;
+
+const importSummary = {
+  type: "object",
+  required: ["mangaId", "mangaSaved", "chaptersFetched", "readableChaptersSaved", "zeroPageChaptersSkipped", "source"],
+  properties: {
+    mangaId: { type: "string" },
+    mangaSaved: { type: "boolean" },
+    chaptersFetched: { type: "integer" },
+    readableChaptersSaved: { type: "integer" },
+    zeroPageChaptersSkipped: { type: "integer" },
+    source: { type: "string", enum: ["mangadex"] }
+  }
+} as const;
+
+const importResponse = {
+  type: "object",
+  required: ["status", "summary"],
+  properties: {
+    status: { type: "string", enum: ["completed"] },
+    summary: importSummary
+  }
+} as const;
+
+const syncResponse = {
+  type: "object",
+  required: ["status", "summary"],
+  properties: {
+    status: { type: "string", enum: ["completed"] },
+    summary: {
+      type: "object",
+      required: ["mangaCount", "cachedTotal"],
+      properties: {
+        mangaCount: { type: "integer" },
+        cachedTotal: { type: "integer" }
+      }
+    }
+  }
+} as const;
+
 const secured = [{ bearerAuth: [] }];
 const errors = { 400: errorResponse, 401: errorResponse, 404: errorResponse, 409: errorResponse, 500: errorResponse } as const;
+const adminErrors = { 400: errorResponse, 401: errorResponse, 403: errorResponse, 404: errorResponse, 500: errorResponse, 503: errorResponse } as const;
 
 export const healthRouteSchemas = {
   liveness: {
@@ -326,7 +378,7 @@ export const catalogRouteSchemas = {
         translatedLanguage: { type: "string", default: "vi,en" }
       }
     },
-    response: { 200: pagination(chapterSummary), ...errors }
+    response: { 200: chapterPagination, 202: chapterPagination, ...errors }
   },
   reader: {
     summary: "Get chapter reader metadata",
@@ -347,6 +399,52 @@ export const catalogRouteSchemas = {
       },
       ...errors
     }
+  }
+} as const;
+
+export const adminCatalogRouteSchemas = {
+  importManga: {
+    summary: "Import one MangaDex manga into the local catalog cache",
+    tags: ["Admin Catalog"],
+    params: { type: "object", required: ["id"], properties: { id: uuid } },
+    querystring: {
+      type: "object",
+      properties: {
+        includeChapters: { type: "string", enum: ["true", "false"], default: "false" },
+        languages: { type: "string", default: "vi,en" },
+        chaptersLimit: { type: "integer", minimum: 1, maximum: 100, default: 100 }
+      }
+    },
+    response: { 200: importResponse, ...adminErrors }
+  },
+  importMangaChapters: {
+    summary: "Import one MangaDex manga chapter feed into the local catalog cache",
+    tags: ["Admin Catalog"],
+    params: { type: "object", required: ["id"], properties: { id: uuid } },
+    querystring: {
+      type: "object",
+      properties: {
+        languages: { type: "string", default: "vi,en" },
+        limit: { type: "integer", minimum: 1, maximum: 100, default: 100 },
+        offset: { type: "integer", minimum: 0, default: 0 }
+      }
+    },
+    response: { 200: importResponse, ...adminErrors }
+  },
+  syncCatalog: {
+    summary: "Run a MangaDex catalog sync",
+    tags: ["Admin Catalog"],
+    querystring: {
+      type: "object",
+      properties: {
+        q: { type: "string" },
+        limit: { type: "integer", minimum: 1, maximum: 100 },
+        languages: { type: "string", default: "vi,en" },
+        includeChapters: { type: "string", enum: ["true", "false"], default: "false" },
+        chaptersLimit: { type: "integer", minimum: 1, maximum: 100, default: 32 }
+      }
+    },
+    response: { 200: syncResponse, ...adminErrors }
   }
 } as const;
 

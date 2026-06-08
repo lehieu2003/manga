@@ -1,7 +1,6 @@
-import { saveChapterBatch } from "../domain/services/catalog-cache.service.js";
+import { importMangaChapters } from "../domain/services/catalog-import.service.js";
 import { redis } from "../infrastructure/cache/client.js";
 import { prisma } from "../infrastructure/database/client.js";
-import { getChapters } from "../infrastructure/mangadex/mangadex.client.js";
 
 const limitArg = Number(process.argv.find((arg) => arg.startsWith("--limit="))?.split("=")[1]);
 const delayArg = Number(process.argv.find((arg) => arg.startsWith("--delay-ms="))?.split("=")[1]);
@@ -45,15 +44,14 @@ try {
 
   for (const [index, manga] of targets.entries()) {
     try {
-      const result = await getChapters({
+      const result = await importMangaChapters({
         mangaId: manga.id,
         limit: 100,
         offset: 0,
-        translatedLanguage
+        languages: translatedLanguage
       });
-      await saveChapterBatch(manga.id, result.data);
 
-      const readableCount = result.data.filter((chapter) => chapter.pages > 0).length;
+      const readableCount = result.readableChaptersSaved;
       fetched += 1;
       savedReadableChapters += readableCount;
 

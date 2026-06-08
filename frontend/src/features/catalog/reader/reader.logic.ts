@@ -32,6 +32,13 @@ export function compareChapters(a: ChapterSummary, b: ChapterSummary) {
   return byChapter || byDate || a.id.localeCompare(b.id);
 }
 
+export function findReaderFallbackChapter(chapters: ChapterSummary[], chapterId: string) {
+  const current = chapters.find((chapter) => chapter.id === chapterId);
+  if (!current) return undefined;
+  const sameChapter = chapters.filter((chapter) => chapter.id !== chapterId && chapter.chapter === current.chapter);
+  return sameChapter.find((chapter) => chapter.translatedLanguage === current.translatedLanguage) ?? sameChapter[0];
+}
+
 export function chapterSortValue(chapter: ChapterSummary | undefined) {
   if (!chapter) return Number.NaN;
   const parsed = Number.parseFloat(chapter.chapter ?? "");

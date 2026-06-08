@@ -21,6 +21,7 @@ export function MangaDetailPage() {
     chapterPages: detail.chapters.data?.pages ?? [],
     progress: detail.progress.data
   });
+  const chaptersNeedSync = Boolean(detail.chapters.data?.pages.some((page) => page.needsSync));
 
   return (
     <div className="space-y-6">
@@ -37,6 +38,7 @@ export function MangaDetailPage() {
         onSelectedLanguagesChange={detail.setSelectedLanguages}
         progress={detail.progress.data}
         chapters={detail.chapters}
+        needsSync={chaptersNeedSync}
       />
     </div>
   );

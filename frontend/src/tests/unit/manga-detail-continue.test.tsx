@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "@/api";
 import { MangaDetailPage } from "@/features/catalog/pages/MangaDetailPage";
 
@@ -59,6 +59,10 @@ vi.mock("@/api", async () => {
 });
 
 describe("MangaDetailPage continue reading", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("renders a one-click continue reading card with chapter and page", async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
@@ -93,5 +97,30 @@ describe("MangaDetailPage continue reading", () => {
     await userEvent.click(screen.getByLabelText("VI"));
 
     expect(api.getChapters).toHaveBeenLastCalledWith("manga-1", { limit: 100, offset: 0, translatedLanguage: ["en"] });
+  });
+
+  it("renders sync-needed state instead of filter empty state when chapter cache is missing", async () => {
+    vi.mocked(api.getChapters).mockResolvedValueOnce({
+      data: [],
+      limit: 100,
+      offset: 0,
+      total: 0,
+      source: "db",
+      needsSync: true
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={["/manga/manga-1"]}>
+          <Routes>
+            <Route path="/manga/:mangaId" element={<MangaDetailPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByText("Chapter data is not synced yet.")).toBeInTheDocument();
+    expect(screen.queryByText("No chapter matches your filters.")).not.toBeInTheDocument();
   });
 });
