@@ -2,12 +2,12 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import { useMemo } from "react";
 import { api, assetUrl } from "@/api";
 import type { User } from "@/types";
-import { compareChapters, createReaderNavItems } from "./reader.logic";
+import { compareChapters, createReaderNavItems, findReaderFallbackChapter } from "./reader.logic";
 import type { ReaderQuality } from "./reader.types";
 
 export function useReaderData({ chapterId, mangaId, user, quality }: { chapterId: string; mangaId: string; user?: User | null; quality: ReaderQuality }) {
   const queryClient = useQueryClient();
-  const reader = useQuery({ queryKey: ["reader", chapterId], queryFn: () => api.getReader(chapterId), enabled: Boolean(chapterId) });
+  const reader = useQuery({ queryKey: ["reader", chapterId], queryFn: () => api.getReader(chapterId), enabled: Boolean(chapterId), retry: false });
   const chapters = useInfiniteQuery({
     queryKey: ["reader-chapters", mangaId],
     queryFn: ({ pageParam }) => api.getChapters(mangaId, { limit: 100, offset: pageParam }),
@@ -43,6 +43,7 @@ export function useReaderData({ chapterId, mangaId, user, quality }: { chapterId
   const currentChapterIndex = sortedChapters.findIndex((chapter) => chapter.id === chapterId);
   const previousChapter = currentChapterIndex > 0 ? sortedChapters[currentChapterIndex - 1] : undefined;
   const nextChapter = currentChapterIndex >= 0 ? sortedChapters[currentChapterIndex + 1] : undefined;
+  const fallbackChapter = useMemo(() => findReaderFallbackChapter(sortedChapters, chapterId), [chapterId, sortedChapters]);
   const navItems = useMemo(
     () =>
       createReaderNavItems({
@@ -65,6 +66,7 @@ export function useReaderData({ chapterId, mangaId, user, quality }: { chapterId
     currentChapterIndex,
     previousChapter,
     nextChapter,
+    fallbackChapter,
     navItems,
     hasMoreChapters: Boolean(chapters.hasNextPage),
     isFetchingMoreChapters: chapters.isFetchingNextPage,

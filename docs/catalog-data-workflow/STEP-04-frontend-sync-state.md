@@ -1,6 +1,11 @@
 # Step 04: Frontend Sync State
 
-Status: planned
+Status: done
+
+Completed verification:
+
+- `npm --workspace frontend test -- manga-detail-continue chapter-list search-page`
+- `npm --workspace frontend run typecheck`
 
 ## Goal
 

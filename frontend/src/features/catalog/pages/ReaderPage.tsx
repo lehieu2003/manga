@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/features/auth/stores/auth.store";
 import { ReaderCanvas } from "@/features/catalog/reader/ReaderCanvas";
 import { ReaderToolbar } from "@/features/catalog/reader/ReaderToolbar";
+import { ReaderUnavailableState } from "@/features/catalog/reader/ReaderUnavailableState";
 import {
   useReaderChapterAutoLoad,
   useReaderChapterReset,
@@ -117,12 +118,15 @@ export function ReaderPage() {
   if (data.reader.isLoading) return <div className="surface rounded-lg p-6 text-[var(--muted)]">Preparing reader...</div>;
   if (data.reader.isError)
     return (
-      <div className="surface space-y-4 rounded-lg p-6">
-        <p className="text-[var(--danger)]">{data.reader.error.message}</p>
-        <button className="btn btn-primary" onClick={() => data.reader.refetch()} type="button">
-          Retry
-        </button>
-      </div>
+      <ReaderUnavailableState
+        errorMessage={data.reader.error.message}
+        fallbackChapter={data.fallbackChapter}
+        hasMangaContext={Boolean(mangaId)}
+        isRetrying={data.reader.isFetching}
+        onBackToChapters={() => navigate(`/manga/${mangaId}`)}
+        onOpenFallback={() => goToChapter(data.fallbackChapter?.id ?? "")}
+        onRetry={() => data.reader.refetch()}
+      />
     );
 
   return (

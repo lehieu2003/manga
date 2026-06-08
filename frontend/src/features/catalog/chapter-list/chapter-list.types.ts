@@ -12,6 +12,7 @@ export type ChapterListProps = {
   hasMore?: boolean;
   isLoadingMore?: boolean;
   onLoadMore?: () => void;
+  needsSync?: boolean;
 };
 
 export type ChapterListState = {

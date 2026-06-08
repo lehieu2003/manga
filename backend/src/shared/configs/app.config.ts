@@ -8,6 +8,7 @@ try {
 }
 
 const optionalUrl = z.preprocess((value) => (value === "" ? undefined : value), z.string().url().optional());
+const optionalSecret = z.preprocess((value) => (value === "" ? undefined : value), z.string().min(16).optional());
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -24,6 +25,7 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
   LOG_FILE: z.string().min(1).optional(),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
+  ADMIN_SYNC_TOKEN: optionalSecret,
   SYNC_ON_STARTUP: z.coerce.boolean().default(false),
   SYNC_LIMIT: z.coerce.number().int().min(1).max(100).default(48)
 });

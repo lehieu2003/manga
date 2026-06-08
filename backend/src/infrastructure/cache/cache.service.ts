@@ -28,6 +28,25 @@ export async function cached<T>(key: string, ttlSeconds: number, loader: () => P
   return value;
 }
 
+export async function clearCacheByPrefix(prefix: string) {
+  for (const key of memoryCache.keys()) {
+    if (key.startsWith(prefix)) {
+      memoryCache.delete(key);
+    }
+  }
+
+  if (!redisReady) return;
+
+  let cursor = "0";
+  do {
+    const [nextCursor, keys] = await redis.scan(cursor, "MATCH", `${prefix}*`, "COUNT", 100);
+    cursor = nextCursor;
+    if (keys.length > 0) {
+      await redis.del(...keys);
+    }
+  } while (cursor !== "0");
+}
+
 export function makeCacheKey(prefix: string, params: Record<string, unknown>) {
   const stable = Object.entries(params)
     .filter(([, value]) => value !== undefined && value !== null && value !== "")

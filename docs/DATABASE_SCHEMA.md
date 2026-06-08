@@ -166,16 +166,16 @@ Readable chapter = CachedChapter.pages > 0
 
 If MangaDex returns an empty live chapter feed but PostgreSQL has readable cached chapters, the backend should prefer the cached chapter list for the user-facing response. This keeps the reader usable when upstream data is incomplete.
 
-## Planned Read/Sync Separation
+## Read/Sync Separation
 
-The planned catalog workflow refactor separates two responsibilities that are currently mixed:
+The catalog workflow separates two responsibilities:
 
 - **Read APIs** serve frontend requests from PostgreSQL cache and short-lived Redis response cache.
 - **Import/sync operations** call MangaDex official APIs and upsert `CachedManga` / `CachedChapter`.
 
-The step-by-step implementation plan lives in `docs/catalog-data-workflow/README.md`.
+The step-by-step implementation record lives in `docs/catalog-data-workflow/README.md`.
 
-After the refactor, reader-facing chapter APIs should not call MangaDex live as part of normal page rendering. MangaDex live calls should be limited to scripts, admin sync endpoints, or future background jobs.
+Reader-facing chapter APIs should not call MangaDex live as part of normal page rendering. MangaDex live calls are limited to scripts, admin sync endpoints, or future background jobs.
 
 ## Common Operational Checks
 

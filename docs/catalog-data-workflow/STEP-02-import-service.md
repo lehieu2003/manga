@@ -1,6 +1,11 @@
 # Step 02: MangaDex Import Service
 
-Status: planned
+Status: done
+
+Completed verification:
+
+- `npm --workspace backend test -- catalog-import.service catalog.routes catalog-cache.service`
+- `npm --workspace backend run typecheck`
 
 ## Goal
 

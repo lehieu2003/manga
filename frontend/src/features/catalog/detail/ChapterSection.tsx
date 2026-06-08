@@ -11,7 +11,8 @@ export function ChapterSection({
   selectedLanguages,
   onSelectedLanguagesChange,
   progress,
-  chapters
+  chapters,
+  needsSync
 }: {
   mangaId: string;
   chapterItems: ChapterSummary[];
@@ -30,6 +31,7 @@ export function ChapterSection({
     isFetchingNextPage: boolean;
     fetchNextPage: () => void;
   };
+  needsSync?: boolean;
 }) {
   return (
     <section className="space-y-4">
@@ -66,6 +68,7 @@ export function ChapterSection({
           chaptersProgress={progress?.chaptersProgress}
           selectedLanguages={selectedLanguages}
           onSelectedLanguagesChange={onSelectedLanguagesChange}
+          needsSync={needsSync}
           hasMore={chapters.hasNextPage}
           isLoadingMore={chapters.isFetchingNextPage}
           onLoadMore={() => chapters.fetchNextPage()}

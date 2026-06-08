@@ -1,6 +1,15 @@
 # Step 05: Tests And Ops
 
-Status: planned
+Status: done
+
+Completed verification:
+
+- `npm --workspace backend run typecheck`
+- `npm --workspace backend test`
+- `npm --workspace frontend run typecheck`
+- `npm --workspace frontend test -- manga-detail-continue chapter-list reader-page search-page`
+- `npm --workspace frontend run build`
+- Manual chapter read check for manga `32d76d19-8a05-4db0-9fc2-e0b0648fe9d0` returned `total: 481`, `source: "db"`, and `needsSync: false`.
 
 ## Goal
 
