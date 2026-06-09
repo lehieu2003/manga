@@ -1,8 +1,8 @@
-import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { syncMangaDexCatalog } from "../../../domain/services/catalog-sync.service.js";
 import { importMangaChapters, importMangaDetail, importMangaWithChapters } from "../../../domain/services/catalog-import.service.js";
 import { env } from "../../../shared/configs/app.config.js";
-import { HttpError } from "../../../shared/errors/http-error.js";
+import { requireAdminToken } from "../../middlewares/admin.middleware.js";
 import { mangaParamsSchema } from "../../validators/catalog.validator.js";
 import { adminCatalogRouteSchemas } from "../../docs/route-schemas.js";
 
@@ -21,23 +21,9 @@ function parsePositiveNumber(value: unknown, fallback: number, max: number) {
   return Math.min(Math.trunc(parsed), max);
 }
 
-function requireAdminSyncToken(request: FastifyRequest) {
-  if (!env.ADMIN_SYNC_TOKEN) {
-    throw new HttpError(503, "Admin sync token is not configured", "ADMIN_SYNC_NOT_CONFIGURED");
-  }
-
-  const token = request.headers["x-admin-token"];
-  if (!token) {
-    throw new HttpError(401, "Admin sync token is required", "ADMIN_SYNC_TOKEN_REQUIRED");
-  }
-  if (Array.isArray(token) || token !== env.ADMIN_SYNC_TOKEN) {
-    throw new HttpError(403, "Admin sync token is invalid", "ADMIN_SYNC_TOKEN_INVALID");
-  }
-}
-
 export async function adminCatalogRoutes(app: FastifyInstance) {
   app.addHook("preHandler", async (request) => {
-    requireAdminSyncToken(request);
+    requireAdminToken(request);
   });
 
   app.post("/admin/catalog/manga/:id/import", { schema: adminCatalogRouteSchemas.importManga }, async (request) => {

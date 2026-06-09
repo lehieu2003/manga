@@ -17,7 +17,8 @@ export async function registerSwagger(app: FastifyInstance) {
         { name: "Catalog", description: "MangaDex search, manga details, genres, chapters, and reader metadata" },
         { name: "Media", description: "Cover and chapter page image proxy endpoints" },
         { name: "Library", description: "Authenticated user's manga shelf" },
-        { name: "Progress", description: "Authenticated user's reading progress" }
+        { name: "Progress", description: "Authenticated user's reading progress" },
+        { name: "Admin", description: "Token-protected admin operations for catalog, users, and cached data" }
       ],
       components: {
         securitySchemes: {
@@ -25,6 +26,11 @@ export async function registerSwagger(app: FastifyInstance) {
             type: "http",
             scheme: "bearer",
             bearerFormat: "JWT"
+          },
+          xAdminToken: {
+            type: "apiKey",
+            in: "header",
+            name: "X-Admin-Token"
           }
         }
       }

@@ -17,9 +17,12 @@ describe("swagger docs", () => {
     expect(document.paths["/api/auth/login"]).toBeDefined();
     expect(document.paths["/api/manga/search"]).toBeDefined();
     expect(document.paths["/api/library"]).toBeDefined();
+    expect(document.paths["/api/admin/overview"]).toBeDefined();
     expect(document.paths["/health/ready"]).toBeDefined();
     expect(document.components?.securitySchemes?.bearerAuth).toBeDefined();
+    expect(document.components?.securitySchemes?.xAdminToken).toBeDefined();
     expect(document.paths["/api/library"].get.security).toEqual([{ bearerAuth: [] }]);
+    expect(document.paths["/api/admin/overview"].get.security).toEqual([{ xAdminToken: [] }]);
     expect(document.paths["/api/auth/login"].post.security).toBeUndefined();
     expect(document.paths["/api/manga/search"].get.security).toBeUndefined();
 

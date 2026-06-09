@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { AdminPage } from "@/features/admin/pages/AdminPage";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { HomePage } from "@/features/catalog/pages/HomePage";
 import { LibraryPage } from "@/features/library/pages/LibraryPage";
@@ -39,6 +40,7 @@ export function App() {
         />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/admin" element={<AdminPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
