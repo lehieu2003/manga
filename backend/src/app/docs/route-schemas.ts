@@ -448,6 +448,41 @@ export const adminCatalogRouteSchemas = {
   }
 } as const;
 
+const adminSecured = [{ xAdminToken: [] }];
+const adminGenericResponse = {
+  type: "object",
+  additionalProperties: true
+} as const;
+
+const adminRouteSchema = (summary: string) =>
+  ({
+    summary,
+    tags: ["Admin"],
+    security: adminSecured,
+    response: { 200: adminGenericResponse, ...adminErrors }
+  }) as const;
+
+export const adminRouteSchemas = {
+  overview: adminRouteSchema("Get admin overview counts"),
+  listCachedManga: adminRouteSchema("List cached manga for admin"),
+  getCachedManga: adminRouteSchema("Get cached manga detail for admin"),
+  deleteCachedManga: adminRouteSchema("Delete one cached manga row"),
+  deleteCachedChapters: adminRouteSchema("Delete cached chapters for one manga"),
+  listUsers: adminRouteSchema("List users for admin"),
+  getUser: adminRouteSchema("Get user detail for admin"),
+  updateUser: adminRouteSchema("Update user profile as admin"),
+  revokeUserSessions: adminRouteSchema("Revoke active user sessions"),
+  deleteUser: adminRouteSchema("Delete one user"),
+  listUserLibrary: adminRouteSchema("List user library as admin"),
+  updateUserLibrary: adminRouteSchema("Update user library item as admin"),
+  deleteUserLibrary: adminRouteSchema("Delete user library item as admin"),
+  listUserProgress: adminRouteSchema("List user reading progress as admin"),
+  updateUserProgress: adminRouteSchema("Update user reading progress as admin"),
+  deleteUserProgress: adminRouteSchema("Delete user reading progress as admin"),
+  listUserSearchHistory: adminRouteSchema("List user search history as admin"),
+  clearUserSearchHistory: adminRouteSchema("Clear user search history as admin")
+} as const;
+
 export const mediaRouteSchemas = {
   cover: {
     summary: "Proxy a MangaDex cover image",
