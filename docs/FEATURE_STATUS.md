@@ -223,7 +223,7 @@ Mobile hiện là MVP client của backend, chưa có cùng mức test coverage 
 - Queue/storage/email infrastructure chưa có implementation thật.
 - Swagger/OpenAPI schemas hiện được khai báo riêng với Zod runtime validators, nên cần giữ hai bên đồng bộ khi đổi request/response contract.
 - Image traffic đã xong Phase 1 backend hardening; Phase 2 Cloudflare runbook đã sẵn sàng nhưng cache rules chưa được apply trên Cloudflare production.
-- Không có admin dashboard, cache dashboard hoặc manual cache invalidation UI.
+- Admin dashboard hiện có ở `/admin` cho overview, catalog sync/import, cache management, user management, library/progress/search-history management.
 - Mobile app chưa được liệt kê trong CI verification như web/backend.
 
 ## Tính Năng Chưa Implement
@@ -272,7 +272,7 @@ Mobile hiện là MVP client của backend, chưa có cùng mức test coverage 
 - Object storage cache như Cloudflare R2 nếu CDN cache miss vẫn quá tốn origin traffic.
 - Better outbound MangaDex queue/rate-limit policy.
 - Background job scheduler cho periodic sync.
-- Cache invalidation hoặc refresh endpoint cho admin/dev.
+- Background cache refresh/invalidation policy tự động cho admin/dev.
 - Observability dashboard, request metrics, tracing.
 - Runtime domain event publisher/subscriber.
 
@@ -288,7 +288,7 @@ Mobile hiện là MVP client của backend, chưa có cùng mức test coverage 
 - User comments.
 - Ratings/reviews.
 - Custom manga lists.
-- Admin tools.
+- Persistent admin audit log.
 - Report broken chapter/image.
 - Content preference controls beyond current safe/suggestive API query.
 
@@ -311,9 +311,30 @@ Public/catalog:
 
 Admin/catalog:
 
+- `GET /api/admin/overview`
 - `POST /api/admin/catalog/manga/:id/import`
 - `POST /api/admin/catalog/manga/:id/chapters/import`
 - `POST /api/admin/catalog/sync`
+- `GET /api/admin/catalog/cache/manga`
+- `GET /api/admin/catalog/cache/manga/:mangaId`
+- `DELETE /api/admin/catalog/cache/manga/:mangaId`
+- `DELETE /api/admin/catalog/cache/manga/:mangaId/chapters`
+
+Admin/users:
+
+- `GET /api/admin/users`
+- `GET /api/admin/users/:userId`
+- `PATCH /api/admin/users/:userId`
+- `POST /api/admin/users/:userId/sessions/revoke`
+- `DELETE /api/admin/users/:userId`
+- `GET /api/admin/users/:userId/library`
+- `PATCH /api/admin/users/:userId/library/:mangaId`
+- `DELETE /api/admin/users/:userId/library/:mangaId`
+- `GET /api/admin/users/:userId/progress`
+- `PATCH /api/admin/users/:userId/progress/:chapterId`
+- `DELETE /api/admin/users/:userId/progress/:chapterId`
+- `GET /api/admin/users/:userId/search-history`
+- `DELETE /api/admin/users/:userId/search-history`
 
 Auth:
 
@@ -348,6 +369,7 @@ Library/progress:
 - `/login`: login.
 - `/register`: register.
 - `/settings`: protected account settings.
+- `/admin`: admin console guarded by `X-Admin-Token` session token.
 
 ## Mobile Routes Hiện Có
 

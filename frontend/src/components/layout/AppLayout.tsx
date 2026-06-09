@@ -1,5 +1,6 @@
-import { BookOpen, Library, Search, Settings, UserRound } from "lucide-react";
+import { BookOpen, Library, Search, Settings, ShieldCheck, UserRound } from "lucide-react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { getAdminToken } from "@/api";
 import { useAuth } from "@/features/auth/stores/auth.store";
 
 const navItems = [
@@ -14,6 +15,7 @@ export function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const isReaderRoute = location.pathname.startsWith("/read/");
+  const visibleNavItems = getAdminToken() ? [...navItems, { to: "/admin", label: "Admin", icon: ShieldCheck }] : navItems;
 
   return (
     <div className={`shell ${isReaderRoute ? "shell-reader" : ""}`}>
@@ -31,7 +33,7 @@ export function AppLayout() {
           </button>
 
           <nav className="flex items-center gap-1 rounded-xl border border-[var(--line)] bg-[rgba(18,13,10,0.78)] p-1">
-            {navItems.map((item) => (
+            {visibleNavItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}

@@ -62,6 +62,7 @@ Set `JWT_SECRET`, `POSTGRES_PASSWORD`, and `CORS_ORIGIN` in `.env` for the VPS e
 - [Feature status](docs/FEATURE_STATUS.md): current implemented features, known limits, and not-yet-implemented roadmap items.
 - [Database schema](docs/DATABASE_SCHEMA.md): current Prisma data model, catalog cache behavior, and operational checks for readable chapters.
 - [Catalog data workflow refactor](docs/catalog-data-workflow/README.md): step-by-step plan to separate frontend DB reads from MangaDex import/sync operations.
+- [Admin workflow](docs/admin-workflow/README.md): step-by-step plan for full admin API and admin UI implementation.
 - [Reader and chapter navigation plan](docs/READER_CHAPTER_NAVIGATION_PLAN.md): MVP behavior, interfaces, and test scenarios for reader navigation.
 - [Chapter list advanced plan](docs/CHAPTER_LIST_ADVANCED_PLAN.md): MVP behavior, filters, infinite scroll, and test scenarios for advanced chapter browsing.
 - [Wibu manga cafe theme plan](docs/WIBU_MANGA_CAFE_THEME_PLAN.md): warm anime-native visual direction and acceptance checks.

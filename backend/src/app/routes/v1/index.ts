@@ -1,3 +1,4 @@
+export { adminRoutes } from "./admin.routes.js";
 export { adminCatalogRoutes } from "./admin.catalog.routes.js";
 export { authRoutes } from "./auth.routes.js";
 export { catalogRoutes } from "./catalog.routes.js";
