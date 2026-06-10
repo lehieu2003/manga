@@ -37,11 +37,16 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return AppScope(
       appState: widget.appState,
-      child: MaterialApp.router(
-        title: 'Manga Cafe',
-        debugShowCheckedModeBanner: false,
-        theme: MangaTheme.dark(),
-        routerConfig: _router,
+      child: AnimatedBuilder(
+        animation: widget.appState,
+        builder: (context, _) => MaterialApp.router(
+          title: 'Manga Cafe',
+          debugShowCheckedModeBanner: false,
+          theme: MangaTheme.light(),
+          darkTheme: MangaTheme.dark(),
+          themeMode: widget.appState.themeMode,
+          routerConfig: _router,
+        ),
       ),
     );
   }

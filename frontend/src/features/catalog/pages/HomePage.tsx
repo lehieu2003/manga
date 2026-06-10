@@ -175,7 +175,7 @@ function RecentCard({ item }: { item: LibraryItem }) {
   const progress = item.readingProgress;
   const chapterId = progress?.chapterId ?? item.lastChapterId;
   const content = (
-    <article className="grid grid-cols-[48px_1fr] gap-3 rounded-lg border border-[var(--line)] bg-[rgba(255,184,107,0.035)] p-2.5">
+    <article className="grid grid-cols-[48px_1fr] gap-3 rounded-lg border border-[var(--line)] bg-[var(--accent-panel)] p-2.5">
       <div className="manga-cover-frame rounded-md">
         {item.manga?.coverUrl ? <img className="h-full w-full object-cover" src={assetUrl(item.manga.coverUrl)} alt={title} /> : null}
       </div>

@@ -2,7 +2,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../domain/models/models.dart';
-import 'theme.dart';
 
 class MangaCardTile extends StatelessWidget {
   const MangaCardTile({
@@ -19,6 +18,7 @@ class MangaCardTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cover = assetUrl(manga.coverUrl);
+    final scheme = Theme.of(context).colorScheme;
     return InkWell(
       borderRadius: BorderRadius.circular(8),
       onTap: onTap,
@@ -30,9 +30,13 @@ class MangaCardTile extends StatelessWidget {
             AspectRatio(
               aspectRatio: 0.72,
               child: cover.isEmpty
-                  ? const ColoredBox(
-                      color: MangaTheme.panelStrong,
-                      child: Icon(Icons.menu_book_outlined, size: 42),
+                  ? ColoredBox(
+                      color: scheme.surfaceContainerHighest,
+                      child: Icon(
+                        Icons.menu_book_outlined,
+                        size: 42,
+                        color: scheme.primary,
+                      ),
                     )
                   : CachedNetworkImage(
                       imageUrl: cover,
@@ -62,9 +66,9 @@ class MangaCardTile extends StatelessWidget {
                     ].whereType<String>().join(' · '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: MangaTheme.muted),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),

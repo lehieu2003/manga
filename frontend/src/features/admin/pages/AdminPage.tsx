@@ -307,7 +307,7 @@ function UsersPanel() {
         <SearchBox value={query} onChange={setQuery} placeholder="Search users..." />
         <div className="mt-4 grid gap-2">
           {rows.map((user) => (
-            <button key={user.id} className={`w-full rounded-lg border p-3 text-left ${selectedUserId === user.id ? "border-[var(--accent)] bg-[rgba(255,184,107,0.09)]" : "border-[var(--line)] bg-[rgba(255,184,107,0.03)]"}`} onClick={() => setSelectedUserId(user.id)} type="button">
+            <button key={user.id} className={`w-full rounded-lg border p-3 text-left ${selectedUserId === user.id ? "border-[var(--accent)] bg-[var(--accent-tint)]" : "border-[var(--line)] bg-[var(--accent-panel)]"}`} onClick={() => setSelectedUserId(user.id)} type="button">
               <span className="block font-bold">{user.displayName}</span>
               <span className="block text-sm text-[var(--muted)]">{user.email}</span>
             </button>

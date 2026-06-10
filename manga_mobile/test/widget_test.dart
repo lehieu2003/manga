@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:manga_mobile/data/repositories/repositories.dart';
 import 'package:manga_mobile/data/services/api_client.dart';
+import 'package:manga_mobile/data/services/theme_store.dart';
 import 'package:manga_mobile/domain/models/models.dart';
 import 'package:manga_mobile/main.dart';
 import 'package:manga_mobile/ui/app_state.dart';
@@ -10,6 +11,31 @@ import 'package:manga_mobile/ui/features/detail/manga_detail_screen.dart';
 import 'package:manga_mobile/ui/features/reader/reader_screen.dart';
 
 void main() {
+  testWidgets('app shell toggles between system dark and light mode', (
+    tester,
+  ) async {
+    final app = _buildApp();
+    await tester.pumpWidget(MyApp(appState: app));
+    await tester.pumpAndSettle();
+
+    final initialIsDark =
+        tester.widget<MaterialApp>(find.byType(MaterialApp)).themeMode ==
+        ThemeMode.system;
+    expect(initialIsDark, isTrue);
+
+    final lightToggle = find.byTooltip('Switch to light mode');
+    final darkToggle = find.byTooltip('Switch to dark mode');
+    final isCurrentlyDark = lightToggle.evaluate().isNotEmpty;
+    final toggle = isCurrentlyDark ? lightToggle : darkToggle;
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<MaterialApp>(find.byType(MaterialApp)).themeMode,
+      isCurrentlyDark ? ThemeMode.light : ThemeMode.dark,
+    );
+  });
+
   testWidgets('search supports discovery and genre routes with clear filters', (
     tester,
   ) async {
@@ -158,6 +184,7 @@ TestAppState _buildApp({bool signedIn = false}) {
     authRepository: FakeAuthRepository(api, user),
     catalogRepository: FakeCatalogRepository(api),
     libraryRepository: FakeLibraryRepository(api),
+    themeStore: FakeThemeStore(),
   )..isBooting = false;
   if (signedIn) app.user = user;
   return app;
@@ -175,7 +202,20 @@ class TestAppState extends AppState {
     required super.authRepository,
     required super.catalogRepository,
     required super.libraryRepository,
+    super.themeStore,
   });
+}
+
+class FakeThemeStore extends ThemeStore {
+  ThemeMode saved = ThemeMode.system;
+
+  @override
+  Future<ThemeMode> readThemeMode() async => saved;
+
+  @override
+  Future<void> saveThemeMode(ThemeMode mode) async {
+    saved = mode;
+  }
 }
 
 class FakeAuthRepository extends AuthRepository {

@@ -1,7 +1,8 @@
-import { BookOpen, Library, Search, Settings, ShieldCheck, UserRound } from "lucide-react";
+import { BookOpen, Library, Moon, Search, Settings, ShieldCheck, Sun, UserRound } from "lucide-react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { getAdminToken } from "@/api";
 import { useAuth } from "@/features/auth/stores/auth.store";
+import { useTheme } from "@/features/theme/theme.store";
 
 const navItems = [
   { to: "/", label: "Home", icon: BookOpen },
@@ -12,10 +13,13 @@ const navItems = [
 
 export function AppLayout() {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const isReaderRoute = location.pathname.startsWith("/read/");
   const visibleNavItems = getAdminToken() ? [...navItems, { to: "/admin", label: "Admin", icon: ShieldCheck }] : navItems;
+  const ThemeIcon = theme === "dark" ? Sun : Moon;
+  const themeLabel = theme === "dark" ? "Switch to light mode" : "Switch to dark mode";
 
   return (
     <div className={`shell ${isReaderRoute ? "shell-reader" : ""}`}>
@@ -23,7 +27,7 @@ export function AppLayout() {
       <header className="app-header sticky top-0 z-40">
         <div className="container-x flex h-16 items-center justify-between gap-4">
           <button className="flex items-center gap-3" onClick={() => navigate("/")} aria-label="Go home" type="button">
-            <span className="grid size-9 place-items-center rounded-lg border border-[var(--line)] bg-[var(--surface-strong)] shadow-[0_8px_22px_rgba(255,184,107,0.08)]">
+            <span className="brand-mark grid size-9 place-items-center rounded-lg border border-[var(--line)] bg-[var(--surface-strong)]">
               <BookOpen size={19} color="var(--accent)" />
             </span>
             <span className="hidden text-left sm:block">
@@ -32,7 +36,7 @@ export function AppLayout() {
             </span>
           </button>
 
-          <nav className="flex items-center gap-1 rounded-xl border border-[var(--line)] bg-[rgba(18,13,10,0.78)] p-1">
+          <nav className="app-nav flex items-center gap-1 rounded-xl border border-[var(--line)] p-1">
             {visibleNavItems.map((item) => (
               <NavLink
                 key={item.to}
@@ -47,16 +51,21 @@ export function AppLayout() {
             ))}
           </nav>
 
-          {user ? (
-            <button className="btn min-h-9 text-sm" onClick={logout} type="button">
-              <UserRound size={17} />
-              <span className="hidden sm:inline">{user.displayName}</span>
+          <div className="flex items-center gap-2">
+            <button className="btn reader-icon-button min-h-9" onClick={toggleTheme} title={themeLabel} aria-label={themeLabel} type="button">
+              <ThemeIcon size={17} />
             </button>
-          ) : (
-            <button className="btn btn-primary min-h-9 text-sm" onClick={() => navigate("/login")} type="button">
-              Login
-            </button>
-          )}
+            {user ? (
+              <button className="btn min-h-9 text-sm" onClick={logout} type="button">
+                <UserRound size={17} />
+                <span className="hidden sm:inline">{user.displayName}</span>
+              </button>
+            ) : (
+              <button className="btn btn-primary min-h-9 text-sm" onClick={() => navigate("/login")} type="button">
+                Login
+              </button>
+            )}
+          </div>
         </div>
       </header>
       ) : null}
