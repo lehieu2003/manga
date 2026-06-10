@@ -29,6 +29,23 @@ describe("swagger docs", () => {
     await app.close();
   });
 
+  it("includes response examples for public, auth, library, and admin contracts", async () => {
+    const app = await buildApp();
+
+    const response = await app.inject({ method: "GET", url: "/docs/json" });
+    const document = response.json() as {
+      paths: Record<string, Record<string, { responses: Record<string, { content?: Record<string, { schema?: { example?: unknown } }> }> }>>;
+    };
+
+    expect(response.statusCode).toBe(200);
+    expect(getJsonExample(document, "/api/auth/login", "post", "200")).toMatchObject({ accessToken: expect.any(String), user: { email: "reader@example.com" } });
+    expect(getJsonExample(document, "/api/manga/search", "get", "200")).toMatchObject({ data: [], source: "cache" });
+    expect(getJsonExample(document, "/api/library", "get", "200")).toMatchObject({ data: [expect.objectContaining({ mangaId: expect.any(String) })] });
+    expect(getJsonExample(document, "/api/admin/overview", "get", "200")).toMatchObject({ ok: true });
+
+    await app.close();
+  });
+
   it("serves Swagger UI", async () => {
     const app = await buildApp();
 
@@ -43,3 +60,12 @@ describe("swagger docs", () => {
     await app.close();
   });
 });
+
+function getJsonExample(
+  document: { paths: Record<string, Record<string, { responses: Record<string, { content?: Record<string, { schema?: { example?: unknown } }> }> }>> },
+  path: string,
+  method: string,
+  status: string
+) {
+  return document.paths[path][method].responses[status].content?.["application/json"]?.schema?.example;
+}

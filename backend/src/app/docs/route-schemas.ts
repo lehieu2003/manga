@@ -1,6 +1,10 @@
 const uuid = { type: "string", format: "uuid" } as const;
 const idString = { type: "string" } as const;
 const dateTime = { type: "string", format: "date-time" } as const;
+const exampleDate = "2024-01-02T00:00:00.000Z";
+const exampleMangaId = "32d76d19-8a05-4db0-9fc2-e0b0648fe9d0";
+const exampleChapterId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+const exampleUserId = "user_01HZX9Y4B8J4ZQ9WQ7Y6K3N2P1";
 
 const errorResponse = {
   type: "object",
@@ -15,7 +19,8 @@ const errorResponse = {
         details: { type: "object", additionalProperties: true }
       }
     }
-  }
+  },
+  example: { error: { code: "VALIDATION_ERROR", message: "Request validation failed" } }
 } as const;
 
 const user = {
@@ -27,6 +32,13 @@ const user = {
     displayName: { type: "string" },
     avatarUrl: { type: ["string", "null"], format: "uri" },
     createdAt: dateTime
+  },
+  example: {
+    id: exampleUserId,
+    email: "reader@example.com",
+    displayName: "Manga Reader",
+    avatarUrl: null,
+    createdAt: exampleDate
   }
 } as const;
 
@@ -38,6 +50,12 @@ const tokenPair = {
     accessToken: { type: "string" },
     refreshToken: { type: "string" },
     expiresAt: dateTime
+  },
+  example: {
+    user: user.example,
+    accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example",
+    refreshToken: "refresh_01HZX9Y4B8J4ZQ9WQ7Y6K3N2P1",
+    expiresAt: "2024-01-02T01:00:00.000Z"
   }
 } as const;
 
@@ -54,6 +72,17 @@ const mangaSummary = {
     contentRating: { type: "string" },
     tags: { type: "array", items: { type: "string" } },
     coverUrl: { type: "string" }
+  },
+  example: {
+    id: exampleMangaId,
+    title: "Manga Cafe Sample",
+    altTitles: ["Sample Manga"],
+    description: "A cached MangaDex title returned by the reader catalog.",
+    status: "ongoing",
+    year: 2024,
+    contentRating: "safe",
+    tags: ["Romance", "Slice of Life"],
+    coverUrl: "/api/covers/32d76d19-8a05-4db0-9fc2-e0b0648fe9d0/cover.jpg"
   }
 } as const;
 
@@ -69,6 +98,16 @@ const chapterSummary = {
     publishAt: { type: "string" },
     pages: { type: "integer" },
     scanlationGroup: { type: "string" }
+  },
+  example: {
+    id: exampleChapterId,
+    title: "Morning Coffee",
+    chapter: "12",
+    volume: "2",
+    translatedLanguage: "en",
+    publishAt: exampleDate,
+    pages: 24,
+    scanlationGroup: "Manga Cafe Scans"
   }
 } as const;
 
@@ -84,6 +123,16 @@ const readingProgress = {
     completed: { type: "boolean" },
     createdAt: dateTime,
     updatedAt: dateTime
+  },
+  example: {
+    id: "progress_01HZX9Y4B8J4ZQ9WQ7Y6K3N2P1",
+    userId: exampleUserId,
+    mangaId: exampleMangaId,
+    chapterId: exampleChapterId,
+    pageIndex: 8,
+    completed: false,
+    createdAt: exampleDate,
+    updatedAt: exampleDate
   }
 } as const;
 
@@ -117,6 +166,26 @@ const libraryItem = {
       ]
     },
     readingProgress: { anyOf: [readingProgress, { type: "null" }] }
+  },
+  example: {
+    id: "library_01HZX9Y4B8J4ZQ9WQ7Y6K3N2P1",
+    userId: exampleUserId,
+    mangaId: exampleMangaId,
+    status: "READING",
+    isFavorite: true,
+    lastChapterId: exampleChapterId,
+    lastReadAt: exampleDate,
+    createdAt: exampleDate,
+    updatedAt: exampleDate,
+    manga: {
+      id: exampleMangaId,
+      title: "Manga Cafe Sample",
+      coverUrl: "/api/covers/32d76d19-8a05-4db0-9fc2-e0b0648fe9d0/cover.jpg",
+      status: "ongoing",
+      year: 2024,
+      tags: ["Romance", "Slice of Life"]
+    },
+    readingProgress: readingProgress.example
   }
 } as const;
 
@@ -130,6 +199,13 @@ const pagination = <TItem extends object>(item: TItem) =>
       offset: { type: "integer" },
       total: { type: "integer" },
       source: { type: "string", enum: ["live", "cache"] }
+    },
+    example: {
+      data: [],
+      limit: 24,
+      offset: 0,
+      total: 0,
+      source: "cache"
     }
   }) as const;
 
@@ -143,6 +219,14 @@ const chapterPagination = {
     total: { type: "integer" },
     source: { type: "string", enum: ["db"] },
     needsSync: { type: "boolean" }
+  },
+  example: {
+    data: [chapterSummary.example],
+    limit: 96,
+    offset: 0,
+    total: 1,
+    source: "db",
+    needsSync: false
   }
 } as const;
 
@@ -156,6 +240,14 @@ const importSummary = {
     readableChaptersSaved: { type: "integer" },
     zeroPageChaptersSkipped: { type: "integer" },
     source: { type: "string", enum: ["mangadex"] }
+  },
+  example: {
+    mangaId: exampleMangaId,
+    mangaSaved: true,
+    chaptersFetched: 100,
+    readableChaptersSaved: 96,
+    zeroPageChaptersSkipped: 4,
+    source: "mangadex"
   }
 } as const;
 
@@ -165,7 +257,8 @@ const importResponse = {
   properties: {
     status: { type: "string", enum: ["completed"] },
     summary: importSummary
-  }
+  },
+  example: { status: "completed", summary: importSummary.example }
 } as const;
 
 const syncResponse = {
@@ -181,7 +274,8 @@ const syncResponse = {
         cachedTotal: { type: "integer" }
       }
     }
-  }
+  },
+  example: { status: "completed", summary: { mangaCount: 24, cachedTotal: 120 } }
 } as const;
 
 const secured = [{ bearerAuth: [] }];
@@ -451,7 +545,8 @@ export const adminCatalogRouteSchemas = {
 const adminSecured = [{ xAdminToken: [] }];
 const adminGenericResponse = {
   type: "object",
-  additionalProperties: true
+  additionalProperties: true,
+  example: { ok: true, summary: { affectedCount: 1 } }
 } as const;
 
 const adminRouteSchema = (summary: string) =>
@@ -520,7 +615,12 @@ export const libraryRouteSchemas = {
     tags: ["Library"],
     security: secured,
     response: {
-      200: { type: "object", required: ["data"], properties: { data: { type: "array", items: libraryItem } } },
+      200: {
+        type: "object",
+        required: ["data"],
+        properties: { data: { type: "array", items: libraryItem } },
+        example: { data: [libraryItem.example] }
+      },
       ...errors
     }
   },
@@ -529,7 +629,15 @@ export const libraryRouteSchemas = {
     tags: ["Library"],
     security: secured,
     params: { type: "object", required: ["mangaId"], properties: { mangaId: uuid } },
-    response: { 200: { type: "object", required: ["item"], properties: { item: { anyOf: [libraryItem, { type: "null" }] } } }, ...errors }
+    response: {
+      200: {
+        type: "object",
+        required: ["item"],
+        properties: { item: { anyOf: [libraryItem, { type: "null" }] } },
+        example: { item: libraryItem.example }
+      },
+      ...errors
+    }
   },
   upsert: {
     summary: "Add or update a library item",
@@ -544,14 +652,30 @@ export const libraryRouteSchemas = {
         lastChapterId: uuid
       }
     },
-    response: { 200: { type: "object", required: ["item"], properties: { item: libraryItem } }, ...errors }
+    response: {
+      200: {
+        type: "object",
+        required: ["item"],
+        properties: { item: libraryItem },
+        example: { item: libraryItem.example }
+      },
+      ...errors
+    }
   },
   remove: {
     summary: "Remove a manga from the authenticated user's library",
     tags: ["Library"],
     security: secured,
     params: { type: "object", required: ["mangaId"], properties: { mangaId: uuid } },
-    response: { 200: { type: "object", required: ["ok"], properties: { ok: { type: "boolean" } } }, ...errors }
+    response: {
+      200: {
+        type: "object",
+        required: ["ok"],
+        properties: { ok: { type: "boolean" } },
+        example: { ok: true }
+      },
+      ...errors
+    }
   }
 } as const;
 
@@ -569,6 +693,11 @@ export const progressRouteSchemas = {
           progress: { anyOf: [readingProgress, { type: "null" }] },
           chaptersProgress: { type: "array", items: readingProgress },
           chapter: { anyOf: [chapterSummary, { type: "null" }] }
+        },
+        example: {
+          progress: readingProgress.example,
+          chaptersProgress: [readingProgress.example],
+          chapter: chapterSummary.example
         }
       },
       ...errors
@@ -579,7 +708,15 @@ export const progressRouteSchemas = {
     tags: ["Progress"],
     security: secured,
     params: { type: "object", required: ["chapterId"], properties: { chapterId: uuid } },
-    response: { 200: { type: "object", required: ["progress"], properties: { progress: { anyOf: [readingProgress, { type: "null" }] } } }, ...errors }
+    response: {
+      200: {
+        type: "object",
+        required: ["progress"],
+        properties: { progress: { anyOf: [readingProgress, { type: "null" }] } },
+        example: { progress: readingProgress.example }
+      },
+      ...errors
+    }
   },
   save: {
     summary: "Save progress for a chapter",
@@ -595,6 +732,14 @@ export const progressRouteSchemas = {
         completed: { type: "boolean", default: false }
       }
     },
-    response: { 200: { type: "object", required: ["progress"], properties: { progress: readingProgress } }, ...errors }
+    response: {
+      200: {
+        type: "object",
+        required: ["progress"],
+        properties: { progress: readingProgress },
+        example: { progress: readingProgress.example }
+      },
+      ...errors
+    }
   }
 } as const;

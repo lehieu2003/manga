@@ -1,8 +1,7 @@
 import type { FastifyInstance } from "fastify";
-import { getMangaDexUploadsBaseUrl } from "../../../infrastructure/mangadex/mangadex.client.js";
+import { proxyCoverImage } from "../../controllers/media.controller.js";
 import { coverParamsSchema } from "../../validators/media.validator.js";
 import { mediaRouteSchemas } from "../../docs/route-schemas.js";
-import { mediaCacheControl, proxyMangaDexImage } from "../../services/media-proxy.service.js";
 
 export async function coverRoutes(app: FastifyInstance) {
   app.get(
@@ -13,17 +12,7 @@ export async function coverRoutes(app: FastifyInstance) {
     },
     async (request, reply) => {
       const { mangaId, fileName } = coverParamsSchema.parse(request.params);
-      const url = `${getMangaDexUploadsBaseUrl()}/covers/${mangaId}/${fileName}`;
-      return proxyMangaDexImage({
-        request,
-        reply,
-        url,
-        timeoutMs: 10_000,
-        cacheControl: mediaCacheControl.cover,
-        fetchFailedMessage: "Unable to fetch MangaDex cover",
-        fetchFailedCode: "COVER_FETCH_FAILED",
-        timeoutCode: "COVER_FETCH_TIMEOUT"
-      });
+      return proxyCoverImage(request, reply, { mangaId, fileName });
     }
   );
 }
