@@ -17,6 +17,8 @@ export function useMangaDiscovery({
 }) {
   const [state, dispatch] = useReducer(discoveryReducer, createDiscoveryState(routeGenre, defaultSort));
   const deferredQuery = useDeferredValue(state.query);
+  const deferredAuthor = useDeferredValue(state.author);
+  const deferredArtist = useDeferredValue(state.artist);
   const genres = useQuery({ queryKey: ["genres"], queryFn: api.getGenres });
   const validYear = parseDiscoveryYear(state.year);
   const result = useInfiniteQuery<Paginated<MangaSummary>, Error, { pages: Array<Paginated<MangaSummary>>; pageParams: unknown[] }, unknown[], number>({
@@ -30,6 +32,8 @@ export function useMangaDiscovery({
       state.contentRating,
       state.status,
       validYear,
+      deferredAuthor,
+      deferredArtist,
       state.sort
     ],
     queryFn: ({ pageParam }) =>
@@ -40,6 +44,8 @@ export function useMangaDiscovery({
         contentRating: state.contentRating,
         status: state.status,
         year: validYear,
+        author: deferredAuthor,
+        artist: deferredArtist,
         sort: state.sort,
         limit: 24,
         offset: pageParam
@@ -49,7 +55,10 @@ export function useMangaDiscovery({
       const nextOffset = lastPage.offset + lastPage.limit;
       return nextOffset < lastPage.total ? nextOffset : undefined;
     },
-    enabled: deferredQuery.length === 0 || deferredQuery.length >= 2
+    enabled:
+      (deferredQuery.length === 0 || deferredQuery.length >= 2) &&
+      (deferredAuthor.trim().length === 0 || deferredAuthor.trim().length >= 2) &&
+      (deferredArtist.trim().length === 0 || deferredArtist.trim().length >= 2)
   });
   const pages = result.data?.pages ?? [];
   const manga = pages.flatMap((page) => page.data);

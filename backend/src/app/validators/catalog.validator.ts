@@ -15,6 +15,8 @@ export const mangaSearchQuerySchema = z.object({
   status: csv(),
   year: z.coerce.number().int().min(1900).max(new Date().getFullYear() + 1).optional(),
   demographic: csv(),
+  author: z.string().trim().max(120).optional(),
+  artist: z.string().trim().max(120).optional(),
   sort: sortSchema,
   genre: z.string().trim().optional(),
   genres: csv()

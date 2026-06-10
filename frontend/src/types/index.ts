@@ -15,11 +15,16 @@ export type MangaSummary = {
   year?: number;
   contentRating?: string;
   tags: string[];
+  authors?: string[];
+  artists?: string[];
   coverUrl?: string;
 };
 
 export type GenreSummary = {
+  id?: string;
   name: string;
+  group?: string;
+  aliases?: string[];
   count: number;
 };
 

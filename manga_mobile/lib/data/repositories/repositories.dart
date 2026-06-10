@@ -105,6 +105,8 @@ class CatalogRepository {
     List<String> contentRating = const ['safe', 'suggestive'],
     List<String> status = const [],
     int? year,
+    String? author,
+    String? artist,
     String sort = 'relevance',
   }) {
     return _api.get(
@@ -129,6 +131,8 @@ class CatalogRepository {
         'contentRating': contentRating.join(','),
         'status': status.join(','),
         'year': year?.toString(),
+        'author': author?.trim(),
+        'artist': artist?.trim(),
         'sort': sort,
       },
     );

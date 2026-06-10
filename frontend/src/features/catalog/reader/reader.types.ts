@@ -5,6 +5,6 @@ export type ReaderChapterNavItem = ChapterSummary & {
   isCurrent: boolean;
 };
 
-export type ReaderQuality = "data-saver";
+export type ReaderQuality = "data-saver" | "original";
 export type ReaderMode = "vertical" | "paged";
 export type ReaderFit = "width" | "contain";

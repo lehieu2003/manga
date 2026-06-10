@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../data/services/reader_settings_store.dart';
 import '../../../domain/models/models.dart';
 import '../../app_state.dart';
 import '../../core/theme.dart';
@@ -29,6 +30,8 @@ class _ReaderScreenState extends State<ReaderScreen> {
   int _pageIndex = 0;
   bool _paged = false;
   bool _contain = false;
+  bool _dataSaver = true;
+  ReaderPayload? _reader;
   Timer? _saveTimer;
 
   @override
@@ -63,11 +66,13 @@ class _ReaderScreenState extends State<ReaderScreen> {
   }
 
   Future<void> _load() async {
+    final settings = await _app.readerSettingsStore.readSettings();
+    _paged = settings.paged;
+    _contain = settings.contain;
+    _dataSaver = settings.dataSaver;
     final reader = await _app.catalogRepository.reader(widget.chapterId);
-    _pages = reader.dataSaverPageUrls
-        .map(_app.catalogRepository.assetUrl)
-        .where((url) => url.isNotEmpty)
-        .toList();
+    _reader = reader;
+    _applyReaderPages();
     if (widget.mangaId != null) {
       final results = await Future.wait([
         _app.catalogRepository.chapters(widget.mangaId!),
@@ -87,6 +92,38 @@ class _ReaderScreenState extends State<ReaderScreen> {
       }
     }
     if (mounted) _preloadAround(_pageIndex);
+  }
+
+  void _applyReaderPages() {
+    final reader = _reader;
+    if (reader == null) return;
+    final urls = _dataSaver ? reader.dataSaverPageUrls : reader.pageUrls;
+    _pages = urls
+        .map(_app.catalogRepository.assetUrl)
+        .where((url) => url.isNotEmpty)
+        .toList();
+    _pageIndex = _pageIndex.clamp(0, (_pages.length - 1).clamp(0, 9999));
+  }
+
+  void _toggleQuality() {
+    setState(() {
+      _dataSaver = !_dataSaver;
+      _applyReaderPages();
+    });
+    _saveReaderSettings();
+    _preloadAround(_pageIndex);
+  }
+
+  void _saveReaderSettings() {
+    unawaited(
+      _app.readerSettingsStore.saveSettings(
+        ReaderSettings(
+          paged: _paged,
+          contain: _contain,
+          dataSaver: _dataSaver,
+        ),
+      ),
+    );
   }
 
   void _setPage(int index) {
@@ -133,16 +170,25 @@ class _ReaderScreenState extends State<ReaderScreen> {
           ),
           actions: [
             IconButton(
+              tooltip: _dataSaver ? 'Use original quality' : 'Use data saver',
+              onPressed: _toggleQuality,
+              icon: Icon(_dataSaver ? Icons.hd_outlined : Icons.data_saver_on),
+            ),
+            IconButton(
               tooltip: _paged ? 'Vertical mode' : 'Paged mode',
               onPressed: () {
                 setState(() => _paged = !_paged);
+                _saveReaderSettings();
                 _preloadAround(_pageIndex);
               },
               icon: Icon(_paged ? Icons.view_stream : Icons.view_carousel),
             ),
             IconButton(
               tooltip: 'Image fit',
-              onPressed: () => setState(() => _contain = !_contain),
+              onPressed: () {
+                setState(() => _contain = !_contain);
+                _saveReaderSettings();
+              },
               icon: const Icon(Icons.fit_screen),
             ),
           ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:manga_mobile/data/repositories/repositories.dart';
 import 'package:manga_mobile/data/services/api_client.dart';
+import 'package:manga_mobile/data/services/reader_settings_store.dart';
 import 'package:manga_mobile/data/services/theme_store.dart';
 import 'package:manga_mobile/domain/models/models.dart';
 import 'package:manga_mobile/main.dart';
@@ -60,14 +61,31 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Genre: Action'), findsOneWidget);
-    await tester.drag(find.byType(ListView), const Offset(0, -520));
+    await tester.enterText(find.widgetWithText(TextField, 'Author'), 'ONE');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Author: ONE'),
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Author: ONE'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Include: Action'),
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Include: Action'), findsOneWidget);
 
-    await tester.tap(find.text('Clear filters'));
+    final clearFilters = find.widgetWithText(ActionChip, 'Clear filters');
+    await tester.ensureVisible(clearFilters);
+    await tester.pumpAndSettle();
+    await tester.tap(clearFilters);
     await tester.pumpAndSettle();
 
     expect(find.text('Include: Action'), findsNothing);
+    expect(find.text('Author: ONE'), findsNothing);
   });
 
   testWidgets('library shows summaries, clears filters, and updates actions', (
@@ -125,6 +143,7 @@ void main() {
     'reader exposes mode controls and missing manga context message',
     (tester) async {
       final app = _buildApp(signedIn: true);
+      final settingsStore = app.readerSettingsStore as FakeReaderSettingsStore;
       await tester.pumpWidget(
         AppScope(
           appState: app,
@@ -140,10 +159,16 @@ void main() {
         find.text('Chapter navigation needs manga context.'),
         findsOneWidget,
       );
+      expect(find.byTooltip('Use original quality'), findsOneWidget);
+      await tester.tap(find.byTooltip('Use original quality'));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Use data saver'), findsOneWidget);
+      expect(settingsStore.saved.dataSaver, isFalse);
 
       await tester.tap(find.byTooltip('Paged mode'));
       await tester.pumpAndSettle();
       expect(find.byTooltip('Vertical mode'), findsOneWidget);
+      expect(settingsStore.saved.paged, isTrue);
     },
   );
 
@@ -184,6 +209,7 @@ TestAppState _buildApp({bool signedIn = false}) {
     authRepository: FakeAuthRepository(api, user),
     catalogRepository: FakeCatalogRepository(api),
     libraryRepository: FakeLibraryRepository(api),
+    readerSettingsStore: FakeReaderSettingsStore(),
     themeStore: FakeThemeStore(),
   )..isBooting = false;
   if (signedIn) app.user = user;
@@ -202,6 +228,7 @@ class TestAppState extends AppState {
     required super.authRepository,
     required super.catalogRepository,
     required super.libraryRepository,
+    super.readerSettingsStore,
     super.themeStore,
   });
 }
@@ -215,6 +242,18 @@ class FakeThemeStore extends ThemeStore {
   @override
   Future<void> saveThemeMode(ThemeMode mode) async {
     saved = mode;
+  }
+}
+
+class FakeReaderSettingsStore extends ReaderSettingsStore {
+  ReaderSettings saved = const ReaderSettings();
+
+  @override
+  Future<ReaderSettings> readSettings() async => saved;
+
+  @override
+  Future<void> saveSettings(ReaderSettings settings) async {
+    saved = settings;
   }
 }
 
@@ -256,6 +295,8 @@ class FakeCatalogRepository extends CatalogRepository {
     List<String> contentRating = const ['safe', 'suggestive'],
     List<String> status = const [],
     int? year,
+    String? author,
+    String? artist,
     String sort = 'relevance',
   }) async {
     final data = _manga
@@ -269,6 +310,22 @@ class FakeCatalogRepository extends CatalogRepository {
           (manga) =>
               includedTags.isEmpty ||
               includedTags.every((tag) => manga.tags.contains(tag)),
+        )
+        .where(
+          (manga) =>
+              author == null ||
+              author.isEmpty ||
+              manga.authors.any(
+                (item) => item.toLowerCase().contains(author.toLowerCase()),
+              ),
+        )
+        .where(
+          (manga) =>
+              artist == null ||
+              artist.isEmpty ||
+              manga.artists.any(
+                (item) => item.toLowerCase().contains(artist.toLowerCase()),
+              ),
         )
         .toList();
     return Paginated(
@@ -312,7 +369,7 @@ class FakeCatalogRepository extends CatalogRepository {
 
   @override
   Future<ReaderPayload> reader(String chapterId) async => const ReaderPayload(
-    pageUrls: ['/page-1.jpg', '/page-2.jpg'],
+    pageUrls: ['/page-1-original.jpg', '/page-2-original.jpg'],
     dataSaverPageUrls: ['/page-1.jpg', '/page-2.jpg'],
   );
 }
@@ -394,6 +451,8 @@ final _manga = [
     altTitles: const ['Alpha Alt'],
     description: 'A test manga.',
     tags: const ['Action', 'Drama'],
+    authors: const ['ONE'],
+    artists: const ['Yusuke Murata'],
     status: 'ongoing',
     year: 2026,
     contentRating: 'safe',
@@ -404,6 +463,8 @@ final _manga = [
     altTitles: const [],
     description: 'Another test manga.',
     tags: const ['Drama'],
+    authors: const ['Kanehito Yamada'],
+    artists: const ['Tsukasa Abe'],
     status: 'completed',
     year: 2025,
     contentRating: 'safe',

@@ -35,7 +35,7 @@ export function useReaderData({ chapterId, mangaId, user, quality }: { chapterId
     }
   });
   const pages = useMemo(() => {
-    const urls = quality === "data-saver" ? reader.data?.dataSaverPageUrls : reader.data?.dataSaverPageUrls;
+    const urls = quality === "data-saver" ? reader.data?.dataSaverPageUrls : reader.data?.pageUrls;
     return urls?.map(assetUrl).filter((page): page is string => Boolean(page)) ?? [];
   }, [quality, reader.data]);
   const chapterItems = useMemo(() => chapters.data?.pages.flatMap((page) => page.data) ?? [], [chapters.data]);

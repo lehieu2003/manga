@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "@/api";
 import { ReaderPage } from "@/features/catalog/pages/ReaderPage";
+import { READER_SETTINGS_STORAGE_KEY } from "@/features/catalog/reader/readerSettings";
 import type { ChapterSummary } from "@/types";
 
 const chapters: ChapterSummary[] = [
@@ -85,6 +86,7 @@ vi.mock("@/api", async () => {
 describe("ReaderPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     MockIntersectionObserver.instances = [];
     vi.stubGlobal("IntersectionObserver", MockIntersectionObserver);
   });
@@ -132,6 +134,38 @@ describe("ReaderPage", () => {
     expect(screen.getByRole("combobox", { name: "Select chapter" })).toBeDisabled();
     expect(screen.getByRole("option", { name: "Chapter navigation unavailable" })).toBeInTheDocument();
     expect(api.getChapters).not.toHaveBeenCalled();
+  });
+
+  it("toggles between data saver and original page URLs", async () => {
+    const user = userEvent.setup();
+    renderReader("/read/chapter-2?mangaId=manga-1");
+
+    const firstPage = await screen.findByAltText("Page 1");
+    expect(firstPage).toHaveAttribute("src", expect.stringContaining("/data-saver/chapter-2-1-saver.jpg"));
+
+    await user.click(screen.getByRole("button", { name: "Toggle reader quality" }));
+
+    expect(await screen.findByAltText("Page 1")).toHaveAttribute("src", expect.stringContaining("/data/chapter-2-1.jpg"));
+    expect(screen.getByRole("button", { name: "Toggle reader quality" })).toHaveTextContent("Original");
+  });
+
+  it("loads and persists device reader settings", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(READER_SETTINGS_STORAGE_KEY, JSON.stringify({ mode: "paged", fit: "contain", quality: "original" }));
+    renderReader("/read/chapter-2?mangaId=manga-1");
+
+    expect(await screen.findByAltText("Page 1")).toHaveAttribute("src", expect.stringContaining("/data/chapter-2-1.jpg"));
+    expect(screen.getByRole("button", { name: "Toggle reader quality" })).toHaveTextContent("Original");
+    expect(screen.getAllByAltText(/Page /)).toHaveLength(1);
+
+    await user.click(screen.getByRole("button", { name: "Vertical mode" }));
+    await waitFor(() => {
+      expect(JSON.parse(localStorage.getItem(READER_SETTINGS_STORAGE_KEY) ?? "{}")).toMatchObject({
+        mode: "vertical",
+        fit: "contain",
+        quality: "original"
+      });
+    });
   });
 
   it("saves vertical progress from the observed viewport page", async () => {

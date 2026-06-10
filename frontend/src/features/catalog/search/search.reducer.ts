@@ -22,6 +22,10 @@ export function discoveryReducer(state: DiscoveryState, action: DiscoveryAction)
       return { ...state, status: toggleListValue(state.status, action.value) };
     case "yearChanged":
       return { ...state, year: action.value };
+    case "authorChanged":
+      return { ...state, author: action.value };
+    case "artistChanged":
+      return { ...state, artist: action.value };
     case "sortChanged":
       return { ...state, sort: action.value };
     case "cleared":
@@ -39,6 +43,8 @@ export function createDiscoveryState(routeGenre: string, defaultSort: MangaDisco
     contentRating: ["safe", "suggestive"],
     status: [],
     year: "",
+    author: "",
+    artist: "",
     sort: defaultSort
   };
 }

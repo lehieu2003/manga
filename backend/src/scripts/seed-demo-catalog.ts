@@ -13,6 +13,8 @@ const manga: MangaSummary[] = [
     year: 1989,
     contentRating: "suggestive",
     tags: ["Action", "Adventure", "Drama", "Fantasy"],
+    authors: ["Kentaro Miura"],
+    artists: ["Kentaro Miura"],
     coverUrl: "https://uploads.mangadex.org/covers/391b0423-d847-456f-aff0-8b0cfc03066b/9dca1dc9-9e24-4f0e-bdf4-acdf2160d010.512.jpg"
   },
   {
@@ -24,6 +26,8 @@ const manga: MangaSummary[] = [
     year: 2012,
     contentRating: "safe",
     tags: ["Action", "Comedy", "Superhero"],
+    authors: ["ONE"],
+    artists: ["Yusuke Murata"],
     coverUrl: "https://uploads.mangadex.org/covers/a96676e5-8ae2-425e-b549-7f15dd34a6d8/8cb80e56-8d9d-4f70-9d3a-0a4cc6b5379f.512.jpg"
   },
   {
@@ -35,6 +39,8 @@ const manga: MangaSummary[] = [
     year: 2020,
     contentRating: "safe",
     tags: ["Adventure", "Drama", "Fantasy", "Slice of Life"],
+    authors: ["Kanehito Yamada"],
+    artists: ["Tsukasa Abe"],
     coverUrl: "https://uploads.mangadex.org/covers/32ee02ab-c8f5-4b2f-b4f4-4f8b903f720a/5b8f4f4b-9788-4f89-b3a9-a30e8f2e5c9c.512.jpg"
   }
 ];

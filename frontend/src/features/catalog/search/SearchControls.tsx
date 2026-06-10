@@ -28,6 +28,7 @@ export function SearchControls(props: SearchControlsProps) {
     <section className="surface rounded-lg p-5">
       <DiscoveryHeader preset={preset} routeGenre={routeGenre} />
       <SearchSortRow preset={preset} query={state.query} sort={state.sort} hasFilters={hasFilters} dispatch={dispatch} routeGenre={routeGenre} defaultSort={defaultSort} />
+      <CreatorFilters author={state.author} artist={state.artist} dispatch={dispatch} />
       <TagFilters genres={genres} includedTags={state.includedTags} excludedTags={state.excludedTags} dispatch={dispatch} />
       <AttributeFilters contentRating={state.contentRating} status={state.status} year={state.year} dispatch={dispatch} />
       <ActiveDiscoveryChips state={state} validYear={validYear} defaultSort={defaultSort} dispatch={dispatch} />
@@ -98,6 +99,31 @@ function SearchSortRow({
           Clear
         </button>
       ) : null}
+    </div>
+  );
+}
+
+function CreatorFilters({ author, artist, dispatch }: { author: string; artist: string; dispatch: React.Dispatch<DiscoveryAction> }) {
+  return (
+    <div className="mt-4 grid gap-3 md:grid-cols-2">
+      <label>
+        <span className="mb-2 block text-sm font-bold text-[var(--muted)]">Author</span>
+        <input
+          className="control min-h-11 w-full rounded-lg px-3"
+          value={author}
+          onChange={(event) => dispatch({ type: "authorChanged", value: event.target.value })}
+          placeholder="ONE, Kentaro Miura..."
+        />
+      </label>
+      <label>
+        <span className="mb-2 block text-sm font-bold text-[var(--muted)]">Artist</span>
+        <input
+          className="control min-h-11 w-full rounded-lg px-3"
+          value={artist}
+          onChange={(event) => dispatch({ type: "artistChanged", value: event.target.value })}
+          placeholder="Yusuke Murata, Tsukasa Abe..."
+        />
+      </label>
     </div>
   );
 }
@@ -176,6 +202,16 @@ function ActiveDiscoveryChips({ state, validYear, defaultSort, dispatch }: { sta
         </button>
       ))}
       {validYear ? <span className="chapter-legend">Year: {validYear}</span> : null}
+      {state.author.trim() ? (
+        <button className="chapter-legend" onClick={() => dispatch({ type: "authorChanged", value: "" })} type="button">
+          Author: {state.author.trim()}
+        </button>
+      ) : null}
+      {state.artist.trim() ? (
+        <button className="chapter-legend" onClick={() => dispatch({ type: "artistChanged", value: "" })} type="button">
+          Artist: {state.artist.trim()}
+        </button>
+      ) : null}
       {state.sort !== defaultSort ? <span className="chapter-legend">Custom sort</span> : null}
     </div>
   );

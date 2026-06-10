@@ -33,7 +33,21 @@ export type MangaSummary = {
   year?: number;
   contentRating?: string;
   tags: string[];
+  authors: string[];
+  artists: string[];
   coverUrl?: string;
+};
+
+export type MangaCreatorSummary = {
+  id: string;
+  name: string;
+};
+
+export type MangaTagSummary = {
+  id: string;
+  name: string;
+  group: string;
+  aliases: string[];
 };
 
 export type ChapterSummary = {
