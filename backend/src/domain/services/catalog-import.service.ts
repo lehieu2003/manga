@@ -1,4 +1,5 @@
 import { getChapters, getManga } from "../../infrastructure/mangadex/mangadex.client.js";
+import { domainEvents } from "../events/index.js";
 import { saveChapterBatch, saveManga } from "./catalog-cache.service.js";
 
 const DEFAULT_LANGUAGES = ["vi", "en"];
@@ -15,6 +16,7 @@ export type CatalogImportSummary = {
 export async function importMangaDetail(mangaId: string): Promise<CatalogImportSummary> {
   const manga = await getManga(mangaId);
   await saveManga(manga);
+  await domainEvents.publish({ type: "catalog.manga_cached", mangaId });
 
   return {
     mangaId,
@@ -35,6 +37,13 @@ export async function importMangaChapters(input: { mangaId: string; limit?: numb
   });
   const readableChapters = result.data.filter((chapter) => chapter.pages > 0);
   await saveChapterBatch(input.mangaId, readableChapters);
+  await domainEvents.publish({
+    type: "catalog.chapters_imported",
+    mangaId: input.mangaId,
+    chaptersFetched: result.data.length,
+    readableChaptersSaved: readableChapters.length,
+    zeroPageChaptersSkipped: result.data.length - readableChapters.length
+  });
 
   return {
     mangaId: input.mangaId,

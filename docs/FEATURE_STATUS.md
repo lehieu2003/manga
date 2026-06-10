@@ -61,9 +61,9 @@ Flutter mobile app đã có cấu trúc nền:
 - Domain models.
 - App state restore session.
 - GoRouter routes cho home, search, library, settings, auth, manga detail và reader.
-- Theme và core widgets riêng.
+- Theme mode và core widgets riêng.
 
-Mobile hiện là MVP client của backend, chưa có cùng mức test coverage và polish như web.
+Mobile hiện là reader client của backend với parity cơ bản cho home, discovery, library, detail, reader, settings và theme switching. Test coverage đã có widget coverage cho các flow chính nhưng vẫn chưa có integration/driver coverage và CI chính thức như web/backend.
 
 ## Tính Năng Đã Có
 
@@ -105,11 +105,11 @@ Mobile hiện là MVP client của backend, chưa có cùng mức test coverage 
 
 ### Theme Và Visual Direction
 
-- Web UI dùng theme Wibu Manga Cafe ấm, tối, reader-first.
-- Palette chính là nâu than, giấy ấm, amber accent và sakura accent nhỏ.
+- Web UI dùng theme Wibu Manga Cafe reader-first với dark/light mode.
+- Palette chính là nâu than hoặc giấy ấm, amber accent và sakura accent nhỏ.
 - Header, manga cards, chapter rows, reader toolbar, genre chips và filter labels đã dùng visual language manga shelf/cafe.
-- Mobile có dark Manga Cafe theme.
-- Theme chưa có theme switcher.
+- Mobile có Manga Cafe dark/light theme.
+- Web và mobile đều có theme switcher; reader vẫn ưu tiên nền tối để đọc ảnh.
 
 ### Cover Và Page Image Proxy
 
@@ -203,7 +203,7 @@ Mobile hiện là MVP client của backend, chưa có cùng mức test coverage 
 - Backend tests hiện có cho auth password hashing, cache key, reader URL mapping, genre count, health readiness, auth account routes và progress manga endpoint.
 - Frontend tests hiện có cho auth form/state, library page, genre chips, chapter list, home personalization, manga detail continue, reader page, search page và settings page.
 - Automated web tests hiện nằm trong unit test folder.
-- Mobile hiện chỉ có Flutter scaffold/widget test mặc định, chưa có coverage tương đương web.
+- Mobile hiện có Flutter widget tests cho theme toggle và các flow chính như search, library, detail, reader và settings; vẫn thiếu integration/driver flow tests và CI chính thức.
 
 ## Giới Hạn Hiện Tại
 

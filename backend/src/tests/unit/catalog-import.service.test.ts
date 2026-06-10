@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const getChapters = vi.fn();
 const getManga = vi.fn();
+const publish = vi.fn();
 const saveChapterBatch = vi.fn();
 const saveManga = vi.fn();
 
@@ -13,6 +14,10 @@ vi.mock("../../infrastructure/mangadex/mangadex.client.js", () => ({
 vi.mock("../../domain/services/catalog-cache.service.js", () => ({
   saveChapterBatch,
   saveManga
+}));
+
+vi.mock("../../domain/events/index.js", () => ({
+  domainEvents: { publish }
 }));
 
 describe("catalog import service", () => {
@@ -33,6 +38,7 @@ describe("catalog import service", () => {
     const result = await importMangaDetail("manga-1");
 
     expect(saveManga).toHaveBeenCalledWith(expect.objectContaining({ id: "manga-1" }));
+    expect(publish).toHaveBeenCalledWith({ type: "catalog.manga_cached", mangaId: "manga-1" });
     expect(result).toEqual({
       mangaId: "manga-1",
       mangaSaved: true,
@@ -64,6 +70,13 @@ describe("catalog import service", () => {
       translatedLanguage: ["en"]
     });
     expect(saveChapterBatch).toHaveBeenCalledWith("manga-1", [expect.objectContaining({ id: "chapter-1", pages: 24 })]);
+    expect(publish).toHaveBeenCalledWith({
+      type: "catalog.chapters_imported",
+      mangaId: "manga-1",
+      chaptersFetched: 2,
+      readableChaptersSaved: 1,
+      zeroPageChaptersSkipped: 1
+    });
     expect(result).toEqual({
       mangaId: "manga-1",
       mangaSaved: false,
