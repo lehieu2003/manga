@@ -5,8 +5,17 @@ import '../../../domain/models/models.dart';
 import '../../app_state.dart';
 import '../../core/widgets.dart';
 
+enum DiscoveryPreset { search, popular, latest }
+
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({super.key});
+  const SearchScreen({
+    super.key,
+    this.preset = DiscoveryPreset.search,
+    this.routeGenre,
+  });
+
+  final DiscoveryPreset preset;
+  final String? routeGenre;
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -22,6 +31,7 @@ class _SearchScreenState extends State<SearchScreen> {
   final List<String> _ratings = ['safe', 'suggestive'];
   final List<String> _statuses = [];
   String _sort = 'relevance';
+  String? _source;
   int _offset = 0;
   int _total = 0;
   bool _loading = true;
@@ -32,8 +42,7 @@ class _SearchScreenState extends State<SearchScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final tag = GoRouterState.of(context).uri.queryParameters['tag'];
-      if (tag != null) _included = [tag];
+      _applyInitialDiscoveryState();
       _load(reset: true);
       _loadGenres();
     });
@@ -46,9 +55,30 @@ class _SearchScreenState extends State<SearchScreen> {
     super.dispose();
   }
 
+  void _applyInitialDiscoveryState() {
+    final uri = GoRouterState.of(context).uri;
+    final queryTag = uri.queryParameters['tag'];
+    final routeGenre = widget.routeGenre == null
+        ? null
+        : Uri.decodeComponent(widget.routeGenre!);
+    _included = {
+      if (routeGenre != null && routeGenre.isNotEmpty) routeGenre,
+      if (queryTag != null && queryTag.isNotEmpty) queryTag,
+    }.toList();
+    _sort = switch (widget.preset) {
+      DiscoveryPreset.popular => 'followed',
+      DiscoveryPreset.latest => 'latest',
+      DiscoveryPreset.search => 'relevance',
+    };
+  }
+
   Future<void> _loadGenres() async {
-    final genres = await AppScope.of(context).catalogRepository.genres();
-    if (mounted) setState(() => _genres = genres);
+    try {
+      final genres = await AppScope.of(context).catalogRepository.genres();
+      if (mounted) setState(() => _genres = genres);
+    } catch (_) {
+      // Search still works without genre suggestions.
+    }
   }
 
   Future<void> _load({required bool reset}) async {
@@ -77,6 +107,7 @@ class _SearchScreenState extends State<SearchScreen> {
         _items = reset ? page.data : [..._items, ...page.data];
         _offset = page.offset + page.limit;
         _total = page.total;
+        _source = page.source;
       });
     } catch (error) {
       setState(() => _error = error.toString());
@@ -93,11 +124,12 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
+    final hasFilters = _hasActiveFilters;
     return ListView(
       padding: const EdgeInsets.all(14),
       children: [
         Text(
-          'Search MangaDex',
+          _title,
           style: Theme.of(
             context,
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
@@ -224,12 +256,45 @@ class _SearchScreenState extends State<SearchScreen> {
             }).toList(),
           ),
         ],
+        if (hasFilters || _source != null) ...[
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (_source != null)
+                _SummaryChip(
+                  label: _source == 'cache' ? 'Cached results' : 'Live results',
+                ),
+              _SummaryChip(label: '${_items.length} of $_total shown'),
+              _SummaryChip(label: _sortLabel(_sort)),
+              if (_query.text.trim().isNotEmpty)
+                _SummaryChip(label: 'Search: ${_query.text.trim()}'),
+              for (final tag in _included) _SummaryChip(label: 'Include: $tag'),
+              for (final tag in _excluded) _SummaryChip(label: 'Exclude: $tag'),
+              for (final rating in _ratings) _SummaryChip(label: rating),
+              for (final status in _statuses) _SummaryChip(label: status),
+              if (_year.text.trim().isNotEmpty)
+                _SummaryChip(label: 'Year: ${_year.text.trim()}'),
+              if (hasFilters)
+                ActionChip(
+                  avatar: const Icon(Icons.clear, size: 16),
+                  label: const Text('Clear filters'),
+                  onPressed: _clearFilters,
+                ),
+            ],
+          ),
+        ],
         if (_loading)
           const AsyncPane(message: 'Searching...')
         else if (_error != null)
           AsyncPane(message: _error!, onRetry: () => _load(reset: true))
         else if (_items.isEmpty)
-          const AsyncPane(message: 'No manga found.')
+          AsyncPane(
+            message: hasFilters
+                ? 'No manga matches these filters.'
+                : 'No manga found. Try another title or genre.',
+          )
         else ...[
           SectionHeader(title: '${_items.length} of $_total results'),
           MangaGrid(
@@ -249,6 +314,51 @@ class _SearchScreenState extends State<SearchScreen> {
       ],
     );
   }
+
+  String get _title {
+    if (widget.routeGenre != null && widget.routeGenre!.isNotEmpty) {
+      return 'Genre: ${Uri.decodeComponent(widget.routeGenre!)}';
+    }
+    return switch (widget.preset) {
+      DiscoveryPreset.popular => 'Popular manga',
+      DiscoveryPreset.latest => 'Latest updates',
+      DiscoveryPreset.search => 'Search MangaDex',
+    };
+  }
+
+  bool get _hasActiveFilters {
+    return _query.text.trim().isNotEmpty ||
+        _included.isNotEmpty ||
+        _excluded.isNotEmpty ||
+        _statuses.isNotEmpty ||
+        _year.text.trim().isNotEmpty ||
+        _sort !=
+            switch (widget.preset) {
+              DiscoveryPreset.popular => 'followed',
+              DiscoveryPreset.latest => 'latest',
+              DiscoveryPreset.search => 'relevance',
+            } ||
+        !_sameStringSet(_ratings, const ['safe', 'suggestive']);
+  }
+
+  void _clearFilters() {
+    setState(() {
+      _query.clear();
+      _year.clear();
+      _included.clear();
+      _excluded.clear();
+      _statuses.clear();
+      _ratings
+        ..clear()
+        ..addAll(const ['safe', 'suggestive']);
+      _sort = switch (widget.preset) {
+        DiscoveryPreset.popular => 'followed',
+        DiscoveryPreset.latest => 'latest',
+        DiscoveryPreset.search => 'relevance',
+      };
+    });
+    _load(reset: true);
+  }
 }
 
 void _toggle(List<String> list, String value) {
@@ -256,5 +366,28 @@ void _toggle(List<String> list, String value) {
     list.remove(value);
   } else {
     list.add(value);
+  }
+}
+
+bool _sameStringSet(List<String> left, List<String> right) =>
+    left.length == right.length && left.toSet().containsAll(right);
+
+String _sortLabel(String sort) => switch (sort) {
+  'latest' => 'Latest',
+  'followed' => 'Popular',
+  'title' => 'Title A-Z',
+  'created' => 'Created newest',
+  'updated' => 'Updated newest',
+  _ => 'Relevance',
+};
+
+class _SummaryChip extends StatelessWidget {
+  const _SummaryChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Chip(visualDensity: VisualDensity.compact, label: Text(label));
   }
 }

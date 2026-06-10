@@ -25,6 +25,7 @@ class _MangaDetailScreenState extends State<MangaDetailScreen> {
   MangaProgressPayload? _progress;
   final List<ChapterSummary> _chapters = [];
   final List<String> _languages = ['vi', 'en'];
+  final Set<String> _selectedGroups = {};
   String _chapterSearch = '';
   String _sort = 'newest';
   int _chapterOffset = 0;
@@ -116,14 +117,47 @@ class _MangaDetailScreenState extends State<MangaDetailScreen> {
         isFavorite: true,
       );
       setState(() => _libraryItem = item);
+      if (mounted) _showSnack('Added to library.');
     } catch (error) {
       setState(() => _error = error.toString());
+      if (mounted) _showSnack(error.toString());
     }
   }
 
   Future<void> _remove() async {
-    await _app.libraryRepository.remove(widget.mangaId);
-    setState(() => _libraryItem = null);
+    try {
+      await _app.libraryRepository.remove(widget.mangaId);
+      setState(() => _libraryItem = null);
+      if (mounted) _showSnack('Removed from library.');
+    } catch (error) {
+      if (mounted) _showSnack(error.toString());
+    }
+  }
+
+  Future<void> _onChapterSearchChanged(String value) async {
+    setState(() => _chapterSearch = value);
+    final needle = value.trim();
+    if (needle.isEmpty || _visibleChapters().isNotEmpty) return;
+    if (_chapterOffset >= _chapterTotal || _loadingMore) return;
+    await _loadMoreChapters();
+  }
+
+  void _clearChapterFilters() {
+    setState(() {
+      _chapterSearch = '';
+      _languages
+        ..clear()
+        ..addAll(const ['vi', 'en']);
+      _selectedGroups.clear();
+      _sort = 'newest';
+    });
+    _reloadChapters();
+  }
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -146,6 +180,19 @@ class _MangaDetailScreenState extends State<MangaDetailScreen> {
           final manga = _manga!;
           final cover = app.catalogRepository.assetUrl(manga.coverUrl);
           final visible = _visibleChapters();
+          final latestPublishAt = _chapters.isEmpty
+              ? null
+              : _chapters
+                    .map((chapter) => chapter.publishAt)
+                    .reduce((a, b) => a.isAfter(b) ? a : b);
+          final groups =
+              _chapters
+                  .map((chapter) => chapter.scanlationGroup)
+                  .whereType<String>()
+                  .where((group) => group.trim().isNotEmpty)
+                  .toSet()
+                  .toList()
+                ..sort();
           final continueChapter =
               visible
                   .where(
@@ -275,6 +322,29 @@ class _MangaDetailScreenState extends State<MangaDetailScreen> {
               SectionHeader(title: 'Chapters ($_chapterTotal)'),
               Wrap(
                 spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _InfoChip(label: '${_languages.length} languages'),
+                  _InfoChip(label: '${visible.length} visible'),
+                  if (latestPublishAt != null)
+                    _InfoChip(label: 'Latest ${_formatDate(latestPublishAt)}'),
+                  const _InfoChip(label: 'Current'),
+                  const _InfoChip(label: 'Read'),
+                  const _InfoChip(label: 'New'),
+                  if (_chapterSearch.isNotEmpty ||
+                      _selectedGroups.isNotEmpty ||
+                      _languages.length != 2 ||
+                      _sort != 'newest')
+                    ActionChip(
+                      avatar: const Icon(Icons.clear, size: 16),
+                      label: const Text('Clear filters'),
+                      onPressed: _clearChapterFilters,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
                 children: ['vi', 'en'].map((language) {
                   return FilterChip(
                     label: Text(language.toUpperCase()),
@@ -301,8 +371,7 @@ class _MangaDetailScreenState extends State<MangaDetailScreen> {
                         labelText: 'Search chapter',
                         prefixIcon: Icon(Icons.search),
                       ),
-                      onChanged: (value) =>
-                          setState(() => _chapterSearch = value),
+                      onChanged: _onChapterSearchChanged,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -317,6 +386,28 @@ class _MangaDetailScreenState extends State<MangaDetailScreen> {
                   ),
                 ],
               ),
+              if (groups.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: groups.map((group) {
+                    return FilterChip(
+                      label: Text(group),
+                      selected: _selectedGroups.contains(group),
+                      onSelected: (_) {
+                        setState(() {
+                          if (_selectedGroups.contains(group)) {
+                            _selectedGroups.remove(group);
+                          } else {
+                            _selectedGroups.add(group);
+                          }
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+              ],
               const SizedBox(height: 10),
               ...visible.map(
                 (chapter) => _ChapterRow(
@@ -324,6 +415,9 @@ class _MangaDetailScreenState extends State<MangaDetailScreen> {
                   mangaId: widget.mangaId,
                   currentProgress: _progress?.progress,
                   chaptersProgress: _progress?.chaptersProgress ?? const [],
+                  isLatest:
+                      latestPublishAt != null &&
+                      chapter.publishAt.isAtSameMomentAs(latestPublishAt),
                 ),
               ),
               if (_chapterOffset < _chapterTotal)
@@ -343,12 +437,19 @@ class _MangaDetailScreenState extends State<MangaDetailScreen> {
 
   List<ChapterSummary> _visibleChapters() {
     final needle = _chapterSearch.trim().toLowerCase();
-    final filtered = _chapters.where((chapter) {
-      if (needle.isEmpty) return true;
-      return [chapter.chapter, chapter.title].whereType<String>().any(
-        (value) => value.toLowerCase().contains(needle),
-      );
-    }).toList();
+    final filtered = _chapters
+        .where((chapter) {
+          if (needle.isEmpty) return true;
+          return [chapter.chapter, chapter.title].whereType<String>().any(
+            (value) => value.toLowerCase().contains(needle),
+          );
+        })
+        .where((chapter) {
+          if (_selectedGroups.isEmpty) return true;
+          final group = chapter.scanlationGroup;
+          return group != null && _selectedGroups.contains(group);
+        })
+        .toList();
     filtered.sort((a, b) {
       final byNumber = _chapterValue(a).compareTo(_chapterValue(b));
       final byDate = a.publishAt.compareTo(b.publishAt);
@@ -365,12 +466,14 @@ class _ChapterRow extends StatelessWidget {
     required this.mangaId,
     required this.currentProgress,
     required this.chaptersProgress,
+    required this.isLatest,
   });
 
   final ChapterSummary chapter;
   final String mangaId;
   final ReadingProgress? currentProgress;
   final List<ReadingProgress> chaptersProgress;
+  final bool isLatest;
 
   @override
   Widget build(BuildContext context) {
@@ -392,16 +495,65 @@ class _ChapterRow extends StatelessWidget {
               : Icons.circle_outlined,
           color: MangaTheme.amber,
         ),
-        title: Text(
-          'Chapter ${chapter.chapter ?? '?'}',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Chapter ${chapter.chapter ?? '?'}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 8),
+            _TinyBadge(label: chapter.translatedLanguage.toUpperCase()),
+            if (isLatest) ...[
+              const SizedBox(width: 6),
+              const _TinyBadge(label: 'NEW'),
+            ],
+          ],
         ),
         subtitle: Text(
-          '[${chapter.translatedLanguage.toUpperCase()}] ${chapter.pages} pages${chapter.title == null ? '' : ' · ${chapter.title}'}',
+          '$state · ${chapter.pages} pages${chapter.title == null ? '' : ' · ${chapter.title}'}${chapter.scanlationGroup == null ? '' : ' · ${chapter.scanlationGroup}'}',
         ),
         trailing: const Icon(Icons.chevron_right),
         onTap: () => context.push('/read/${chapter.id}?mangaId=$mangaId'),
+      ),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Chip(visualDensity: VisualDensity.compact, label: Text(label));
+  }
+}
+
+class _TinyBadge extends StatelessWidget {
+  const _TinyBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(color: MangaTheme.amber.withValues(alpha: 0.5)),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        child: Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: MangaTheme.amber,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
       ),
     );
   }
@@ -412,3 +564,6 @@ double _chapterValue(ChapterSummary chapter) {
   if (parsed != null) return parsed;
   return chapter.publishAt.millisecondsSinceEpoch / 1000000000000;
 }
+
+String _formatDate(DateTime date) =>
+    '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';

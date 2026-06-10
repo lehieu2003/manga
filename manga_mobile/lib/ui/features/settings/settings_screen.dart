@@ -53,8 +53,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             : _avatarUrl.text.trim(),
       );
       setState(() => _message = 'Profile saved.');
+      if (mounted) _showSnack('Profile saved.');
     } catch (error) {
       setState(() => _error = error.toString());
+      if (mounted) _showSnack(error.toString());
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -63,6 +65,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _changePassword() async {
     if (_newPassword.text != _confirmPassword.text) {
       setState(() => _error = 'New password confirmation does not match.');
+      _showSnack('New password confirmation does not match.');
       return;
     }
     setState(() {
@@ -78,8 +81,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _newPassword.clear();
       _confirmPassword.clear();
       setState(() => _message = 'Password changed.');
+      if (mounted) _showSnack('Password changed.');
     } catch (error) {
       setState(() => _error = error.toString());
+      if (mounted) _showSnack(error.toString());
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -191,6 +196,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         OutlinedButton.icon(
           onPressed: () async {
             await app.logout();
+            if (context.mounted) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Logged out.')));
+            }
             if (context.mounted) context.go('/login');
           },
           icon: const Icon(Icons.logout),
@@ -198,5 +208,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ],
     );
+  }
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }

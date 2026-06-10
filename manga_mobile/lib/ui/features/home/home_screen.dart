@@ -146,18 +146,30 @@ class _HomeScreenState extends State<HomeScreen> {
                   return ActionChip(
                     label: Text('${genre.name} ${genre.count}'),
                     onPressed: () => context.go(
-                      '/search?tag=${Uri.encodeQueryComponent(genre.name)}',
+                      '/genres/${Uri.encodeComponent(genre.name)}',
                     ),
                   );
                 }).toList(),
               ),
-              SectionHeader(title: 'Popular picks'),
+              SectionHeader(
+                title: 'Popular picks',
+                action: TextButton(
+                  onPressed: () => context.go('/discover/popular'),
+                  child: const Text('View all'),
+                ),
+              ),
               MangaGrid(
                 items: data.popular,
                 assetUrl: app.catalogRepository.assetUrl,
                 onTap: (manga) => context.push('/manga/${manga.id}'),
               ),
-              SectionHeader(title: 'Latest starters'),
+              SectionHeader(
+                title: 'Latest starters',
+                action: TextButton(
+                  onPressed: () => context.go('/discover/latest'),
+                  child: const Text('Latest updates'),
+                ),
+              ),
               MangaGrid(
                 items: data.latest,
                 assetUrl: app.catalogRepository.assetUrl,
