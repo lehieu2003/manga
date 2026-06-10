@@ -31,6 +31,8 @@ class MangaSummary {
     required this.altTitles,
     required this.description,
     required this.tags,
+    this.authors = const [],
+    this.artists = const [],
     this.status,
     this.year,
     this.contentRating,
@@ -45,6 +47,8 @@ class MangaSummary {
   final int? year;
   final String? contentRating;
   final List<String> tags;
+  final List<String> authors;
+  final List<String> artists;
   final String? coverUrl;
 
   factory MangaSummary.fromJson(Map<String, dynamic> json) => MangaSummary(
@@ -58,18 +62,32 @@ class MangaSummary {
         : int.tryParse('${json['year']}'),
     contentRating: json['contentRating'] as String?,
     tags: _stringList(json['tags']),
+    authors: _stringList(json['authors']),
+    artists: _stringList(json['artists']),
     coverUrl: json['coverUrl'] as String?,
   );
 }
 
 class GenreSummary {
-  const GenreSummary({required this.name, required this.count});
+  const GenreSummary({
+    required this.name,
+    required this.count,
+    this.id,
+    this.group,
+    this.aliases = const [],
+  });
 
+  final String? id;
   final String name;
+  final String? group;
+  final List<String> aliases;
   final int count;
 
   factory GenreSummary.fromJson(Map<String, dynamic> json) => GenreSummary(
+    id: json['id'] as String?,
     name: json['name']?.toString() ?? '',
+    group: json['group'] as String?,
+    aliases: _stringList(json['aliases']),
     count: json['count'] is int
         ? json['count'] as int
         : int.tryParse('${json['count']}') ?? 0,

@@ -50,8 +50,16 @@ describe("SearchPage discovery", () => {
     await waitFor(() => expect(searchMangaMock).toHaveBeenLastCalledWith(expect.objectContaining({ includedTags: ["Action"] })));
     expect(screen.getByRole("button", { name: "Include: Action" })).toBeInTheDocument();
 
+    await user.type(screen.getByLabelText("Author"), "ONE");
+    await waitFor(() => expect(searchMangaMock).toHaveBeenLastCalledWith(expect.objectContaining({ author: "ONE" })));
+    expect(screen.getByRole("button", { name: "Author: ONE" })).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Artist"), "Murata");
+    await waitFor(() => expect(searchMangaMock).toHaveBeenLastCalledWith(expect.objectContaining({ artist: "Murata" })));
+    expect(screen.getByRole("button", { name: "Artist: Murata" })).toBeInTheDocument();
+
     await user.click(screen.getByRole("button", { name: "Clear" }));
-    await waitFor(() => expect(searchMangaMock).toHaveBeenLastCalledWith(expect.objectContaining({ includedTags: [] })));
+    await waitFor(() => expect(searchMangaMock).toHaveBeenLastCalledWith(expect.objectContaining({ includedTags: [], author: "", artist: "" })));
   });
 
   it("keeps genre routes as an active discovery tag and shows cache state", async () => {

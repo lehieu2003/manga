@@ -10,6 +10,8 @@ export type DiscoveryState = {
   contentRating: ContentRating[];
   status: MangaStatus[];
   year: string;
+  author: string;
+  artist: string;
   sort: MangaDiscoverySort;
 };
 
@@ -20,5 +22,7 @@ export type DiscoveryAction =
   | { type: "contentRatingToggled"; value: ContentRating }
   | { type: "statusToggled"; value: MangaStatus }
   | { type: "yearChanged"; value: string }
+  | { type: "authorChanged"; value: string }
+  | { type: "artistChanged"; value: string }
   | { type: "sortChanged"; value: MangaDiscoverySort }
   | { type: "cleared"; routeGenre: string; defaultSort: MangaDiscoverySort };

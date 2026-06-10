@@ -14,6 +14,8 @@ export const catalogApi = {
     status?: string[];
     year?: number;
     demographic?: string[];
+    author?: string;
+    artist?: string;
     sort?: "relevance" | "latest" | "followed" | "title" | "created" | "updated";
   }) {
     const query = new URLSearchParams();
@@ -28,6 +30,8 @@ export const catalogApi = {
     if (params.status?.length) query.set("status", params.status.join(","));
     if (params.year) query.set("year", String(params.year));
     if (params.demographic?.length) query.set("demographic", params.demographic.join(","));
+    if (params.author?.trim()) query.set("author", params.author.trim());
+    if (params.artist?.trim()) query.set("artist", params.artist.trim());
     if (params.sort) query.set("sort", params.sort);
     return request<Paginated<MangaSummary>>(`/manga/search?${query}`);
   },

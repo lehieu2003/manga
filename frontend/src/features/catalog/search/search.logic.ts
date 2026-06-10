@@ -32,6 +32,8 @@ export function hasActiveDiscoveryFilters(state: DiscoveryState, defaultSort: Ma
     Boolean(validYear) ||
     state.contentRating.length !== 2 ||
     state.sort !== defaultSort ||
-    state.query.trim().length > 0
+    state.query.trim().length > 0 ||
+    state.author.trim().length > 0 ||
+    state.artist.trim().length > 0
   );
 }

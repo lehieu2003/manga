@@ -24,6 +24,8 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final _query = TextEditingController();
   final _year = TextEditingController();
+  final _author = TextEditingController();
+  final _artist = TextEditingController();
   List<GenreSummary> _genres = [];
   List<MangaSummary> _items = [];
   List<String> _included = [];
@@ -52,6 +54,8 @@ class _SearchScreenState extends State<SearchScreen> {
   void dispose() {
     _query.dispose();
     _year.dispose();
+    _author.dispose();
+    _artist.dispose();
     super.dispose();
   }
 
@@ -101,6 +105,8 @@ class _SearchScreenState extends State<SearchScreen> {
         contentRating: _ratings,
         status: _statuses,
         year: parsedYear,
+        author: _author.text.trim().isEmpty ? null : _author.text.trim(),
+        artist: _artist.text.trim().isEmpty ? null : _artist.text.trim(),
         sort: _sort,
       );
       setState(() {
@@ -146,6 +152,34 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           ),
           onSubmitted: (_) => _load(reset: true),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _author,
+                decoration: const InputDecoration(
+                  labelText: 'Author',
+                  prefixIcon: Icon(Icons.person_search_outlined),
+                ),
+                onChanged: (_) => setState(() {}),
+                onSubmitted: (_) => _load(reset: true),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: TextField(
+                controller: _artist,
+                decoration: const InputDecoration(
+                  labelText: 'Artist',
+                  prefixIcon: Icon(Icons.brush_outlined),
+                ),
+                onChanged: (_) => setState(() {}),
+                onSubmitted: (_) => _load(reset: true),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 10),
         Row(
@@ -270,6 +304,10 @@ class _SearchScreenState extends State<SearchScreen> {
               _SummaryChip(label: _sortLabel(_sort)),
               if (_query.text.trim().isNotEmpty)
                 _SummaryChip(label: 'Search: ${_query.text.trim()}'),
+              if (_author.text.trim().isNotEmpty)
+                _SummaryChip(label: 'Author: ${_author.text.trim()}'),
+              if (_artist.text.trim().isNotEmpty)
+                _SummaryChip(label: 'Artist: ${_artist.text.trim()}'),
               for (final tag in _included) _SummaryChip(label: 'Include: $tag'),
               for (final tag in _excluded) _SummaryChip(label: 'Exclude: $tag'),
               for (final rating in _ratings) _SummaryChip(label: rating),
@@ -328,6 +366,8 @@ class _SearchScreenState extends State<SearchScreen> {
 
   bool get _hasActiveFilters {
     return _query.text.trim().isNotEmpty ||
+        _author.text.trim().isNotEmpty ||
+        _artist.text.trim().isNotEmpty ||
         _included.isNotEmpty ||
         _excluded.isNotEmpty ||
         _statuses.isNotEmpty ||
@@ -345,6 +385,8 @@ class _SearchScreenState extends State<SearchScreen> {
     setState(() {
       _query.clear();
       _year.clear();
+      _author.clear();
+      _artist.clear();
       _included.clear();
       _excluded.clear();
       _statuses.clear();
