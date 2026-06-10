@@ -43,6 +43,8 @@ export async function searchCachedManga(input: {
   offset: number;
   genres?: string[];
   excludedGenres?: string[];
+  authors?: string[];
+  artists?: string[];
   status?: string[];
   contentRating?: string[];
   year?: number;
@@ -62,6 +64,12 @@ export async function searchCachedManga(input: {
   }
   if (input.excludedGenres?.length) {
     filters.push({ NOT: { tags: { hasSome: input.excludedGenres } } });
+  }
+  if (input.authors?.length) {
+    filters.push({ authors: { hasSome: input.authors } });
+  }
+  if (input.artists?.length) {
+    filters.push({ artists: { hasSome: input.artists } });
   }
   if (input.status?.length) {
     filters.push({ status: { in: input.status } });
@@ -158,6 +166,8 @@ function toCachedMangaData(manga: MangaSummary) {
     year: manga.year,
     contentRating: manga.contentRating,
     tags: manga.tags,
+    authors: manga.authors,
+    artists: manga.artists,
     coverUrl: normalizeCoverProxyUrl(manga.coverUrl),
     fetchedAt: new Date()
   };
@@ -187,6 +197,8 @@ function fromCachedManga(manga: {
   year: number | null;
   contentRating: string | null;
   tags: string[];
+  authors?: string[];
+  artists?: string[];
   coverUrl: string | null;
 }): MangaSummary {
   return {
@@ -198,6 +210,8 @@ function fromCachedManga(manga: {
     year: manga.year ?? undefined,
     contentRating: manga.contentRating ?? undefined,
     tags: manga.tags,
+    authors: manga.authors ?? [],
+    artists: manga.artists ?? [],
     coverUrl: normalizeCoverProxyUrl(manga.coverUrl)
   };
 }

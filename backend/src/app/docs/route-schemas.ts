@@ -71,6 +71,8 @@ const mangaSummary = {
     year: { type: "integer" },
     contentRating: { type: "string" },
     tags: { type: "array", items: { type: "string" } },
+    authors: { type: "array", items: { type: "string" } },
+    artists: { type: "array", items: { type: "string" } },
     coverUrl: { type: "string" }
   },
   example: {
@@ -82,6 +84,8 @@ const mangaSummary = {
     year: 2024,
     contentRating: "safe",
     tags: ["Romance", "Slice of Life"],
+    authors: ["Manga Author"],
+    artists: ["Manga Artist"],
     coverUrl: "/api/covers/32d76d19-8a05-4db0-9fc2-e0b0648fe9d0/cover.jpg"
   }
 } as const;
@@ -426,6 +430,8 @@ export const catalogRouteSchemas = {
         status: { type: "string" },
         year: { type: "integer", minimum: 1900 },
         demographic: { type: "string" },
+        author: { type: "string", maxLength: 120 },
+        artist: { type: "string", maxLength: 120 },
         sort: { type: "string", enum: ["relevance", "latest", "followed", "title", "created", "updated"], default: "relevance" },
         genre: { type: "string" },
         genres: { type: "string" }

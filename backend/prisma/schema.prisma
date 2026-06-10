@@ -91,6 +91,8 @@ model CachedManga {
   year          Int?
   contentRating String?
   tags          String[]
+  authors       String[]        @default([])
+  artists       String[]        @default([])
   coverUrl      String?
   source        String          @default("mangadex")
   fetchedAt     DateTime        @default(now())

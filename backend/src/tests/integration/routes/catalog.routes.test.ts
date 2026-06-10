@@ -12,6 +12,7 @@ const mangaDexGetChapters = vi.fn();
 const mangaDexGetReader = vi.fn();
 const mangaDexGetTags = vi.fn();
 const mangaDexSearch = vi.fn();
+const mangaDexSearchCreators = vi.fn();
 
 vi.mock("../../../infrastructure/database/client.js", () => ({
   prisma: {
@@ -45,7 +46,8 @@ vi.mock("../../../infrastructure/mangadex/mangadex.client.js", () => ({
   getMangaTags: mangaDexGetTags,
   getManga: vi.fn(),
   getReader: mangaDexGetReader,
-  searchManga: mangaDexSearch
+  searchManga: mangaDexSearch,
+  searchMangaCreators: mangaDexSearchCreators
 }));
 
 vi.mock("../../../domain/repositories/index.js", () => ({
@@ -150,7 +152,9 @@ describe("catalogRoutes", () => {
           title: "Action Manga",
           altTitles: [],
           description: "",
-          tags: ["Action"]
+          tags: ["Action"],
+          authors: [],
+          artists: []
         }
       ]
     });
@@ -169,6 +173,42 @@ describe("catalogRoutes", () => {
       })
     );
     expect(mangaUpsert).toHaveBeenCalled();
+
+    await app.close();
+  });
+
+  it("resolves author names to MangaDex creator ids before live search", async () => {
+    const { catalogRoutes } = await import("../../../app/routes/v1/catalog.routes.js");
+    const app = Fastify();
+    await app.register(catalogRoutes, { prefix: "/api" });
+
+    mangaDexSearchCreators.mockResolvedValue([{ id: "b5e3d267-6c88-4b61-8f1a-59f45a7a0f0f", name: "ONE" }]);
+    mangaDexSearch.mockResolvedValue({
+      limit: 24,
+      offset: 0,
+      total: 1,
+      data: [
+        {
+          id: "a96676e5-8ae2-425e-b549-7f15dd34a6d8",
+          title: "One Punch-Man",
+          altTitles: [],
+          description: "",
+          tags: ["Action"],
+          authors: ["ONE"],
+          artists: ["Yusuke Murata"]
+        }
+      ]
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/manga/search?author=ONE&limit=24&offset=0"
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ source: "live", total: 1 });
+    expect(mangaDexSearchCreators).toHaveBeenCalledWith({ q: "ONE", limit: 10 });
+    expect(mangaDexSearch).toHaveBeenCalledWith(expect.objectContaining({ authorOrArtist: ["b5e3d267-6c88-4b61-8f1a-59f45a7a0f0f"] }));
 
     await app.close();
   });

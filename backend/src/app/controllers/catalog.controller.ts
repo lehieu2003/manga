@@ -1,6 +1,6 @@
 import type { z } from "zod";
 import { cached, clearCacheByPrefix, makeCacheKey } from "../../infrastructure/cache/cache.service.js";
-import { getManga, getReader, searchManga } from "../../infrastructure/mangadex/mangadex.client.js";
+import { getManga, getReader, searchManga, searchMangaCreators } from "../../infrastructure/mangadex/mangadex.client.js";
 import { searchHistoryRepository } from "../../domain/repositories/index.js";
 import { getCachedChapters, getCachedGenres, getCachedManga, markCachedChapterUnreadable, saveManga, saveMangaBatch, searchCachedManga } from "../../domain/services/catalog-cache.service.js";
 import { listMangaDexTags, resolveMangaDexTagFilters } from "../../domain/services/mangadex-tag-registry.service.js";
@@ -18,6 +18,8 @@ export async function searchCatalogManga(query: MangaSearchQuery, options: { use
     offset: query.offset,
     genres: includedTagNames,
     excludedGenres: query.excludedTags,
+    authors: query.author ? [query.author] : undefined,
+    artists: query.artist ? [query.artist] : undefined,
     status: query.status,
     contentRating: query.contentRating,
     year: query.year,
@@ -31,8 +33,9 @@ export async function searchCatalogManga(query: MangaSearchQuery, options: { use
   }
 
   const tagFilters = await resolveTagFiltersForSearch({ included: includedTagNames, excluded: query.excludedTags });
+  const creatorFilter = await resolveCreatorFilterForSearch(query);
   const canSearchLiveWithTags = tagFilters.unresolvedIncluded.length === 0 && tagFilters.unresolvedExcluded.length === 0;
-  if ((includedTagNames.length || query.excludedTags.length) && !canSearchLiveWithTags) {
+  if (((includedTagNames.length || query.excludedTags.length) && !canSearchLiveWithTags) || !creatorFilter.canSearchLive) {
     const fallback = await searchCachedManga(cacheFilters);
     return { ...fallback, source: "cache" as const };
   }
@@ -43,8 +46,24 @@ export async function searchCatalogManga(query: MangaSearchQuery, options: { use
         ...query,
         tags: tagFilters.includedTagIds,
         includedTags: tagFilters.includedTagIds,
-        excludedTags: tagFilters.excludedTagIds
+        excludedTags: tagFilters.excludedTagIds,
+        authorOrArtist: creatorFilter.creatorIds
       });
+      if (result.total === 0 && query.q && !query.author && !query.artist) {
+        const creatorFallbackIds = await resolveCreatorIds(query.q);
+        if (creatorFallbackIds.length) {
+          const creatorResult = await searchManga({
+            ...query,
+            q: undefined,
+            tags: tagFilters.includedTagIds,
+            includedTags: tagFilters.includedTagIds,
+            excludedTags: tagFilters.excludedTagIds,
+            authorOrArtist: creatorFallbackIds
+          });
+          await saveMangaBatch(creatorResult.data);
+          return { ...creatorResult, source: "live" as const };
+        }
+      }
       await saveMangaBatch(result.data);
       return { ...result, source: "live" as const };
     } catch (error) {
@@ -119,4 +138,21 @@ async function resolveTagFiltersForSearch(input: { included: string[]; excluded:
       unresolvedExcluded: input.excluded
     };
   }
+}
+
+async function resolveCreatorFilterForSearch(query: MangaSearchQuery) {
+  const names = [query.author, query.artist].filter((value): value is string => Boolean(value));
+  if (!names.length) return { creatorIds: [], canSearchLive: true };
+
+  try {
+    const creatorIds = [...new Set((await Promise.all(names.map((name) => resolveCreatorIds(name)))).flat())];
+    return { creatorIds, canSearchLive: creatorIds.length > 0 };
+  } catch {
+    return { creatorIds: [], canSearchLive: false };
+  }
+}
+
+async function resolveCreatorIds(name: string) {
+  const creators = await searchMangaCreators({ q: name, limit: 10 });
+  return creators.map((creator) => creator.id);
 }

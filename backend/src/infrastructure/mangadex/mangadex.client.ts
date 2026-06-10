@@ -1,7 +1,7 @@
 import { env } from "../../shared/configs/app.config.js";
 import { HttpError } from "../../shared/errors/http-error.js";
 import { buildPageProxyUrl } from "../../shared/utils/media-url.js";
-import type { ChapterSummary, MangaDexListResponse, MangaDexSingleResponse, MangaSummary, MangaTagSummary, ReaderPayload } from "./mangadex.types.js";
+import type { ChapterSummary, MangaCreatorSummary, MangaDexListResponse, MangaDexSingleResponse, MangaSummary, MangaTagSummary, ReaderPayload } from "./mangadex.types.js";
 
 const USER_AGENT = "mangadex-reader/0.1 (+https://github.com/local/mangadex-reader)";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -20,6 +20,7 @@ export type MangaSearchInput = {
   status?: string[];
   year?: number;
   demographic?: string[];
+  authorOrArtist?: string[];
   sort?: MangaSearchSort;
 };
 
@@ -93,6 +94,8 @@ function normalizeManga(entity: MangaDexSingleResponse["data"]): MangaSummary {
   const attrs = entity.attributes as Record<string, unknown>;
   const cover = entity.relationships?.find((relationship) => relationship.type === "cover_art");
   const fileName = cover?.attributes?.fileName;
+  const authors = relationshipNames(entity.relationships, "author");
+  const artists = relationshipNames(entity.relationships, "artist");
   const tags = ((attrs.tags as Array<{ attributes?: { name?: Record<string, string> } }>) ?? [])
     .map((tag) => firstLocalized(tag.attributes?.name, ["en", "vi"]))
     .filter(Boolean);
@@ -110,8 +113,21 @@ function normalizeManga(entity: MangaDexSingleResponse["data"]): MangaSummary {
     year: attrs.year as number | undefined,
     contentRating: attrs.contentRating as string | undefined,
     tags,
+    authors,
+    artists,
     coverUrl: typeof fileName === "string" ? `${getMangaDexUploadsBaseUrl()}/covers/${entity.id}/${fileName}.512.jpg` : undefined
   };
+}
+
+function relationshipNames(relationships: MangaDexSingleResponse["data"]["relationships"], type: string) {
+  return [
+    ...new Set(
+      (relationships ?? [])
+        .filter((relationship) => relationship.type === type)
+        .map((relationship) => relationship.attributes?.name)
+        .filter((name): name is string => typeof name === "string" && Boolean(name.trim()))
+    )
+  ];
 }
 
 function normalizeChapter(entity: MangaDexListResponse["data"][number]): ChapterSummary {
@@ -155,6 +171,7 @@ export async function searchManga(input: {
   status?: string[];
   year?: number;
   demographic?: string[];
+  authorOrArtist?: string[];
   sort?: MangaSearchSort;
 }) {
   const includedTags = [...new Set([...(input.tags ?? []), ...(input.includedTags ?? [])])].filter((tag) => UUID_PATTERN.test(tag));
@@ -168,10 +185,11 @@ export async function searchManga(input: {
   if (input.q) params.set("title", input.q);
   if (input.year) params.set("year", String(input.year));
   appendArrayParams(params, "availableTranslatedLanguage", input.languages);
-  appendArrayParams(params, "includes", ["cover_art"]);
+  appendArrayParams(params, "includes", ["cover_art", "author", "artist"]);
   appendArrayParams(params, "contentRating", input.contentRating?.length ? input.contentRating : ["safe", "suggestive"]);
   appendArrayParams(params, "status", input.status ?? []);
   appendArrayParams(params, "publicationDemographic", input.demographic ?? []);
+  appendArrayParams(params, "authorOrArtist", (input.authorOrArtist ?? []).filter((id) => UUID_PATTERN.test(id)));
   appendArrayParams(params, "includedTags", includedTags);
   appendArrayParams(params, "excludedTags", excludedTags);
 
@@ -187,6 +205,20 @@ export async function searchManga(input: {
 export async function getMangaTags() {
   const result = await requestMangaDex<MangaDexListResponse>("/manga/tag");
   return result.data.map(normalizeTag).filter((tag) => tag.name);
+}
+
+export async function searchMangaCreators(input: { q: string; limit?: number }) {
+  const params = new URLSearchParams({
+    name: input.q,
+    limit: String(input.limit ?? 10)
+  });
+  const result = await requestMangaDex<MangaDexListResponse>("/author", params);
+  return result.data
+    .map((entity): MangaCreatorSummary => {
+      const attrs = entity.attributes as Record<string, unknown>;
+      return { id: entity.id, name: (attrs.name as string | undefined) ?? "" };
+    })
+    .filter((creator) => creator.name);
 }
 
 export function applyMangaSort(params: URLSearchParams, sort: MangaSearchSort) {
@@ -214,7 +246,7 @@ export function applyMangaSort(params: URLSearchParams, sort: MangaSearchSort) {
 
 export async function getManga(id: string) {
   const params = new URLSearchParams();
-  appendArrayParams(params, "includes", ["cover_art"]);
+  appendArrayParams(params, "includes", ["cover_art", "author", "artist"]);
   const result = await requestMangaDex<MangaDexSingleResponse>(`/manga/${id}`, params);
   return normalizeManga(result.data);
 }
