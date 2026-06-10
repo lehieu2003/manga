@@ -1,6 +1,7 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 import '../data/repositories/repositories.dart';
+import '../data/services/theme_store.dart';
 import '../domain/models/models.dart';
 
 class AppState extends ChangeNotifier {
@@ -8,13 +9,16 @@ class AppState extends ChangeNotifier {
     required this.authRepository,
     required this.catalogRepository,
     required this.libraryRepository,
-  });
+    ThemeStore? themeStore,
+  }) : themeStore = themeStore ?? ThemeStore();
 
   final AuthRepository authRepository;
   final CatalogRepository catalogRepository;
   final LibraryRepository libraryRepository;
+  final ThemeStore themeStore;
 
   User? user;
+  ThemeMode themeMode = ThemeMode.system;
   bool isBooting = true;
 
   bool get isSignedIn => user != null;
@@ -22,9 +26,20 @@ class AppState extends ChangeNotifier {
   Future<void> restore() async {
     isBooting = true;
     notifyListeners();
-    user = await authRepository.restoreSession();
+    final results = await Future.wait<Object?>([
+      authRepository.restoreSession(),
+      themeStore.readThemeMode(),
+    ]);
+    user = results[0] as User?;
+    themeMode = results[1] as ThemeMode;
     isBooting = false;
     notifyListeners();
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    themeMode = mode;
+    notifyListeners();
+    await themeStore.saveThemeMode(mode);
   }
 
   Future<void> login(String email, String password) async {

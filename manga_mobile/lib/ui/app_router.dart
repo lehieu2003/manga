@@ -95,6 +95,8 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
+    final app = AppScope.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final index = switch (location) {
       '/search' => 1,
       '/library' => 2,
@@ -105,6 +107,12 @@ class AppShell extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Manga Cafe'),
         actions: [
+          IconButton(
+            tooltip: isDark ? 'Switch to light mode' : 'Switch to dark mode',
+            onPressed: () =>
+                app.setThemeMode(isDark ? ThemeMode.light : ThemeMode.dark),
+            icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+          ),
           IconButton(
             tooltip: 'Search',
             onPressed: () => context.go('/search'),

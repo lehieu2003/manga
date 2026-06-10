@@ -183,7 +183,7 @@ function ActiveDiscoveryChips({ state, validYear, defaultSort, dispatch }: { sta
 
 function FilterPanel({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-[var(--line)] bg-[rgba(255,184,107,0.035)] p-4">
+    <div className="rounded-lg border border-[var(--line)] bg-[var(--accent-panel)] p-4">
       <div className="mb-3 flex items-center gap-2">
         <Filter size={16} color="var(--accent)" />
         <div>

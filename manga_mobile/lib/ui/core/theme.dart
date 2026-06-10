@@ -8,6 +8,61 @@ class MangaTheme {
   static const muted = Color(0xFFCDB89F);
   static const amber = Color(0xFFFFB86B);
   static const sakura = Color(0xFFFF7AA8);
+  static const cocoa = Color(0xFF2F2117);
+  static const cream = Color(0xFFF8EDDD);
+  static const creamPanel = Color(0xFFFFF8ED);
+  static const creamStrong = Color(0xFFF0DBC0);
+  static const coffeeMuted = Color(0xFF795F49);
+
+  static ThemeData light() {
+    final scheme = ColorScheme.fromSeed(
+      seedColor: const Color(0xFFB9631D),
+      brightness: Brightness.light,
+      surface: creamPanel,
+      primary: const Color(0xFFB9631D),
+      secondary: const Color(0xFFC94F78),
+    );
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: scheme,
+      scaffoldBackgroundColor: cream,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: cream,
+        foregroundColor: cocoa,
+        centerTitle: false,
+      ),
+      cardTheme: CardThemeData(
+        color: creamPanel,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: const BorderSide(color: Color(0xFFD6BEA3)),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: creamStrong,
+        selectedColor: const Color(0xFFB9631D).withValues(alpha: 0.16),
+        labelStyle: const TextStyle(color: cocoa),
+        side: const BorderSide(color: Color(0xFFD6BEA3)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFFFFFAF1),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFD6BEA3)),
+        ),
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: creamPanel,
+        selectedItemColor: Color(0xFFB9631D),
+        unselectedItemColor: coffeeMuted,
+        type: BottomNavigationBarType.fixed,
+      ),
+    );
+  }
 
   static ThemeData dark() {
     final scheme = ColorScheme.fromSeed(

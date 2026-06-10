@@ -24,7 +24,7 @@ export function ChapterRows({
       {chapters.length ? (
         chapters.map((chapter) => <ChapterRow key={chapter.id} chapter={chapter} mangaId={mangaId} metadata={metadata} />)
       ) : (
-        <div className="bg-[rgba(23,17,13,0.78)] p-6 text-center text-[var(--muted)]">
+        <div className="bg-[var(--surface)] p-6 text-center text-[var(--muted)]">
           {!selectedLanguages.length
             ? "Select at least one language to load chapters."
             : needsSync
