@@ -96,6 +96,12 @@
   --toast-bg: rgba(255, 248, 237, 0.97);
   --toast-shadow: rgba(118, 78, 39, 0.18);
   --metric-track: rgba(84, 55, 31, 0.12);
+  --chapter-row-bg: rgba(255, 250, 241, 0.86);
+  --chapter-row-hover-bg: rgba(255, 243, 224, 0.98);
+  --chapter-row-line: rgba(150, 105, 65, 0.24);
+  --chapter-row-current-bg: rgba(185, 99, 29, 0.1);
+  --chapter-state-bg: rgba(255, 248, 237, 0.84);
+  --chapter-title: #3a2518;
 }
 
 * {
@@ -387,11 +393,12 @@ img {
   display: flex;
   align-items: center;
   gap: 1rem;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--chapter-row-line, var(--line));
   background:
-    linear-gradient(90deg, rgba(255, 184, 107, 0.025), transparent 36%),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent), transparent 95%), transparent 36%),
     var(--chapter-row-bg);
   padding: 0.9rem 1rem;
+  color: var(--chapter-title, var(--text));
   transition:
     background 160ms ease,
     border-color 160ms ease;
@@ -407,7 +414,7 @@ img {
 
 .chapter-row-current {
   border-left: 3px solid var(--accent);
-  background: var(--accent-tint);
+  background: var(--chapter-row-current-bg, var(--accent-tint));
 }
 
 .chapter-state {
@@ -418,6 +425,7 @@ img {
   place-items: center;
   border-radius: 999px;
   border: 1px solid var(--line);
+  background: var(--chapter-state-bg, transparent);
   font-size: 0.82rem;
   font-weight: 900;
 }
