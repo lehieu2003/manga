@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../data/services/reader_settings_store.dart';
 import '../../../domain/models/models.dart';
 import '../../app_state.dart';
 import '../../core/theme.dart';
@@ -65,6 +66,10 @@ class _ReaderScreenState extends State<ReaderScreen> {
   }
 
   Future<void> _load() async {
+    final settings = await _app.readerSettingsStore.readSettings();
+    _paged = settings.paged;
+    _contain = settings.contain;
+    _dataSaver = settings.dataSaver;
     final reader = await _app.catalogRepository.reader(widget.chapterId);
     _reader = reader;
     _applyReaderPages();
@@ -105,7 +110,20 @@ class _ReaderScreenState extends State<ReaderScreen> {
       _dataSaver = !_dataSaver;
       _applyReaderPages();
     });
+    _saveReaderSettings();
     _preloadAround(_pageIndex);
+  }
+
+  void _saveReaderSettings() {
+    unawaited(
+      _app.readerSettingsStore.saveSettings(
+        ReaderSettings(
+          paged: _paged,
+          contain: _contain,
+          dataSaver: _dataSaver,
+        ),
+      ),
+    );
   }
 
   void _setPage(int index) {
@@ -160,13 +178,17 @@ class _ReaderScreenState extends State<ReaderScreen> {
               tooltip: _paged ? 'Vertical mode' : 'Paged mode',
               onPressed: () {
                 setState(() => _paged = !_paged);
+                _saveReaderSettings();
                 _preloadAround(_pageIndex);
               },
               icon: Icon(_paged ? Icons.view_stream : Icons.view_carousel),
             ),
             IconButton(
               tooltip: 'Image fit',
-              onPressed: () => setState(() => _contain = !_contain),
+              onPressed: () {
+                setState(() => _contain = !_contain);
+                _saveReaderSettings();
+              },
               icon: const Icon(Icons.fit_screen),
             ),
           ],

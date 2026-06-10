@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/repositories/repositories.dart';
+import '../data/services/reader_settings_store.dart';
 import '../data/services/theme_store.dart';
 import '../domain/models/models.dart';
 
@@ -9,12 +10,15 @@ class AppState extends ChangeNotifier {
     required this.authRepository,
     required this.catalogRepository,
     required this.libraryRepository,
+    ReaderSettingsStore? readerSettingsStore,
     ThemeStore? themeStore,
-  }) : themeStore = themeStore ?? ThemeStore();
+  }) : readerSettingsStore = readerSettingsStore ?? ReaderSettingsStore(),
+       themeStore = themeStore ?? ThemeStore();
 
   final AuthRepository authRepository;
   final CatalogRepository catalogRepository;
   final LibraryRepository libraryRepository;
+  final ReaderSettingsStore readerSettingsStore;
   final ThemeStore themeStore;
 
   User? user;

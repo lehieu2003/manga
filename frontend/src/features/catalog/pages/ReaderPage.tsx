@@ -14,6 +14,7 @@ import {
   useVisibleReaderPage
 } from "@/features/catalog/reader/reader.effects";
 import { preloadPages } from "@/features/catalog/reader/reader.logic";
+import { readReaderSettings, writeReaderSettings } from "@/features/catalog/reader/readerSettings";
 import type { ReaderFit, ReaderMode, ReaderQuality } from "@/features/catalog/reader/reader.types";
 import { useReaderData } from "@/features/catalog/reader/useReaderData";
 
@@ -23,15 +24,18 @@ export function ReaderPage() {
   const navigate = useNavigate();
   const mangaId = params.get("mangaId") ?? "";
   const { user } = useAuth();
-  const [mode, setMode] = useState<ReaderMode>("vertical");
-  const [fit, setFit] = useState<ReaderFit>("width");
-  const [quality, setQuality] = useState<ReaderQuality>("data-saver");
+  const [settings, setSettings] = useState(readReaderSettings);
+  const { mode, fit, quality } = settings;
   const [pageIndex, setPageIndex] = useState(0);
   const [isToolbarVisible, setIsToolbarVisible] = useState(true);
   const imageRefs = useRef<Array<HTMLImageElement | null>>([]);
   const lastScrollYRef = useRef(0);
   const toolbarTimerRef = useRef<number | null>(null);
   const data = useReaderData({ chapterId, mangaId, user, quality });
+
+  useEffect(() => {
+    writeReaderSettings(settings);
+  }, [settings]);
 
   const showToolbarBriefly = useCallback(() => {
     setIsToolbarVisible(true);
@@ -56,7 +60,7 @@ export function ReaderPage() {
   );
 
   const switchToPagedMode = useCallback(() => {
-    setMode("paged");
+    setSettings((value) => ({ ...value, mode: "paged" }));
     preloadPages(data.pages, pageIndex);
   }, [data.pages, pageIndex]);
 
@@ -149,14 +153,13 @@ export function ReaderPage() {
         quality={quality}
         onGoToChapter={goToChapter}
         onFetchMoreChapters={data.fetchMoreChapters}
-        onModeChange={setMode}
+        onModeChange={(nextMode) => setSettings((value) => ({ ...value, mode: nextMode }))}
         onSwitchToPagedMode={switchToPagedMode}
-        onFitToggle={() => setFit((value) => (value === "width" ? "contain" : "width"))}
+        onFitToggle={() => setSettings((value) => ({ ...value, fit: value.fit === "width" ? "contain" : "width" }))}
         onQualityToggle={() =>
-          setQuality((value) => {
-            const next = value === "data-saver" ? "original" : "data-saver";
+          setSettings((value) => {
             setPageIndex((index) => Math.min(index, Math.max(data.pages.length - 1, 0)));
-            return next;
+            return { ...value, quality: value.quality === "data-saver" ? "original" : "data-saver" };
           })
         }
         onReveal={showToolbarBriefly}

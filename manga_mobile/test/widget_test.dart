@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:manga_mobile/data/repositories/repositories.dart';
 import 'package:manga_mobile/data/services/api_client.dart';
+import 'package:manga_mobile/data/services/reader_settings_store.dart';
 import 'package:manga_mobile/data/services/theme_store.dart';
 import 'package:manga_mobile/domain/models/models.dart';
 import 'package:manga_mobile/main.dart';
@@ -142,6 +143,7 @@ void main() {
     'reader exposes mode controls and missing manga context message',
     (tester) async {
       final app = _buildApp(signedIn: true);
+      final settingsStore = app.readerSettingsStore as FakeReaderSettingsStore;
       await tester.pumpWidget(
         AppScope(
           appState: app,
@@ -161,10 +163,12 @@ void main() {
       await tester.tap(find.byTooltip('Use original quality'));
       await tester.pumpAndSettle();
       expect(find.byTooltip('Use data saver'), findsOneWidget);
+      expect(settingsStore.saved.dataSaver, isFalse);
 
       await tester.tap(find.byTooltip('Paged mode'));
       await tester.pumpAndSettle();
       expect(find.byTooltip('Vertical mode'), findsOneWidget);
+      expect(settingsStore.saved.paged, isTrue);
     },
   );
 
@@ -205,6 +209,7 @@ TestAppState _buildApp({bool signedIn = false}) {
     authRepository: FakeAuthRepository(api, user),
     catalogRepository: FakeCatalogRepository(api),
     libraryRepository: FakeLibraryRepository(api),
+    readerSettingsStore: FakeReaderSettingsStore(),
     themeStore: FakeThemeStore(),
   )..isBooting = false;
   if (signedIn) app.user = user;
@@ -223,6 +228,7 @@ class TestAppState extends AppState {
     required super.authRepository,
     required super.catalogRepository,
     required super.libraryRepository,
+    super.readerSettingsStore,
     super.themeStore,
   });
 }
@@ -236,6 +242,18 @@ class FakeThemeStore extends ThemeStore {
   @override
   Future<void> saveThemeMode(ThemeMode mode) async {
     saved = mode;
+  }
+}
+
+class FakeReaderSettingsStore extends ReaderSettingsStore {
+  ReaderSettings saved = const ReaderSettings();
+
+  @override
+  Future<ReaderSettings> readSettings() async => saved;
+
+  @override
+  Future<void> saveSettings(ReaderSettings settings) async {
+    saved = settings;
   }
 }
 
