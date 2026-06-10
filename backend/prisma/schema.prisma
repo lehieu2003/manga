@@ -101,6 +101,19 @@ model CachedManga {
   @@index([fetchedAt])
 }
 
+model MangaDexTag {
+  id        String   @id
+  name      String
+  group     String
+  aliases   String[] @default([])
+  fetchedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@index([group])
+  @@index([fetchedAt])
+}
+
 model CachedChapter {
   id                 String      @id
   mangaId            String

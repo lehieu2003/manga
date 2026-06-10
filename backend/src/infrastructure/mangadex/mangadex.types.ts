@@ -36,6 +36,13 @@ export type MangaSummary = {
   coverUrl?: string;
 };
 
+export type MangaTagSummary = {
+  id: string;
+  name: string;
+  group: string;
+  aliases: string[];
+};
+
 export type ChapterSummary = {
   id: string;
   title: string;

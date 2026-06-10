@@ -446,9 +446,20 @@ export const catalogRouteSchemas = {
             items: {
               type: "object",
               required: ["name", "count"],
-              properties: { name: { type: "string" }, count: { type: "integer" } }
+              properties: {
+                id: uuid,
+                name: { type: "string" },
+                group: { type: "string" },
+                aliases: { type: "array", items: { type: "string" } },
+                count: { type: "integer" }
+              }
             }
-          }
+          },
+          source: { type: "string", enum: ["mangadex", "cache"] }
+        },
+        example: {
+          data: [{ id: exampleMangaId, name: "Romance", group: "genre", aliases: [], count: 12 }],
+          source: "mangadex"
         }
       },
       ...errors

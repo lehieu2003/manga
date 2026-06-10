@@ -1,7 +1,7 @@
 import { env } from "../../shared/configs/app.config.js";
 import { HttpError } from "../../shared/errors/http-error.js";
 import { buildPageProxyUrl } from "../../shared/utils/media-url.js";
-import type { ChapterSummary, MangaDexListResponse, MangaDexSingleResponse, MangaSummary, ReaderPayload } from "./mangadex.types.js";
+import type { ChapterSummary, MangaDexListResponse, MangaDexSingleResponse, MangaSummary, MangaTagSummary, ReaderPayload } from "./mangadex.types.js";
 
 const USER_AGENT = "mangadex-reader/0.1 (+https://github.com/local/mangadex-reader)";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -129,6 +129,20 @@ function normalizeChapter(entity: MangaDexListResponse["data"][number]): Chapter
   };
 }
 
+function normalizeTag(entity: MangaDexListResponse["data"][number]): MangaTagSummary {
+  const attrs = entity.attributes as Record<string, unknown>;
+  const names = attrs.name as Record<string, string> | undefined;
+  const primaryName = firstLocalized(names, ["en", "vi"]);
+  const aliases = Object.values(names ?? {}).filter((name) => name && name !== primaryName);
+
+  return {
+    id: entity.id,
+    name: primaryName,
+    group: (attrs.group as string | undefined) ?? "unknown",
+    aliases: [...new Set(aliases)]
+  };
+}
+
 export async function searchManga(input: {
   q?: string;
   limit: number;
@@ -168,6 +182,11 @@ export async function searchManga(input: {
     total: result.total,
     data: result.data.map(normalizeManga)
   };
+}
+
+export async function getMangaTags() {
+  const result = await requestMangaDex<MangaDexListResponse>("/manga/tag");
+  return result.data.map(normalizeTag).filter((tag) => tag.name);
 }
 
 export function applyMangaSort(params: URLSearchParams, sort: MangaSearchSort) {

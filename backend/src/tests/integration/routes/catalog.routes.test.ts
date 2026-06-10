@@ -4,8 +4,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const chapterFindMany = vi.fn();
 const chapterCount = vi.fn();
 const chapterUpdateMany = vi.fn();
+const mangaUpsert = vi.fn();
+const tagFindFirst = vi.fn();
+const tagFindMany = vi.fn();
+const tagUpsert = vi.fn();
 const mangaDexGetChapters = vi.fn();
 const mangaDexGetReader = vi.fn();
+const mangaDexGetTags = vi.fn();
+const mangaDexSearch = vi.fn();
 
 vi.mock("../../../infrastructure/database/client.js", () => ({
   prisma: {
@@ -13,6 +19,14 @@ vi.mock("../../../infrastructure/database/client.js", () => ({
       findMany: chapterFindMany,
       count: chapterCount,
       updateMany: chapterUpdateMany
+    },
+    cachedManga: {
+      upsert: mangaUpsert
+    },
+    mangaDexTag: {
+      findFirst: tagFindFirst,
+      findMany: tagFindMany,
+      upsert: tagUpsert
     },
     $transaction: async (operations: unknown[]) => Promise.all(operations)
   }
@@ -28,9 +42,10 @@ vi.mock("../../../infrastructure/cache/client.js", () => ({
 
 vi.mock("../../../infrastructure/mangadex/mangadex.client.js", () => ({
   getChapters: mangaDexGetChapters,
+  getMangaTags: mangaDexGetTags,
   getManga: vi.fn(),
   getReader: mangaDexGetReader,
-  searchManga: vi.fn()
+  searchManga: mangaDexSearch
 }));
 
 vi.mock("../../../domain/repositories/index.js", () => ({
@@ -114,6 +129,46 @@ describe("catalogRoutes", () => {
       needsSync: true
     });
     expect(mangaDexGetChapters).not.toHaveBeenCalled();
+
+    await app.close();
+  });
+
+  it("maps genre names through the MangaDex tag registry before live search", async () => {
+    const { catalogRoutes } = await import("../../../app/routes/v1/catalog.routes.js");
+    const app = Fastify();
+    await app.register(catalogRoutes, { prefix: "/api" });
+
+    tagFindFirst.mockResolvedValue({ fetchedAt: new Date() });
+    tagFindMany.mockResolvedValue([{ id: "391b0423-d847-456f-aff0-8b0cfc03066b", name: "Action", group: "genre", aliases: [] }]);
+    mangaDexSearch.mockResolvedValue({
+      limit: 24,
+      offset: 0,
+      total: 1,
+      data: [
+        {
+          id: "32d76d19-8a05-4db0-9fc2-e0b0648fe9d0",
+          title: "Action Manga",
+          altTitles: [],
+          description: "",
+          tags: ["Action"]
+        }
+      ]
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/manga/search?genre=Action&limit=24&offset=0"
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ source: "live", total: 1 });
+    expect(mangaDexSearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tags: ["391b0423-d847-456f-aff0-8b0cfc03066b"],
+        includedTags: ["391b0423-d847-456f-aff0-8b0cfc03066b"]
+      })
+    );
+    expect(mangaUpsert).toHaveBeenCalled();
 
     await app.close();
   });

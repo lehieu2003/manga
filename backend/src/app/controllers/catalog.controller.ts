@@ -3,6 +3,7 @@ import { cached, clearCacheByPrefix, makeCacheKey } from "../../infrastructure/c
 import { getManga, getReader, searchManga } from "../../infrastructure/mangadex/mangadex.client.js";
 import { searchHistoryRepository } from "../../domain/repositories/index.js";
 import { getCachedChapters, getCachedGenres, getCachedManga, markCachedChapterUnreadable, saveManga, saveMangaBatch, searchCachedManga } from "../../domain/services/catalog-cache.service.js";
+import { listMangaDexTags, resolveMangaDexTagFilters } from "../../domain/services/mangadex-tag-registry.service.js";
 import { HttpError } from "../../shared/errors/http-error.js";
 import type { chaptersQuerySchema, mangaSearchQuerySchema } from "../validators/catalog.validator.js";
 
@@ -10,12 +11,12 @@ type ChaptersQuery = z.infer<typeof chaptersQuerySchema>;
 type MangaSearchQuery = z.infer<typeof mangaSearchQuerySchema>;
 
 export async function searchCatalogManga(query: MangaSearchQuery, options: { userId?: string; onInvalidAuth?: () => void } = {}) {
-  const genres = [...new Set([...(query.genre ? [query.genre] : []), ...query.genres, ...query.includedTags])];
+  const includedTagNames = [...new Set([...(query.genre ? [query.genre] : []), ...query.genres, ...query.includedTags])];
   const cacheFilters = {
     q: query.q,
     limit: query.limit,
     offset: query.offset,
-    genres,
+    genres: includedTagNames,
     excludedGenres: query.excludedTags,
     status: query.status,
     contentRating: query.contentRating,
@@ -29,14 +30,21 @@ export async function searchCatalogManga(query: MangaSearchQuery, options: { use
     options.onInvalidAuth();
   }
 
-  if (genres.length) {
+  const tagFilters = await resolveTagFiltersForSearch({ included: includedTagNames, excluded: query.excludedTags });
+  const canSearchLiveWithTags = tagFilters.unresolvedIncluded.length === 0 && tagFilters.unresolvedExcluded.length === 0;
+  if ((includedTagNames.length || query.excludedTags.length) && !canSearchLiveWithTags) {
     const fallback = await searchCachedManga(cacheFilters);
     return { ...fallback, source: "cache" as const };
   }
 
   return cached(makeCacheKey("manga:search", query), 600, async () => {
     try {
-      const result = await searchManga(query);
+      const result = await searchManga({
+        ...query,
+        tags: tagFilters.includedTagIds,
+        includedTags: tagFilters.includedTagIds,
+        excludedTags: tagFilters.excludedTagIds
+      });
       await saveMangaBatch(result.data);
       return { ...result, source: "live" as const };
     } catch (error) {
@@ -48,7 +56,20 @@ export async function searchCatalogManga(query: MangaSearchQuery, options: { use
 }
 
 export async function listCatalogGenres() {
-  return { data: await cached("genres:list", 300, getCachedGenres) };
+  return cached("genres:list", 300, async () => {
+    const [cachedGenres, registryTags] = await Promise.all([getCachedGenres(), listMangaDexTags()]);
+    const counts = new Map(cachedGenres.map((genre) => [genre.name.toLowerCase(), genre.count]));
+    const registryData = registryTags.map((tag) => ({
+      id: tag.id,
+      name: tag.name,
+      group: tag.group,
+      aliases: tag.aliases,
+      count: counts.get(tag.name.toLowerCase()) ?? 0
+    }));
+
+    if (registryData.length) return { data: registryData, source: "mangadex" as const };
+    return { data: cachedGenres, source: "cache" as const };
+  });
 }
 
 export async function getCatalogManga(id: string) {
@@ -80,5 +101,22 @@ export async function getChapterReader(id: string) {
       await clearCacheByPrefix("manga:chapters:");
     }
     throw error;
+  }
+}
+
+async function resolveTagFiltersForSearch(input: { included: string[]; excluded: string[] }) {
+  if (!input.included.length && !input.excluded.length) {
+    return { includedTagIds: [], excludedTagIds: [], unresolvedIncluded: [], unresolvedExcluded: [] };
+  }
+
+  try {
+    return await resolveMangaDexTagFilters(input);
+  } catch {
+    return {
+      includedTagIds: [],
+      excludedTagIds: [],
+      unresolvedIncluded: input.included,
+      unresolvedExcluded: input.excluded
+    };
   }
 }
