@@ -29,6 +29,8 @@ class _ReaderScreenState extends State<ReaderScreen> {
   int _pageIndex = 0;
   bool _paged = false;
   bool _contain = false;
+  bool _dataSaver = true;
+  ReaderPayload? _reader;
   Timer? _saveTimer;
 
   @override
@@ -64,10 +66,8 @@ class _ReaderScreenState extends State<ReaderScreen> {
 
   Future<void> _load() async {
     final reader = await _app.catalogRepository.reader(widget.chapterId);
-    _pages = reader.dataSaverPageUrls
-        .map(_app.catalogRepository.assetUrl)
-        .where((url) => url.isNotEmpty)
-        .toList();
+    _reader = reader;
+    _applyReaderPages();
     if (widget.mangaId != null) {
       final results = await Future.wait([
         _app.catalogRepository.chapters(widget.mangaId!),
@@ -87,6 +87,25 @@ class _ReaderScreenState extends State<ReaderScreen> {
       }
     }
     if (mounted) _preloadAround(_pageIndex);
+  }
+
+  void _applyReaderPages() {
+    final reader = _reader;
+    if (reader == null) return;
+    final urls = _dataSaver ? reader.dataSaverPageUrls : reader.pageUrls;
+    _pages = urls
+        .map(_app.catalogRepository.assetUrl)
+        .where((url) => url.isNotEmpty)
+        .toList();
+    _pageIndex = _pageIndex.clamp(0, (_pages.length - 1).clamp(0, 9999));
+  }
+
+  void _toggleQuality() {
+    setState(() {
+      _dataSaver = !_dataSaver;
+      _applyReaderPages();
+    });
+    _preloadAround(_pageIndex);
   }
 
   void _setPage(int index) {
@@ -132,6 +151,11 @@ class _ReaderScreenState extends State<ReaderScreen> {
             'Page ${_pages.isEmpty ? 0 : _pageIndex + 1}/${_pages.length}',
           ),
           actions: [
+            IconButton(
+              tooltip: _dataSaver ? 'Use original quality' : 'Use data saver',
+              onPressed: _toggleQuality,
+              icon: Icon(_dataSaver ? Icons.hd_outlined : Icons.data_saver_on),
+            ),
             IconButton(
               tooltip: _paged ? 'Vertical mode' : 'Paged mode',
               onPressed: () {

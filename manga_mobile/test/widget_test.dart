@@ -157,6 +157,10 @@ void main() {
         find.text('Chapter navigation needs manga context.'),
         findsOneWidget,
       );
+      expect(find.byTooltip('Use original quality'), findsOneWidget);
+      await tester.tap(find.byTooltip('Use original quality'));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Use data saver'), findsOneWidget);
 
       await tester.tap(find.byTooltip('Paged mode'));
       await tester.pumpAndSettle();
@@ -347,7 +351,7 @@ class FakeCatalogRepository extends CatalogRepository {
 
   @override
   Future<ReaderPayload> reader(String chapterId) async => const ReaderPayload(
-    pageUrls: ['/page-1.jpg', '/page-2.jpg'],
+    pageUrls: ['/page-1-original.jpg', '/page-2-original.jpg'],
     dataSaverPageUrls: ['/page-1.jpg', '/page-2.jpg'],
   );
 }

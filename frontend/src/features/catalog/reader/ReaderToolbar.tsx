@@ -1,7 +1,7 @@
 import { ArrowLeft, ChevronLeft, ChevronRight, Columns2, Maximize2, Rows3 } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { ChapterSummary } from "@/types";
-import type { ReaderChapterNavItem, ReaderFit, ReaderMode } from "./reader.types";
+import type { ReaderChapterNavItem, ReaderFit, ReaderMode, ReaderQuality } from "./reader.types";
 
 export function ReaderToolbar({
   isVisible,
@@ -18,11 +18,13 @@ export function ReaderToolbar({
   isFetchingMoreChapters,
   mode,
   fit,
+  quality,
   onGoToChapter,
   onFetchMoreChapters,
   onModeChange,
   onSwitchToPagedMode,
   onFitToggle,
+  onQualityToggle,
   onReveal
 }: {
   isVisible: boolean;
@@ -39,11 +41,13 @@ export function ReaderToolbar({
   isFetchingMoreChapters: boolean;
   mode: ReaderMode;
   fit: ReaderFit;
+  quality: ReaderQuality;
   onGoToChapter: (id: string) => void;
   onFetchMoreChapters: () => void;
   onModeChange: (mode: ReaderMode) => void;
   onSwitchToPagedMode: () => void;
   onFitToggle: () => void;
+  onQualityToggle: () => void;
   onReveal: () => void;
 }) {
   return (
@@ -96,6 +100,9 @@ export function ReaderToolbar({
             </button>
             <button className={`btn reader-icon-button border-0 ${fit === "contain" ? "bg-[var(--surface-strong)]" : ""}`} onClick={onFitToggle} aria-label="Toggle image fit" type="button">
               <Maximize2 size={17} />
+            </button>
+            <button className="btn min-h-9 px-3 text-xs" onClick={onQualityToggle} aria-label="Toggle reader quality" type="button">
+              {quality === "data-saver" ? "Data saver" : "Original"}
             </button>
           </div>
         </div>

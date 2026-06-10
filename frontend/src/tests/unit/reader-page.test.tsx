@@ -134,6 +134,19 @@ describe("ReaderPage", () => {
     expect(api.getChapters).not.toHaveBeenCalled();
   });
 
+  it("toggles between data saver and original page URLs", async () => {
+    const user = userEvent.setup();
+    renderReader("/read/chapter-2?mangaId=manga-1");
+
+    const firstPage = await screen.findByAltText("Page 1");
+    expect(firstPage).toHaveAttribute("src", expect.stringContaining("/data-saver/chapter-2-1-saver.jpg"));
+
+    await user.click(screen.getByRole("button", { name: "Toggle reader quality" }));
+
+    expect(await screen.findByAltText("Page 1")).toHaveAttribute("src", expect.stringContaining("/data/chapter-2-1.jpg"));
+    expect(screen.getByRole("button", { name: "Toggle reader quality" })).toHaveTextContent("Original");
+  });
+
   it("saves vertical progress from the observed viewport page", async () => {
     renderReader("/read/chapter-2?mangaId=manga-1");
 

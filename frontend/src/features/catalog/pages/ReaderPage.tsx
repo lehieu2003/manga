@@ -25,7 +25,7 @@ export function ReaderPage() {
   const { user } = useAuth();
   const [mode, setMode] = useState<ReaderMode>("vertical");
   const [fit, setFit] = useState<ReaderFit>("width");
-  const [quality] = useState<ReaderQuality>("data-saver");
+  const [quality, setQuality] = useState<ReaderQuality>("data-saver");
   const [pageIndex, setPageIndex] = useState(0);
   const [isToolbarVisible, setIsToolbarVisible] = useState(true);
   const imageRefs = useRef<Array<HTMLImageElement | null>>([]);
@@ -146,11 +146,19 @@ export function ReaderPage() {
         isFetchingMoreChapters={data.isFetchingMoreChapters}
         mode={mode}
         fit={fit}
+        quality={quality}
         onGoToChapter={goToChapter}
         onFetchMoreChapters={data.fetchMoreChapters}
         onModeChange={setMode}
         onSwitchToPagedMode={switchToPagedMode}
         onFitToggle={() => setFit((value) => (value === "width" ? "contain" : "width"))}
+        onQualityToggle={() =>
+          setQuality((value) => {
+            const next = value === "data-saver" ? "original" : "data-saver";
+            setPageIndex((index) => Math.min(index, Math.max(data.pages.length - 1, 0)));
+            return next;
+          })
+        }
         onReveal={showToolbarBriefly}
       />
       <ReaderCanvas mode={mode} fit={fit} pages={data.pages} pageIndex={pageIndex} imageRefs={imageRefs} onGoToPage={goToPage} onRevealControls={showToolbarBriefly} />
