@@ -86,12 +86,23 @@ class _ReaderScreenState extends State<ReaderScreen> {
         );
       }
     }
+    if (mounted) _preloadAround(_pageIndex);
   }
 
   void _setPage(int index) {
     if (_pages.isEmpty) return;
     setState(() => _pageIndex = index.clamp(0, _pages.length - 1));
+    _preloadAround(_pageIndex);
     _scheduleSave();
+  }
+
+  void _preloadAround(int index) {
+    if (!_paged || !mounted) return;
+    for (final next in [index + 1, index + 2]) {
+      if (next >= 0 && next < _pages.length) {
+        precacheImage(CachedNetworkImageProvider(_pages[next]), context);
+      }
+    }
   }
 
   void _scheduleSave() {
@@ -123,7 +134,10 @@ class _ReaderScreenState extends State<ReaderScreen> {
           actions: [
             IconButton(
               tooltip: _paged ? 'Vertical mode' : 'Paged mode',
-              onPressed: () => setState(() => _paged = !_paged),
+              onPressed: () {
+                setState(() => _paged = !_paged);
+                _preloadAround(_pageIndex);
+              },
               icon: Icon(_paged ? Icons.view_stream : Icons.view_carousel),
             ),
             IconButton(
@@ -140,8 +154,9 @@ class _ReaderScreenState extends State<ReaderScreen> {
               return const AsyncPane(message: 'Preparing reader...');
             }
             if (snapshot.hasError) {
-              return AsyncPane(
+              return _ReaderErrorPane(
                 message: snapshot.error.toString(),
+                mangaId: widget.mangaId,
                 onRetry: () => setState(() => _future = _load()),
               );
             }
@@ -230,6 +245,52 @@ class _ReaderScreenState extends State<ReaderScreen> {
   }
 }
 
+class _ReaderErrorPane extends StatelessWidget {
+  const _ReaderErrorPane({
+    required this.message,
+    required this.mangaId,
+    required this.onRetry,
+  });
+
+  final String message;
+  final String? mangaId;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              alignment: WrapAlignment.center,
+              children: [
+                FilledButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                ),
+                if (mangaId != null)
+                  OutlinedButton.icon(
+                    onPressed: () => context.go('/manga/$mangaId'),
+                    icon: const Icon(Icons.menu_book_outlined),
+                    label: const Text('Back to chapters'),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ChapterNav extends StatelessWidget {
   const _ChapterNav({
     required this.chapterId,
@@ -243,7 +304,32 @@ class _ChapterNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (mangaId == null || chapters.isEmpty) return const SizedBox.shrink();
+    if (mangaId == null) {
+      return const Material(
+        color: Colors.black,
+        child: Padding(
+          padding: EdgeInsets.all(10),
+          child: Text(
+            'Chapter navigation needs manga context.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: MangaTheme.muted),
+          ),
+        ),
+      );
+    }
+    if (chapters.isEmpty) {
+      return const Material(
+        color: Colors.black,
+        child: Padding(
+          padding: EdgeInsets.all(10),
+          child: Text(
+            'Chapter navigation is unavailable while chapter context loads.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: MangaTheme.muted),
+          ),
+        ),
+      );
+    }
     final current = chapters.indexWhere((chapter) => chapter.id == chapterId);
     final previous = current > 0 ? chapters[current - 1] : null;
     final next = current >= 0 && current < chapters.length - 1

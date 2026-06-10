@@ -50,17 +50,40 @@ class _LibraryScreenState extends State<LibraryScreen> {
     String? status,
     bool? favorite,
   }) async {
-    await _app.libraryRepository.upsert(
-      item.mangaId,
-      status: status ?? item.status,
-      isFavorite: favorite ?? item.isFavorite,
-    );
-    setState(() => _future = _load());
+    try {
+      await _app.libraryRepository.upsert(
+        item.mangaId,
+        status: status ?? item.status,
+        isFavorite: favorite ?? item.isFavorite,
+      );
+      setState(() => _future = _load());
+      if (mounted) _showSnack('Library updated.');
+    } catch (error) {
+      if (mounted) _showSnack(error.toString());
+    }
   }
 
   Future<void> _remove(String mangaId) async {
-    await _app.libraryRepository.remove(mangaId);
-    setState(() => _future = _load());
+    try {
+      await _app.libraryRepository.remove(mangaId);
+      setState(() => _future = _load());
+      if (mounted) _showSnack('Removed from library.');
+    } catch (error) {
+      if (mounted) _showSnack(error.toString());
+    }
+  }
+
+  void _clearFilters() {
+    setState(() {
+      _query.clear();
+      _sort = 'lastRead';
+    });
+  }
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -78,6 +101,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
           );
         }
         final items = _visible(snapshot.data ?? const []);
+        final hasActiveFilters =
+            _query.text.trim().isNotEmpty || _sort != 'lastRead';
         return ListView(
           padding: const EdgeInsets.all(14),
           children: [
@@ -125,6 +150,24 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 ),
               ],
               onChanged: (value) => setState(() => _sort = value ?? 'lastRead'),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _LibrarySummaryChip(label: _tabLabel(_tab)),
+                _LibrarySummaryChip(label: '${items.length} shown'),
+                _LibrarySummaryChip(label: _sortLabel(_sort)),
+                if (_query.text.trim().isNotEmpty)
+                  _LibrarySummaryChip(label: 'Search: ${_query.text.trim()}'),
+                if (hasActiveFilters)
+                  ActionChip(
+                    avatar: const Icon(Icons.clear, size: 16),
+                    label: const Text('Clear filters'),
+                    onPressed: _clearFilters,
+                  ),
+              ],
             ),
             SectionHeader(title: '${items.length} shown'),
             if ((snapshot.data ?? const []).isEmpty)
@@ -185,7 +228,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
       if (_sort == 'title') return _title(a).compareTo(_title(b));
       if (_sort == 'status') return a.status.compareTo(b.status);
       if (_sort == 'favorite') {
-        return b.isFavorite.toString().compareTo(a.isFavorite.toString());
+        final byFavorite = (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0);
+        if (byFavorite != 0) return byFavorite;
+        return _activityTime(b).compareTo(_activityTime(a));
       }
       if (_sort == 'updated') return b.updatedAt.compareTo(a.updatedAt);
       return _activityTime(b).compareTo(_activityTime(a));
@@ -384,8 +429,34 @@ class _LibraryCover extends StatelessWidget {
   }
 }
 
+class _LibrarySummaryChip extends StatelessWidget {
+  const _LibrarySummaryChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Chip(visualDensity: VisualDensity.compact, label: Text(label));
+  }
+}
+
 String _title(LibraryItem item) => item.manga?.title ?? item.mangaId;
 DateTime _activityTime(LibraryItem item) =>
     item.readingProgress?.updatedAt ?? item.lastReadAt ?? item.updatedAt;
 String _formatDate(DateTime date) =>
     '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+String _tabLabel(String tab) => switch (tab) {
+  'FAVORITES' => 'Favorites',
+  'COMPLETED' => 'Completed',
+  'PAUSED' => 'Paused',
+  _ => 'Reading',
+};
+
+String _sortLabel(String sort) => switch (sort) {
+  'updated' => 'Recently updated',
+  'title' => 'Title A-Z',
+  'status' => 'Status',
+  'favorite' => 'Favorite first',
+  _ => 'Last read',
+};

@@ -38,6 +38,21 @@ GoRouter buildRouter(AppState appState) {
             builder: (context, state) => const SearchScreen(),
           ),
           GoRoute(
+            path: '/discover/popular',
+            builder: (context, state) =>
+                const SearchScreen(preset: DiscoveryPreset.popular),
+          ),
+          GoRoute(
+            path: '/discover/latest',
+            builder: (context, state) =>
+                const SearchScreen(preset: DiscoveryPreset.latest),
+          ),
+          GoRoute(
+            path: '/genres/:genre',
+            builder: (context, state) =>
+                SearchScreen(routeGenre: state.pathParameters['genre']),
+          ),
+          GoRoute(
             path: '/library',
             builder: (context, state) => const LibraryScreen(),
           ),
