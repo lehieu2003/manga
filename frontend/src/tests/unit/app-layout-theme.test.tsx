@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -26,6 +26,8 @@ describe("AppLayout theme toggle", () => {
     document.documentElement.removeAttribute("data-theme");
     document.documentElement.style.colorScheme = "";
     mockMatchMedia(false);
+    mockScrollPosition(0);
+    vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
   });
 
   it("renders a header toggle that switches the document theme", async () => {
@@ -50,6 +52,31 @@ describe("AppLayout theme toggle", () => {
     expect(localStorage.getItem("manga.theme")).toBe("light");
     expect(screen.getByRole("button", { name: "Switch to dark mode" })).toBeInTheDocument();
   });
+
+  it("shows a global scroll-to-top button after scrolling down", async () => {
+    const user = userEvent.setup();
+    render(
+      <ThemeProvider>
+        <MemoryRouter initialEntries={["/"]}>
+          <Routes>
+            <Route element={<AppLayout />}>
+              <Route index element={<div>Home content</div>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>
+    );
+
+    const button = screen.getByRole("button", { name: "Scroll to top" });
+    expect(button).not.toHaveClass("scroll-to-top-visible");
+
+    mockScrollPosition(480);
+    fireEvent.scroll(window);
+    expect(button).toHaveClass("scroll-to-top-visible");
+
+    await user.click(button);
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
+  });
 });
 
 function mockMatchMedia(prefersLight: boolean) {
@@ -66,5 +93,12 @@ function mockMatchMedia(prefersLight: boolean) {
       removeListener: () => undefined,
       dispatchEvent: () => false
     })
+  });
+}
+
+function mockScrollPosition(scrollY: number) {
+  Object.defineProperty(window, "scrollY", {
+    configurable: true,
+    value: scrollY
   });
 }
