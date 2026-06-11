@@ -11,7 +11,13 @@ export function useMangaDetail({ mangaId, user, showToast }: { mangaId: string; 
   const manga = useQuery({ queryKey: ["manga", mangaId], queryFn: () => api.getManga(mangaId), enabled: Boolean(mangaId) });
   const chapters = useInfiniteQuery({
     queryKey: ["chapters", mangaId, selectedLanguages, chapterSearchQuery],
-    queryFn: ({ pageParam }) => api.getChapters(mangaId, { limit: 100, offset: pageParam, translatedLanguage: selectedLanguages, q: chapterSearchQuery }),
+    queryFn: ({ pageParam }) =>
+      api.getChapters(mangaId, {
+        limit: 100,
+        offset: pageParam,
+        translatedLanguage: selectedLanguages,
+        ...(chapterSearchQuery ? { q: chapterSearchQuery } : {})
+      }),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => {
       const nextOffset = lastPage.offset + lastPage.limit;
