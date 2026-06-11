@@ -60,6 +60,7 @@ export function ChapterList(props: ChapterListProps) {
       <ChapterListControls
         chapters={chapters}
         visibleCount={state.visibleChapters.length}
+        totalVisibleCount={state.collapse.totalCount}
         selectedLanguages={selectedLanguages}
         scanlationGroups={metadata.scanlationGroups}
         state={state.state}
@@ -71,13 +72,23 @@ export function ChapterList(props: ChapterListProps) {
         onClearFilters={state.clearFilters}
       />
       <ChapterRows
-        chapters={state.visibleChapters}
+        groups={state.groupedChapters}
         mangaId={mangaId}
         metadata={metadata}
         selectedLanguages={selectedLanguages}
         isSearchingMore={state.isSearchingMore}
         needsSync={needsSync}
       />
+      {state.collapse.isCollapsible ? (
+        <div className='flex flex-col items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 text-sm text-[var(--muted)] sm:flex-row sm:justify-center'>
+          <span>
+            Showing {state.collapse.visibleCount} of {state.collapse.totalCount} chapters
+          </span>
+          <button className='btn min-h-9 text-sm' onClick={state.collapse.isCollapsed ? state.showAll : state.showFewer} type='button'>
+            {state.collapse.isCollapsed ? 'Show all chapters' : 'Show fewer'}
+          </button>
+        </div>
+      ) : null}
       {selectedLanguages.length && hasMore ? (
         <div ref={sentinelRef} className='flex justify-center'>
           <button
