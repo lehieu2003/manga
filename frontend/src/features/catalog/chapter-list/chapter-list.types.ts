@@ -9,6 +9,7 @@ export type ChapterListProps = {
   chaptersProgress?: ReadingProgress[];
   selectedLanguages: string[];
   onSelectedLanguagesChange: (languages: string[]) => void;
+  onChapterSearchChange?: (search: string) => void;
   hasMore?: boolean;
   isLoadingMore?: boolean;
   onLoadMore?: () => void;

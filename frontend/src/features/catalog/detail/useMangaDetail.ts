@@ -6,10 +6,18 @@ import type { User } from "@/types";
 export function useMangaDetail({ mangaId, user, showToast }: { mangaId: string; user?: User | null; showToast: (input: { kind: "success" | "error" | "info"; title: string; description: string }) => void }) {
   const queryClient = useQueryClient();
   const [selectedLanguages, setSelectedLanguages] = useState(["vi", "en"]);
+  const [chapterSearch, setChapterSearch] = useState("");
+  const chapterSearchQuery = chapterSearch.trim();
   const manga = useQuery({ queryKey: ["manga", mangaId], queryFn: () => api.getManga(mangaId), enabled: Boolean(mangaId) });
   const chapters = useInfiniteQuery({
-    queryKey: ["chapters", mangaId, selectedLanguages],
-    queryFn: ({ pageParam }) => api.getChapters(mangaId, { limit: 100, offset: pageParam, translatedLanguage: selectedLanguages }),
+    queryKey: ["chapters", mangaId, selectedLanguages, chapterSearchQuery],
+    queryFn: ({ pageParam }) =>
+      api.getChapters(mangaId, {
+        limit: 100,
+        offset: pageParam,
+        translatedLanguage: selectedLanguages,
+        ...(chapterSearchQuery ? { q: chapterSearchQuery } : {})
+      }),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => {
       const nextOffset = lastPage.offset + lastPage.limit;
@@ -67,6 +75,8 @@ export function useMangaDetail({ mangaId, user, showToast }: { mangaId: string; 
   return {
     selectedLanguages,
     setSelectedLanguages,
+    chapterSearch,
+    setChapterSearch,
     manga,
     chapters,
     progress,

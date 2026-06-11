@@ -28,7 +28,7 @@ export function filterAndSortChapters(chapters: ChapterSummary[], state: Chapter
     .reduce<ChapterSummary[]>((result, chapter) => {
       const matchesSearch =
         !needle ||
-        [chapter.chapter, chapter.title].some((value) => {
+        [chapter.chapter, chapter.title, chapter.scanlationGroup].some((value) => {
           return Boolean(value?.toLowerCase().includes(needle));
         });
       const matchesGroup = !state.selectedScanlationGroups.length || Boolean(chapter.scanlationGroup && state.selectedScanlationGroups.includes(chapter.scanlationGroup));
@@ -36,20 +36,6 @@ export function filterAndSortChapters(chapters: ChapterSummary[], state: Chapter
       return result;
     }, [])
     .toSorted((a, b) => compareChapters(a, b, state.sortMode));
-}
-
-export function shouldLoadMoreForSearch(
-  search: string,
-  chapters: ChapterSummary[],
-  selectedScanlationGroups: string[],
-  sortMode: SortMode,
-  hasMore?: boolean,
-  isLoadingMore?: boolean,
-  onLoadMore?: () => void
-) {
-  if (!search.trim() || !hasMore || isLoadingMore || !onLoadMore) return false;
-  const visible = filterAndSortChapters(chapters, { chapterSearch: search, selectedScanlationGroups, sortMode });
-  return visible.length === 0;
 }
 
 export function compareChapters(a: ChapterSummary, b: ChapterSummary, sortMode: SortMode) {

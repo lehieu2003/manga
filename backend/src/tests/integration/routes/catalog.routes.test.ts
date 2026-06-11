@@ -5,6 +5,7 @@ const chapterFindMany = vi.fn();
 const chapterCount = vi.fn();
 const chapterUpdateMany = vi.fn();
 const mangaUpsert = vi.fn();
+const mangaFindMany = vi.fn();
 const tagFindFirst = vi.fn();
 const tagFindMany = vi.fn();
 const tagUpsert = vi.fn();
@@ -22,7 +23,8 @@ vi.mock("../../../infrastructure/database/client.js", () => ({
       updateMany: chapterUpdateMany
     },
     cachedManga: {
-      upsert: mangaUpsert
+      upsert: mangaUpsert,
+      findMany: mangaFindMany
     },
     mangaDexTag: {
       findFirst: tagFindFirst,
@@ -108,6 +110,52 @@ describe("catalogRoutes", () => {
     await app.close();
   });
 
+  it("searches cached chapters by server-side query", async () => {
+    const { catalogRoutes } = await import("../../../app/routes/v1/catalog.routes.js");
+    const app = Fastify();
+    await app.register(catalogRoutes, { prefix: "/api" });
+
+    chapterFindMany.mockResolvedValue([
+      {
+        id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        title: "Jump Target",
+        chapter: "123",
+        volume: null,
+        translatedLanguage: "en",
+        publishAt: new Date("2024-02-01T00:00:00.000Z"),
+        pages: 24,
+        scanlationGroup: "Group D"
+      }
+    ]);
+    chapterCount.mockResolvedValue(1);
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/manga/32d76d19-8a05-4db0-9fc2-e0b0648fe9d0/chapters?translatedLanguage=vi,en&limit=100&offset=0&q=jump"
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      data: [{ id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", title: "Jump Target" }],
+      total: 1,
+      source: "db"
+    });
+    expect(chapterFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          OR: [
+            { chapter: { contains: "jump", mode: "insensitive" } },
+            { title: { contains: "jump", mode: "insensitive" } },
+            { scanlationGroup: { contains: "jump", mode: "insensitive" } }
+          ]
+        })
+      })
+    );
+    expect(mangaDexGetChapters).not.toHaveBeenCalled();
+
+    await app.close();
+  });
+
   it("returns 202 needsSync when no readable cached chapters exist", async () => {
     const { catalogRoutes } = await import("../../../app/routes/v1/catalog.routes.js");
     const app = Fastify();
@@ -173,6 +221,31 @@ describe("catalogRoutes", () => {
       })
     );
     expect(mangaUpsert).toHaveBeenCalled();
+
+    await app.close();
+  });
+
+  it("falls back to cached genres when the MangaDex tag registry is unavailable", async () => {
+    const { catalogRoutes } = await import("../../../app/routes/v1/catalog.routes.js");
+    const app = Fastify();
+    await app.register(catalogRoutes, { prefix: "/api" });
+
+    mangaFindMany.mockResolvedValue([{ tags: ["Action", "Drama"] }, { tags: ["Action"] }]);
+    tagFindFirst.mockRejectedValue(new Error("tag registry unavailable"));
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/genres"
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      data: [
+        { name: "Action", count: 2 },
+        { name: "Drama", count: 1 }
+      ],
+      source: "cache"
+    });
 
     await app.close();
   });

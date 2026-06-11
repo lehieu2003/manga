@@ -1,16 +1,15 @@
 import { useMemo, useState } from "react";
 import type { ChapterSummary } from "@/types";
 import { DEFAULT_LANGUAGES } from "./chapter-list.constants";
-import { filterAndSortChapters, shouldLoadMoreForSearch } from "./chapter-list.logic";
+import { filterAndSortChapters } from "./chapter-list.logic";
 import type { ChapterListState } from "./chapter-list.types";
 
 export function useChapterListState({
   chapters,
   selectedLanguages,
   onSelectedLanguagesChange,
-  hasMore,
   isLoadingMore,
-  onLoadMore
+  onChapterSearchChange
 }: {
   chapters: ChapterSummary[];
   selectedLanguages: string[];
@@ -18,17 +17,18 @@ export function useChapterListState({
   hasMore?: boolean;
   isLoadingMore?: boolean;
   onLoadMore?: () => void;
+  onChapterSearchChange?: (search: string) => void;
 }) {
   const [state, setState] = useState<ChapterListState>({ sortMode: "newest", chapterSearch: "", selectedScanlationGroups: [] });
   const visibleChapters = useMemo(() => filterAndSortChapters(chapters, state), [chapters, state]);
   const selectedLanguageKey = selectedLanguages.toSorted().join(",");
   const defaultLanguageKey = DEFAULT_LANGUAGES.toSorted().join(",");
   const hasActiveFilters = state.chapterSearch.trim().length > 0 || state.selectedScanlationGroups.length > 0 || selectedLanguageKey !== defaultLanguageKey;
-  const isSearchingMore = Boolean(state.chapterSearch.trim() && !visibleChapters.length && hasMore);
+  const isSearchingMore = Boolean(state.chapterSearch.trim() && !visibleChapters.length && isLoadingMore);
 
   const updateSearch = (value: string) => {
     setState((current) => ({ ...current, chapterSearch: value }));
-    if (shouldLoadMoreForSearch(value, chapters, state.selectedScanlationGroups, state.sortMode, hasMore, isLoadingMore, onLoadMore)) onLoadMore?.();
+    onChapterSearchChange?.(value);
   };
   const toggleSort = () => setState((current) => ({ ...current, sortMode: current.sortMode === "newest" ? "oldest" : "newest" }));
   const toggleScanlationGroup = (group: string) => {
@@ -45,6 +45,7 @@ export function useChapterListState({
   };
   const clearFilters = () => {
     setState((current) => ({ ...current, chapterSearch: "", selectedScanlationGroups: [] }));
+    onChapterSearchChange?.("");
     onSelectedLanguagesChange(DEFAULT_LANGUAGES);
   };
 

@@ -8,13 +8,6 @@ on:
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/react-doctor.yml"
-  push:
-    branches: [main]
-    paths:
-      - "frontend/**"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/react-doctor.yml"
 
 permissions:
   contents: read
