@@ -1,6 +1,7 @@
 import { BookOpen, Library, Moon, Search, Settings, ShieldCheck, Sun, UserRound } from "lucide-react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { getAdminToken } from "@/api";
+import { ScrollToTopButton } from "@/components/layout/ScrollToTopButton";
 import { useAuth } from "@/features/auth/stores/auth.store";
 import { useTheme } from "@/features/theme/theme.store";
 
@@ -72,6 +73,7 @@ export function AppLayout() {
       <main className={isReaderRoute ? "reader-main" : "container-x py-6"}>
         <Outlet />
       </main>
+      <ScrollToTopButton />
     </div>
   );
 }

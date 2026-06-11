@@ -237,6 +237,52 @@ img {
   box-shadow: 0 10px 24px rgba(255, 184, 107, 0.16);
 }
 
+.scroll-to-top {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(5rem, calc(env(safe-area-inset-bottom) + 1rem));
+  z-index: 70;
+  display: grid;
+  width: 2.85rem;
+  height: 2.85rem;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--accent), var(--line) 42%);
+  border-radius: 0.7rem;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent), transparent 82%), transparent),
+    color-mix(in srgb, var(--surface), transparent 6%);
+  color: var(--accent-strong);
+  box-shadow: 0 18px 42px var(--surface-shadow);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(0.65rem) scale(0.96);
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+  backdrop-filter: blur(16px);
+}
+
+.scroll-to-top-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+.scroll-to-top:hover {
+  border-color: var(--accent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent), transparent 72%), transparent),
+    var(--surface-strong);
+  transform: translateY(-0.1rem) scale(1);
+}
+
+.scroll-to-top:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
 .manga-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
