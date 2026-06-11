@@ -5,6 +5,7 @@ const chapterFindMany = vi.fn();
 const chapterCount = vi.fn();
 const chapterUpdateMany = vi.fn();
 const mangaUpsert = vi.fn();
+const mangaFindMany = vi.fn();
 const tagFindFirst = vi.fn();
 const tagFindMany = vi.fn();
 const tagUpsert = vi.fn();
@@ -22,7 +23,8 @@ vi.mock("../../../infrastructure/database/client.js", () => ({
       updateMany: chapterUpdateMany
     },
     cachedManga: {
-      upsert: mangaUpsert
+      upsert: mangaUpsert,
+      findMany: mangaFindMany
     },
     mangaDexTag: {
       findFirst: tagFindFirst,
@@ -219,6 +221,31 @@ describe("catalogRoutes", () => {
       })
     );
     expect(mangaUpsert).toHaveBeenCalled();
+
+    await app.close();
+  });
+
+  it("falls back to cached genres when the MangaDex tag registry is unavailable", async () => {
+    const { catalogRoutes } = await import("../../../app/routes/v1/catalog.routes.js");
+    const app = Fastify();
+    await app.register(catalogRoutes, { prefix: "/api" });
+
+    mangaFindMany.mockResolvedValue([{ tags: ["Action", "Drama"] }, { tags: ["Action"] }]);
+    tagFindFirst.mockRejectedValue(new Error("tag registry unavailable"));
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/genres"
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      data: [
+        { name: "Action", count: 2 },
+        { name: "Drama", count: 1 }
+      ],
+      source: "cache"
+    });
 
     await app.close();
   });

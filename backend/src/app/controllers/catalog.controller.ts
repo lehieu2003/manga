@@ -76,17 +76,24 @@ export async function searchCatalogManga(query: MangaSearchQuery, options: { use
 
 export async function listCatalogGenres() {
   return cached("genres:list", 300, async () => {
-    const [cachedGenres, registryTags] = await Promise.all([getCachedGenres(), listMangaDexTags()]);
-    const counts = new Map(cachedGenres.map((genre) => [genre.name.toLowerCase(), genre.count]));
-    const registryData = registryTags.map((tag) => ({
-      id: tag.id,
-      name: tag.name,
-      group: tag.group,
-      aliases: tag.aliases,
-      count: counts.get(tag.name.toLowerCase()) ?? 0
-    }));
+    const cachedGenres = await getCachedGenres();
 
-    if (registryData.length) return { data: registryData, source: "mangadex" as const };
+    try {
+      const registryTags = await listMangaDexTags();
+      const counts = new Map(cachedGenres.map((genre) => [genre.name.toLowerCase(), genre.count]));
+      const registryData = registryTags.map((tag) => ({
+        id: tag.id,
+        name: tag.name,
+        group: tag.group,
+        aliases: tag.aliases,
+        count: counts.get(tag.name.toLowerCase()) ?? 0
+      }));
+
+      if (registryData.length) return { data: registryData, source: "mangadex" as const };
+    } catch {
+      // The genre list should remain available from cached manga when the tag registry is stale or unavailable.
+    }
+
     return { data: cachedGenres, source: "cache" as const };
   });
 }
