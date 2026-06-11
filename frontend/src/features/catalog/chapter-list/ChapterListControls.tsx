@@ -6,6 +6,7 @@ import type { ChapterSummary } from "@/types";
 export function ChapterListControls({
   chapters,
   visibleCount,
+  totalVisibleCount,
   selectedLanguages,
   scanlationGroups,
   state,
@@ -18,6 +19,7 @@ export function ChapterListControls({
 }: {
   chapters: ChapterSummary[];
   visibleCount: number;
+  totalVisibleCount: number;
   selectedLanguages: string[];
   scanlationGroups: string[];
   state: ChapterListState;
@@ -36,7 +38,10 @@ export function ChapterListControls({
           <span className="chapter-legend">▶ Current</span>
           <span className="chapter-legend">● New</span>
           <span className="chapter-legend">
-            Showing {visibleCount} / {chapters.length} loaded
+            Showing {visibleCount} / {totalVisibleCount} visible
+          </span>
+          <span className="chapter-legend">
+            {chapters.length} loaded
           </span>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

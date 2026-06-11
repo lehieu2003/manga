@@ -20,6 +20,7 @@ export type ChapterListState = {
   sortMode: SortMode;
   chapterSearch: string;
   selectedScanlationGroups: string[];
+  isExpanded: boolean;
 };
 
 export type ChapterListMetadata = {
@@ -31,3 +32,17 @@ export type ChapterListMetadata = {
 };
 
 export type ChapterState = "read" | "current" | "new";
+
+export type ChapterVolumeGroup = {
+  id: string;
+  title: string;
+  chapters: ChapterSummary[];
+};
+
+export type ChapterCollapseState = {
+  chapters: ChapterSummary[];
+  isCollapsible: boolean;
+  isCollapsed: boolean;
+  totalCount: number;
+  visibleCount: number;
+};

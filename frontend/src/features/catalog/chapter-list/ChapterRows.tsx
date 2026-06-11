@@ -2,27 +2,29 @@ import { ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { ChapterSummary } from "@/types";
 import { estimateReadingTime, getChapterState } from "./chapter-list.logic";
-import type { ChapterListMetadata } from "./chapter-list.types";
+import type { ChapterListMetadata, ChapterVolumeGroup } from "./chapter-list.types";
 
 export function ChapterRows({
-  chapters,
+  groups,
   mangaId,
   metadata,
   selectedLanguages,
   isSearchingMore,
   needsSync
 }: {
-  chapters: ChapterSummary[];
+  groups: ChapterVolumeGroup[];
   mangaId: string;
   metadata: ChapterListMetadata;
   selectedLanguages: string[];
   isSearchingMore: boolean;
   needsSync?: boolean;
 }) {
+  const chapterCount = groups.reduce((count, group) => count + group.chapters.length, 0);
+
   return (
     <div className="overflow-hidden rounded-lg border border-[var(--line)]">
-      {chapters.length ? (
-        chapters.map((chapter) => <ChapterRow key={chapter.id} chapter={chapter} mangaId={mangaId} metadata={metadata} />)
+      {chapterCount ? (
+        groups.map((group) => <ChapterVolumeSection key={group.id} group={group} mangaId={mangaId} metadata={metadata} />)
       ) : (
         <div className="bg-[var(--surface)] p-6 text-center text-[var(--muted)]">
           {!selectedLanguages.length
@@ -35,6 +37,19 @@ export function ChapterRows({
         </div>
       )}
     </div>
+  );
+}
+
+function ChapterVolumeSection({ group, mangaId, metadata }: { group: ChapterVolumeGroup; mangaId: string; metadata: ChapterListMetadata }) {
+  return (
+    <section>
+      <div className="border-b border-[var(--line)] bg-[var(--card)] px-4 py-2 text-xs font-black uppercase tracking-wide text-[var(--muted)]">
+        {group.title}
+      </div>
+      {group.chapters.map((chapter) => (
+        <ChapterRow key={chapter.id} chapter={chapter} mangaId={mangaId} metadata={metadata} />
+      ))}
+    </section>
   );
 }
 
