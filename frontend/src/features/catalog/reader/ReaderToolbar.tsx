@@ -1,4 +1,5 @@
-import { ArrowLeft, ChevronLeft, ChevronRight, Columns2, Maximize2, Rows3 } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, ChevronLeft, ChevronRight, CircleHelp, Columns2, Maximize2, Rows3 } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { ChapterSummary } from "@/types";
 import type { ReaderChapterNavItem, ReaderFit, ReaderMode, ReaderQuality } from "./reader.types";
@@ -50,6 +51,8 @@ export function ReaderToolbar({
   onQualityToggle: () => void;
   onReveal: () => void;
 }) {
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+
   return (
     <div className={`reader-toolbar ${isVisible ? "reader-toolbar-visible" : "reader-toolbar-hidden"}`} onPointerDown={onReveal} onFocus={onReveal}>
       <div className="reader-toolbar-inner">
@@ -104,6 +107,41 @@ export function ReaderToolbar({
             <button className="btn min-h-9 px-3 text-xs" onClick={onQualityToggle} aria-label="Toggle reader quality" type="button">
               {quality === "data-saver" ? "Data saver" : "Original"}
             </button>
+          </div>
+          <div className="reader-help">
+            <button
+              className="btn reader-icon-button"
+              onClick={() => setIsHelpOpen((value) => !value)}
+              aria-controls="reader-shortcuts"
+              aria-expanded={isHelpOpen}
+              aria-label="Reader shortcuts"
+              type="button"
+            >
+              <CircleHelp size={17} />
+            </button>
+            {isHelpOpen ? (
+              <div className="reader-help-popover" id="reader-shortcuts" role="tooltip">
+                <div className="reader-help-title">Reader controls</div>
+                <dl>
+                  <div>
+                    <dt>Left / right tap</dt>
+                    <dd>Previous or next page in paged mode.</dd>
+                  </div>
+                  <div>
+                    <dt>Swipe left / right</dt>
+                    <dd>Next or previous page in paged mode.</dd>
+                  </div>
+                  <div>
+                    <dt>Arrow keys</dt>
+                    <dd>Move between pages in paged mode.</dd>
+                  </div>
+                  <div>
+                    <dt>Center tap</dt>
+                    <dd>Show the reader toolbar.</dd>
+                  </div>
+                </dl>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
