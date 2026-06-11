@@ -559,15 +559,97 @@ img {
   padding: 0.15rem;
 }
 
+.reader-help {
+  position: relative;
+}
+
+.reader-help-popover {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: min(19rem, calc(100vw - 2rem));
+  border: 1px solid color-mix(in srgb, var(--line), var(--accent) 18%);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--reader-toolbar-bg), #050403 18%);
+  padding: 0.85rem;
+  color: var(--text);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(18px);
+}
+
+.reader-help-title {
+  margin-bottom: 0.65rem;
+  font-size: 0.83rem;
+  font-weight: 900;
+}
+
+.reader-help-popover dl {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+}
+
+.reader-help-popover div {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.reader-help-popover dt {
+  color: var(--accent-strong);
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.reader-help-popover dd {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
 .reader-pages {
   display: grid;
   gap: 0.5rem;
 }
 
 .reader-paged-canvas {
+  position: relative;
   display: grid;
   min-height: calc(100vh - 5rem);
   place-items: center;
+  touch-action: pan-y;
+}
+
+.reader-tap-zones {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(5rem, 1fr) minmax(6rem, 1fr) minmax(5rem, 1fr);
+  pointer-events: none;
+}
+
+.reader-tap-zone {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.reader-tap-zone:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -0.35rem;
+}
+
+.reader-tap-zone-left {
+  cursor: w-resize;
+}
+
+.reader-tap-zone-center {
+  cursor: default;
+}
+
+.reader-tap-zone-right {
+  cursor: e-resize;
 }
 
 .reader-page img {
@@ -690,6 +772,10 @@ img {
   .reader-load-button,
   .reader-mode-group {
     display: none;
+  }
+
+  .reader-help {
+    margin-left: auto;
   }
 
   .reader-unavailable {

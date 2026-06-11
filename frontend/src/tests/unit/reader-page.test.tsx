@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -166,6 +166,49 @@ describe("ReaderPage", () => {
         quality: "original"
       });
     });
+  });
+
+  it("moves pages with paged tap zones", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(READER_SETTINGS_STORAGE_KEY, JSON.stringify({ mode: "paged", fit: "width", quality: "data-saver" }));
+    renderReader("/read/chapter-2?mangaId=manga-1");
+
+    expect(await screen.findByText("Page 1 / 3")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Next page tap zone" }));
+    expect(await screen.findByText("Page 2 / 3")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Previous page tap zone" }));
+    expect(await screen.findByText("Page 1 / 3")).toBeInTheDocument();
+  });
+
+  it("moves pages with horizontal swipe gestures in paged mode", async () => {
+    localStorage.setItem(READER_SETTINGS_STORAGE_KEY, JSON.stringify({ mode: "paged", fit: "width", quality: "data-saver" }));
+    const { container } = renderReader("/read/chapter-2?mangaId=manga-1");
+
+    expect(await screen.findByText("Page 1 / 3")).toBeInTheDocument();
+    const canvas = container.querySelector(".reader-paged-canvas");
+    expect(canvas).not.toBeNull();
+
+    fireEvent.pointerDown(canvas as Element, { clientX: 220, clientY: 120 });
+    fireEvent.pointerUp(canvas as Element, { clientX: 120, clientY: 124 });
+    expect(await screen.findByText("Page 2 / 3")).toBeInTheDocument();
+
+    fireEvent.pointerDown(canvas as Element, { clientX: 120, clientY: 120 });
+    fireEvent.pointerUp(canvas as Element, { clientX: 220, clientY: 124 });
+    expect(await screen.findByText("Page 1 / 3")).toBeInTheDocument();
+  });
+
+  it("shows reader shortcut help from the toolbar", async () => {
+    const user = userEvent.setup();
+    renderReader("/read/chapter-2?mangaId=manga-1");
+
+    await screen.findByText("Page 1 / 3");
+    await user.click(screen.getByRole("button", { name: "Reader shortcuts" }));
+
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Reader controls");
+    expect(screen.getByText("Left / right tap")).toBeInTheDocument();
+    expect(screen.getByText("Swipe left / right")).toBeInTheDocument();
+    expect(screen.getByText("Arrow keys")).toBeInTheDocument();
   });
 
   it("saves vertical progress from the observed viewport page", async () => {
