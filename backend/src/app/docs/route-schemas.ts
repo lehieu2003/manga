@@ -486,7 +486,8 @@ export const catalogRouteSchemas = {
       properties: {
         limit: { type: "integer", minimum: 1, maximum: 100, default: 96 },
         offset: { type: "integer", minimum: 0, default: 0 },
-        translatedLanguage: { type: "string", default: "vi,en" }
+        translatedLanguage: { type: "string", default: "vi,en" },
+        q: { type: "string", maxLength: 120, description: "Search cached chapters by chapter number, title, or scanlation group." }
       }
     },
     response: { 200: chapterPagination, 202: chapterPagination, ...errors }

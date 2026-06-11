@@ -41,11 +41,12 @@ export const catalogApi = {
   getManga(id: string) {
     return request<MangaSummary>(`/manga/${id}`);
   },
-  getChapters(mangaId: string, params: { limit?: number; offset?: number; translatedLanguage?: string[] } = {}) {
+  getChapters(mangaId: string, params: { limit?: number; offset?: number; translatedLanguage?: string[]; q?: string } = {}) {
     const query = new URLSearchParams();
     query.set("translatedLanguage", (params.translatedLanguage ?? ["vi", "en"]).join(","));
     query.set("limit", String(params.limit ?? 100));
     query.set("offset", String(params.offset ?? 0));
+    if (params.q?.trim()) query.set("q", params.q.trim());
     return request<Paginated<ChapterSummary>>(`/manga/${mangaId}/chapters?${query}`);
   },
   getReader(chapterId: string) {

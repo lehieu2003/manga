@@ -107,7 +107,7 @@ export async function getCatalogManga(id: string) {
 
 export async function listCatalogChapters(id: string, query: ChaptersQuery) {
   return cached(makeCacheKey("manga:chapters", { id, ...query }), 900, () =>
-    getCachedChapters({ mangaId: id, limit: query.limit, offset: query.offset, translatedLanguage: query.translatedLanguage })
+    getCachedChapters({ mangaId: id, limit: query.limit, offset: query.offset, translatedLanguage: query.translatedLanguage, q: query.q })
   );
 }
 

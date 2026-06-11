@@ -153,14 +153,14 @@ Mobile hiện là reader client của backend với parity cơ bản cho home, d
 
 - Manga detail có stats cơ bản: tổng chapters, số language đã load, last updated.
 - Chapter list có sort toggle Newest First / Oldest First.
-- Chapter list có search chapter theo chapter number hoặc title.
+- Chapter list có search chapter theo chapter number, title hoặc scanlation group.
 - Chapter list có read/current/new legend và badges.
 - Current chapter được highlight.
 - Chapter đã completed hoặc nằm trước current chapter được xem là read trong MVP.
 - Chapter mới nhất có badge NEW.
 - Language badge dùng dạng `[EN]`, `[VI]`.
 - Chapter list load mỗi lần 100 chapter và có infinite scroll kèm fallback Load more.
-- Search chapter tự fetch thêm batch khi chưa thấy kết quả trong chapters đã load.
+- Search chapter gọi server-side query nên có thể tìm trong toàn bộ cached chapter feed, không chỉ các batch đã load.
 - Có filter language bằng checkbox cho Vietnamese và English.
 - Có filter scanlation group bằng checkbox dựa trên các group đã load.
 - Có Clear filters để reset search, language và scanlation filters.
@@ -212,7 +212,7 @@ Mobile hiện là reader client của backend với parity cơ bản cho home, d
 - Search theo cached tag/genre luôn trả từ cache, không gọi live MangaDex tag registry.
 - Included/excluded tag filter hiện dựa trên tag name đã cache; chưa có UI tag ID registry đầy đủ từ MangaDex.
 - Search input placeholder có nhắc author/keyword, nhưng backend chưa implement author/artist relationship search.
-- Search chapter toàn feed đang dùng auto-fetch client-side, chưa có query server-side riêng.
+- Search chapter toàn feed đã có query server-side trên cached chapter feed.
 - Scanlation filter chỉ đầy đủ theo các chapter đã load; option list mở rộng dần khi infinite scroll load thêm.
 - Reading stats dựa trên chapters đã load và total từ feed; chưa có dashboard analytics.
 - Reader chapter navigation cần `mangaId` trên URL; nếu thiếu `mangaId`, reader vẫn đọc được chapter hiện tại nhưng disable previous/next và selector.

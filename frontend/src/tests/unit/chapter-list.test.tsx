@@ -123,17 +123,27 @@ describe("ChapterList", () => {
     expect(onLoadMore).toHaveBeenCalledTimes(1);
   });
 
-  it("auto-fetches more chapters when search has no loaded match", async () => {
+  it("sends chapter search to the server query without auto-fetching another page", async () => {
     const onLoadMore = vi.fn();
+    const onChapterSearchChange = vi.fn();
     render(
       <MemoryRouter>
-        <ChapterList chapters={chapters.slice(0, 2)} mangaId="manga-1" selectedLanguages={["vi", "en"]} onSelectedLanguagesChange={vi.fn()} hasMore onLoadMore={onLoadMore} />
+        <ChapterList
+          chapters={chapters.slice(0, 2)}
+          mangaId="manga-1"
+          selectedLanguages={["vi", "en"]}
+          onSelectedLanguagesChange={vi.fn()}
+          onChapterSearchChange={onChapterSearchChange}
+          hasMore
+          onLoadMore={onLoadMore}
+        />
       </MemoryRouter>
     );
 
     await userEvent.type(screen.getByPlaceholderText("Search chapter..."), "123");
-    expect(onLoadMore).toHaveBeenCalled();
-    expect(screen.getByText("Searching more chapters...")).toBeInTheDocument();
+    expect(onChapterSearchChange).toHaveBeenLastCalledWith("123");
+    expect(onLoadMore).not.toHaveBeenCalled();
+    expect(screen.queryByText("Searching more chapters...")).not.toBeInTheDocument();
   });
 
   it("filters by scanlation group and clears filters", async () => {

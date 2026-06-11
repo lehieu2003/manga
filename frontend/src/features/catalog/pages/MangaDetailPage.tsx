@@ -36,6 +36,7 @@ export function MangaDetailPage() {
         latestPublishAt={chapterView.latestPublishAt}
         selectedLanguages={detail.selectedLanguages}
         onSelectedLanguagesChange={detail.setSelectedLanguages}
+        onChapterSearchChange={detail.setChapterSearch}
         progress={detail.progress.data}
         chapters={detail.chapters}
         needsSync={chaptersNeedSync}

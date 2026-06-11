@@ -10,6 +10,7 @@ export function ChapterSection({
   latestPublishAt,
   selectedLanguages,
   onSelectedLanguagesChange,
+  onChapterSearchChange,
   progress,
   chapters,
   needsSync
@@ -22,6 +23,7 @@ export function ChapterSection({
   latestPublishAt: number;
   selectedLanguages: string[];
   onSelectedLanguagesChange: (languages: string[]) => void;
+  onChapterSearchChange: (search: string) => void;
   progress?: MangaProgressPayload;
   chapters: {
     isLoading: boolean;
@@ -55,6 +57,7 @@ export function ChapterSection({
           chaptersProgress={progress?.chaptersProgress}
           selectedLanguages={selectedLanguages}
           onSelectedLanguagesChange={onSelectedLanguagesChange}
+          onChapterSearchChange={onChapterSearchChange}
         />
       ) : chapters.isLoading ? (
         <div className="surface rounded-lg p-6 text-[var(--muted)]">Loading chapters...</div>
@@ -68,6 +71,7 @@ export function ChapterSection({
           chaptersProgress={progress?.chaptersProgress}
           selectedLanguages={selectedLanguages}
           onSelectedLanguagesChange={onSelectedLanguagesChange}
+          onChapterSearchChange={onChapterSearchChange}
           needsSync={needsSync}
           hasMore={chapters.hasNextPage}
           isLoadingMore={chapters.isFetchingNextPage}

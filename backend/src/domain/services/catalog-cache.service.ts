@@ -129,12 +129,20 @@ export async function getCachedManga(id: string) {
   return manga ? fromCachedManga(manga) : null;
 }
 
-export async function getCachedChapters(input: { mangaId: string; limit: number; offset: number; translatedLanguage: string[] }) {
+export async function getCachedChapters(input: { mangaId: string; limit: number; offset: number; translatedLanguage: string[]; q?: string }) {
   const where: Prisma.CachedChapterWhereInput = {
     mangaId: input.mangaId,
     translatedLanguage: { in: input.translatedLanguage },
     pages: { gt: 0 }
   };
+  const search = input.q?.trim();
+  if (search) {
+    where.OR = [
+      { chapter: { contains: search, mode: "insensitive" } },
+      { title: { contains: search, mode: "insensitive" } },
+      { scanlationGroup: { contains: search, mode: "insensitive" } }
+    ];
+  }
 
   const [data, total] = await prisma.$transaction([
     prisma.cachedChapter.findMany({
