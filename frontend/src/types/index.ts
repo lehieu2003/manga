@@ -150,3 +150,32 @@ export type AdminSearchHistoryRow = {
   query: string;
   createdAt: string;
 };
+
+export type ChatSource = {
+  type: "manga" | "chapter";
+  id: string;
+  title: string;
+  reason: string;
+  coverUrl?: string;
+  score?: number;
+};
+
+export type ChatSuggestedAction = {
+  type: "open_manga" | "open_chapter";
+  label: string;
+  targetId: string;
+};
+
+export type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  sources?: ChatSource[];
+  suggestedActions?: ChatSuggestedAction[];
+  createdAt: string;
+};
+
+export type SendChatMessageResponse = {
+  conversationId: string;
+  message: ChatMessage;
+};

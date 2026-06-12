@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: manga
       POSTGRES_PASSWORD: manga
@@ -40,6 +40,11 @@ services:
       CHOKIDAR_INTERVAL: "1000"
       LOG_FILE: /app/logs/backend.log
       LOG_LEVEL: info
+      RAG_CHAT_ENABLED: ${RAG_CHAT_ENABLED:-false}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GPT_MODEL_NANO: ${GPT_MODEL_NANO:-gpt-4.1-nano}
+      GPT_MODEL_MINI: ${GPT_MODEL_MINI:-gpt-4.1-mini}
+      GPT_EMBEDDING_MODEL: ${GPT_EMBEDDING_MODEL:-text-embedding-3-small}
     ports:
       - "4000:4000"
     volumes:

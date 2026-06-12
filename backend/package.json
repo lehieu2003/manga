@@ -14,6 +14,7 @@
     "prisma:deploy": "prisma migrate deploy",
     "sync:mangadex": "tsx src/scripts/sync-mangadex.ts",
     "backfill:chapters": "tsx src/scripts/backfill-readable-chapters.ts",
+    "index:rag": "tsx src/scripts/index-rag-catalog.ts",
     "seed:demo": "tsx src/scripts/seed-demo-catalog.ts"
   },
   "dependencies": {

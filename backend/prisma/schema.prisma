@@ -15,6 +15,18 @@ enum LibraryStatus {
   DROPPED
 }
 
+enum RagSourceType {
+  MANGA
+  CHAPTER
+}
+
+enum ChatMessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+  TOOL
+}
+
 model User {
   id              String            @id @default(cuid())
   email           String            @unique
@@ -27,6 +39,7 @@ model User {
   libraryItems    LibraryItem[]
   progress        ReadingProgress[]
   searchHistory   SearchHistory[]
+  chatConversations ChatConversation[]
 }
 
 model RefreshSession {
@@ -133,4 +146,55 @@ model CachedChapter {
   @@index([mangaId, translatedLanguage])
   @@index([mangaId, chapter])
   @@index([publishAt])
+}
+
+model RagDocument {
+  id             String                   @id @default(cuid())
+  sourceType     RagSourceType
+  sourceId       String
+  parentSourceId String?
+  title          String
+  content        String
+  metadata       Json
+  contentHash    String
+  embedding      Unsupported("vector(1536)")?
+  embeddingModel String?
+  indexedAt      DateTime?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+
+  @@unique([sourceType, sourceId])
+  @@index([sourceType])
+  @@index([sourceId])
+  @@index([parentSourceId])
+  @@index([contentHash])
+}
+
+model ChatConversation {
+  id        String        @id @default(cuid())
+  userId    String
+  title     String?
+  archived  Boolean       @default(false)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  ChatMessage[]
+
+  @@index([userId, updatedAt])
+}
+
+model ChatMessage {
+  id             String           @id @default(cuid())
+  conversationId String
+  role           ChatMessageRole
+  content        String
+  sources        Json?
+  suggestedActions Json?
+  model          String?
+  tokenUsage     Json?
+  latencyMs      Int?
+  createdAt      DateTime         @default(now())
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
 }

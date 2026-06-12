@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { getAdminToken } from "@/api";
 import { ScrollToTopButton } from "@/components/layout/ScrollToTopButton";
 import { useAuth } from "@/features/auth/stores/auth.store";
+import { FloatingChatWidget } from "@/features/chat/components/FloatingChatWidget";
 import { useTheme } from "@/features/theme/theme.store";
 
 const navItems = [
@@ -18,6 +19,7 @@ export function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const isReaderRoute = location.pathname.startsWith("/read/");
+  const routeContext = getRouteContext(location.pathname);
   const visibleNavItems = getAdminToken() ? [...navItems, { to: "/admin", label: "Admin", icon: ShieldCheck }] : navItems;
   const ThemeIcon = theme === "dark" ? Sun : Moon;
   const themeLabel = theme === "dark" ? "Switch to light mode" : "Switch to dark mode";
@@ -73,7 +75,16 @@ export function AppLayout() {
       <main className={isReaderRoute ? "reader-main" : "container-x py-6"}>
         <Outlet />
       </main>
+      {user ? <FloatingChatWidget routeContext={routeContext} /> : null}
       <ScrollToTopButton />
     </div>
   );
+}
+
+function getRouteContext(pathname: string) {
+  const mangaMatch = pathname.match(/^\/manga\/([^/]+)/);
+  if (mangaMatch) return { mangaId: mangaMatch[1] };
+  const readerMatch = pathname.match(/^\/read\/([^/]+)/);
+  if (readerMatch) return { chapterId: readerMatch[1] };
+  return undefined;
 }

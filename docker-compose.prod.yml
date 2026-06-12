@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-manga}
@@ -43,6 +43,11 @@ services:
       ADMIN_SYNC_TOKEN: ${ADMIN_SYNC_TOKEN:-}
       SYNC_ON_STARTUP: ${SYNC_ON_STARTUP:-false}
       SYNC_LIMIT: ${SYNC_LIMIT:-48}
+      RAG_CHAT_ENABLED: ${RAG_CHAT_ENABLED:-false}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GPT_MODEL_NANO: ${GPT_MODEL_NANO:-gpt-4.1-nano}
+      GPT_MODEL_MINI: ${GPT_MODEL_MINI:-gpt-4.1-mini}
+      GPT_EMBEDDING_MODEL: ${GPT_EMBEDDING_MODEL:-text-embedding-3-small}
     depends_on:
       postgres:
         condition: service_healthy

@@ -13,6 +13,7 @@ import { adminRoutes } from "./app/routes/v1/admin.routes.js";
 import { adminCatalogRoutes } from "./app/routes/v1/admin.catalog.routes.js";
 import { authRoutes } from "./app/routes/v1/auth.routes.js";
 import { catalogRoutes } from "./app/routes/v1/catalog.routes.js";
+import { chatRoutes } from "./app/routes/v1/chat.routes.js";
 import { coverRoutes } from "./app/routes/v1/cover.routes.js";
 import { pageRoutes } from "./app/routes/v1/page.routes.js";
 import { healthRoutes } from "./app/routes/health.routes.js";
@@ -85,6 +86,7 @@ export async function buildApp() {
   await app.register(adminCatalogRoutes, { prefix: "/api" });
   await app.register(authRoutes, { prefix: "/api" });
   await app.register(catalogRoutes, { prefix: "/api" });
+  await app.register(chatRoutes, { prefix: "/api" });
   await app.register(coverRoutes, { prefix: "/api" });
   await app.register(pageRoutes, { prefix: "/api" });
   await app.register(libraryRoutes, { prefix: "/api" });
