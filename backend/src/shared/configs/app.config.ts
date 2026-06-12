@@ -9,6 +9,7 @@ try {
 
 const optionalUrl = z.preprocess((value) => (value === "" ? undefined : value), z.string().url().optional());
 const optionalSecret = z.preprocess((value) => (value === "" ? undefined : value), z.string().min(16).optional());
+const optionalNonEmpty = z.preprocess((value) => (value === "" ? undefined : value), z.string().min(1).optional());
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -27,7 +28,12 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
   ADMIN_SYNC_TOKEN: optionalSecret,
   SYNC_ON_STARTUP: z.coerce.boolean().default(false),
-  SYNC_LIMIT: z.coerce.number().int().min(1).max(100).default(48)
+  SYNC_LIMIT: z.coerce.number().int().min(1).max(100).default(48),
+  RAG_CHAT_ENABLED: z.coerce.boolean().default(false),
+  OPENAI_API_KEY: optionalNonEmpty,
+  GPT_MODEL_NANO: z.string().min(1).default("gpt-4.1-nano"),
+  GPT_MODEL_MINI: z.string().min(1).default("gpt-4.1-mini"),
+  GPT_EMBEDDING_MODEL: z.string().min(1).default("text-embedding-3-small")
 });
 
 export const env = envSchema.parse(process.env);
