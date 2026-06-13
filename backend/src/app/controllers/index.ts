@@ -19,6 +19,7 @@ export {
   upsertAdminUserProgressItem
 } from "./admin.controller.js";
 export { importAdminManga, importAdminMangaChapters, syncAdminCatalog } from "./admin-catalog.controller.js";
+export { getAdminRagStatusView, listAdminRagDocumentPage, reindexAdminRag } from "./admin-rag.controller.js";
 export {
   changeCurrentUserPassword,
   getCurrentUser,

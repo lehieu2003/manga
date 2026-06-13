@@ -51,7 +51,7 @@ describe("adminRoutes", () => {
     const response = await app.inject({ method: "GET", url: "/api/admin/overview" });
 
     expect(response.statusCode).toBe(401);
-    expect(response.json()).toMatchObject({ error: { code: "ADMIN_SYNC_TOKEN_REQUIRED" } });
+    expect(response.json()).toMatchObject({ error: { code: "ADMIN_AUTH_REQUIRED" } });
 
     await app.close();
   });

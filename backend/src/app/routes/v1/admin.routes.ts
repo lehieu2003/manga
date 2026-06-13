@@ -19,7 +19,7 @@ import {
   upsertAdminUserLibraryItem,
   upsertAdminUserProgressItem
 } from "../../controllers/admin.controller.js";
-import { requireAdminToken } from "../../middlewares/admin.middleware.js";
+import { requireAdminAccess } from "../../middlewares/admin.middleware.js";
 import { updateProfileSchema } from "../../validators/auth.validator.js";
 import {
   adminLibraryBodySchema,
@@ -35,7 +35,7 @@ import { adminRouteSchemas } from "../../docs/route-schemas.js";
 
 export async function adminRoutes(app: FastifyInstance) {
   app.addHook("preHandler", async (request) => {
-    requireAdminToken(request);
+    await requireAdminAccess(request);
   });
 
   app.get("/admin/overview", { schema: adminRouteSchemas.overview }, async () => getAdminDashboardOverview());

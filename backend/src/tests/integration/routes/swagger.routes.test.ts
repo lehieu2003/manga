@@ -22,7 +22,7 @@ describe("swagger docs", () => {
     expect(document.components?.securitySchemes?.bearerAuth).toBeDefined();
     expect(document.components?.securitySchemes?.xAdminToken).toBeDefined();
     expect(document.paths["/api/library"].get.security).toEqual([{ bearerAuth: [] }]);
-    expect(document.paths["/api/admin/overview"].get.security).toEqual([{ xAdminToken: [] }]);
+    expect(document.paths["/api/admin/overview"].get.security).toEqual([{ bearerAuth: [] }, { xAdminToken: [] }]);
     expect(document.paths["/api/auth/login"].post.security).toBeUndefined();
     expect(document.paths["/api/manga/search"].get.security).toBeUndefined();
 

@@ -20,7 +20,7 @@ export function AppLayout() {
   const navigate = useNavigate();
   const isReaderRoute = location.pathname.startsWith("/read/");
   const routeContext = getRouteContext(location.pathname);
-  const visibleNavItems = getAdminToken() ? [...navItems, { to: "/admin", label: "Admin", icon: ShieldCheck }] : navItems;
+  const visibleNavItems = user?.role === "ADMIN" || getAdminToken() ? [...navItems, { to: "/admin", label: "Admin", icon: ShieldCheck }] : navItems;
   const ThemeIcon = theme === "dark" ? Sun : Moon;
   const themeLabel = theme === "dark" ? "Switch to light mode" : "Switch to dark mode";
 

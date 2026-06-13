@@ -15,3 +15,20 @@ export function requireAdminToken(request: FastifyRequest) {
     throw new HttpError(403, "Admin sync token is invalid", "ADMIN_SYNC_TOKEN_INVALID");
   }
 }
+
+export async function requireAdminAccess(request: FastifyRequest) {
+  if (request.headers["x-admin-token"]) {
+    requireAdminToken(request);
+    return;
+  }
+
+  try {
+    await request.jwtVerify();
+  } catch {
+    throw new HttpError(401, "Admin authentication is required", "ADMIN_AUTH_REQUIRED");
+  }
+
+  if (request.user.role !== "ADMIN") {
+    throw new HttpError(403, "Admin role is required", "ADMIN_ROLE_REQUIRED");
+  }
+}

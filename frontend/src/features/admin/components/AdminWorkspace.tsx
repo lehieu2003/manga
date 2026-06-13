@@ -1,19 +1,21 @@
-import { Archive, Gauge, RefreshCw, ShieldCheck, Users } from "lucide-react";
+import { Archive, Bot, Gauge, RefreshCw, ShieldCheck, Users } from "lucide-react";
 import { useState } from "react";
 import type { AdminTab } from "../admin.types";
 import { CachePanel } from "./CachePanel";
 import { CatalogOpsPanel } from "./CatalogOpsPanel";
 import { OverviewPanel } from "./OverviewPanel";
+import { RagOpsPanel } from "./RagOpsPanel";
 import { UsersPanel } from "./UsersPanel";
 
 const adminNav = [
   { id: "overview" as const, label: "Overview", detail: "System pulse", icon: Gauge },
   { id: "catalog" as const, label: "Catalog Ops", detail: "Sync and import", icon: RefreshCw },
+  { id: "rag" as const, label: "RAG", detail: "Index and inspect", icon: Bot },
   { id: "users" as const, label: "Users", detail: "Accounts and data", icon: Users },
   { id: "cache" as const, label: "Cache", detail: "Manga storage", icon: Archive }
 ];
 
-export function AdminWorkspace({ onClearToken }: { onClearToken: () => void }) {
+export function AdminWorkspace({ actionLabel = "Clear token", onAction }: { actionLabel?: string; onAction?: () => void }) {
   const [tab, setTab] = useState<AdminTab>("overview");
 
   return (
@@ -56,14 +58,17 @@ export function AdminWorkspace({ onClearToken }: { onClearToken: () => void }) {
             <p className="admin-eyebrow">Admin console</p>
             <h1>Data operations</h1>
           </div>
-          <button className="btn" onClick={onClearToken} type="button">
-            <ShieldCheck size={17} />
-            Clear token
-          </button>
+          {onAction ? (
+            <button className="btn" onClick={onAction} type="button">
+              <ShieldCheck size={17} />
+              {actionLabel}
+            </button>
+          ) : null}
         </div>
 
         {tab === "overview" ? <OverviewPanel onNavigate={setTab} /> : null}
         {tab === "catalog" ? <CatalogOpsPanel /> : null}
+        {tab === "rag" ? <RagOpsPanel /> : null}
         {tab === "users" ? <UsersPanel /> : null}
         {tab === "cache" ? <CachePanel /> : null}
       </section>
