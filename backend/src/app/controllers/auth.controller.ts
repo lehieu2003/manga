@@ -36,15 +36,6 @@ function publicUser(user: {
   avatarUrl: string | null;
   createdAt: Date;
 }) {
-  const { id, email, displayName, role, avatarUrl, createdAt } = user;
-  console.log(`Public user data for ID ${id}:`, {
-    id,
-    email,
-    displayName,
-    role,
-    avatarUrl,
-    createdAt,
-  });
   return {
     id: user.id,
     email: user.email,
