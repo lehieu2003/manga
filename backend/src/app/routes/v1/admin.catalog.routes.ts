@@ -1,12 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import { importAdminManga, importAdminMangaChapters, syncAdminCatalog } from "../../controllers/admin-catalog.controller.js";
-import { requireAdminToken } from "../../middlewares/admin.middleware.js";
+import { requireAdminAccess } from "../../middlewares/admin.middleware.js";
 import { mangaParamsSchema } from "../../validators/catalog.validator.js";
 import { adminCatalogRouteSchemas } from "../../docs/route-schemas.js";
 
 export async function adminCatalogRoutes(app: FastifyInstance) {
   app.addHook("preHandler", async (request) => {
-    requireAdminToken(request);
+    await requireAdminAccess(request);
   });
 
   app.post("/admin/catalog/manga/:id/import", { schema: adminCatalogRouteSchemas.importManga }, async (request) => {

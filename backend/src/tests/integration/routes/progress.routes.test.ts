@@ -24,7 +24,7 @@ describe("progressRoutes", () => {
     const { progressRoutes } = await import("../../../app/routes/v1/progress.routes.js");
     const app = Fastify();
     app.decorate("authenticate", async (request) => {
-      request.user = { sub: "user-1", email: "reader@example.com" };
+      request.user = { sub: "user-1", email: "reader@example.com", role: "USER" };
     });
     await app.register(progressRoutes, { prefix: "/api" });
 

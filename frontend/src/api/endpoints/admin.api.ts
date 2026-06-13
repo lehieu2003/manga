@@ -2,6 +2,9 @@ import type {
   AdminCacheMangaDetail,
   AdminCacheMangaRow,
   AdminOverview,
+  AdminRagDocumentRow,
+  AdminRagReindexResponse,
+  AdminRagStatus,
   AdminSearchHistoryRow,
   AdminUser,
   AdminUserLibraryRow,
@@ -10,7 +13,7 @@ import type {
   CatalogSyncResponse,
   Paginated
 } from "@/types";
-import { API_ORIGIN } from "../interceptors/auth.interceptor";
+import { API_ORIGIN, getAccessToken, getRefreshToken, refreshSession } from "../interceptors/auth.interceptor";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000/api";
 const ADMIN_TOKEN_KEY = "manga.adminToken";
@@ -27,16 +30,23 @@ export function clearAdminToken() {
   sessionStorage.removeItem(ADMIN_TOKEN_KEY);
 }
 
-async function adminRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function adminRequest<T>(path: string, options: RequestInit = {}, allowRefresh = true): Promise<T> {
   const token = getAdminToken();
+  const accessToken = getAccessToken();
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...(token ? { "X-Admin-Token": token } : {}),
       ...options.headers
     }
   });
+
+  if (response.status === 401 && allowRefresh && getRefreshToken()) {
+    await refreshSession();
+    return adminRequest<T>(path, options, false);
+  }
 
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as { error?: { message?: string } } | null;
@@ -54,9 +64,27 @@ function paginationQuery(input: { query?: string; limit?: number; offset?: numbe
   return query;
 }
 
+function ragDocumentsQuery(input: { q?: string; sourceType?: "MANGA" | "CHAPTER"; limit?: number; offset?: number } = {}) {
+  const query = new URLSearchParams();
+  query.set("limit", String(input.limit ?? 25));
+  query.set("offset", String(input.offset ?? 0));
+  if (input.q?.trim()) query.set("q", input.q.trim());
+  if (input.sourceType) query.set("sourceType", input.sourceType);
+  return query;
+}
+
 export const adminApi = {
   getOverview() {
     return adminRequest<AdminOverview>("/admin/overview");
+  },
+  getRagStatus() {
+    return adminRequest<AdminRagStatus>("/admin/rag/status");
+  },
+  listRagDocuments(input: { q?: string; sourceType?: "MANGA" | "CHAPTER"; limit?: number; offset?: number } = {}) {
+    return adminRequest<Paginated<AdminRagDocumentRow>>(`/admin/rag/documents?${ragDocumentsQuery(input)}`);
+  },
+  reindexRag(input: { limit?: number; chapters: boolean }) {
+    return adminRequest<AdminRagReindexResponse>("/admin/rag/reindex", { method: "POST", body: JSON.stringify(input) });
   },
   syncCatalog(input: { q?: string; limit: number; languages: string; includeChapters: boolean; chaptersLimit: number }) {
     const query = new URLSearchParams();

@@ -25,11 +25,12 @@ const errorResponse = {
 
 const user = {
   type: "object",
-  required: ["id", "email", "displayName", "avatarUrl", "createdAt"],
+  required: ["id", "email", "displayName", "role", "avatarUrl", "createdAt"],
   properties: {
     id: idString,
     email: { type: "string", format: "email" },
     displayName: { type: "string" },
+    role: { type: "string", enum: ["USER", "ADMIN"] },
     avatarUrl: { type: ["string", "null"], format: "uri" },
     createdAt: dateTime
   },
@@ -37,6 +38,7 @@ const user = {
     id: exampleUserId,
     email: "reader@example.com",
     displayName: "Manga Reader",
+    role: "USER",
     avatarUrl: null,
     createdAt: exampleDate
   }
@@ -560,7 +562,7 @@ export const adminCatalogRouteSchemas = {
   }
 } as const;
 
-const adminSecured = [{ xAdminToken: [] }];
+const adminSecured: ReadonlyArray<Record<string, readonly string[]>> = [{ bearerAuth: [] }, { xAdminToken: [] }];
 const adminGenericResponse = {
   type: "object",
   additionalProperties: true,
@@ -574,6 +576,38 @@ const adminRouteSchema = (summary: string) =>
     security: adminSecured,
     response: { 200: adminGenericResponse, ...adminErrors }
   }) as const;
+
+export const adminRagRouteSchemas = {
+  status: adminRouteSchema("Get RAG index and chatbot operation status"),
+  listDocuments: {
+    summary: "List indexed RAG documents for admin inspection",
+    tags: ["Admin"],
+    security: adminSecured,
+    querystring: {
+      type: "object",
+      properties: {
+        q: { type: "string", maxLength: 120 },
+        sourceType: { type: "string", enum: ["MANGA", "CHAPTER"] },
+        limit: { type: "integer", minimum: 1, maximum: 100, default: 25 },
+        offset: { type: "integer", minimum: 0, default: 0 }
+      }
+    },
+    response: { 200: adminGenericResponse, ...adminErrors }
+  },
+  reindex: {
+    summary: "Run a synchronous RAG catalog re-index",
+    tags: ["Admin"],
+    security: adminSecured,
+    body: {
+      type: "object",
+      properties: {
+        limit: { type: "integer", minimum: 1, maximum: 5000 },
+        chapters: { type: "boolean", default: false }
+      }
+    },
+    response: { 200: adminGenericResponse, ...adminErrors }
+  }
+} as const;
 
 export const adminRouteSchemas = {
   overview: adminRouteSchema("Get admin overview counts"),

@@ -6,7 +6,7 @@ import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { SettingsPage } from "@/features/profile/pages/SettingsPage";
 
 const authState = vi.hoisted(() => ({
-  user: { id: "user-1", email: "reader@example.com", displayName: "Reader", avatarUrl: null, createdAt: "2024-01-01T00:00:00.000Z" },
+  user: { id: "user-1", email: "reader@example.com", displayName: "Reader", role: "USER", avatarUrl: null, createdAt: "2024-01-01T00:00:00.000Z" },
   updateProfile: vi.fn(),
   changePassword: vi.fn(),
   logout: vi.fn()
@@ -18,7 +18,7 @@ vi.mock("@/features/auth/stores/auth.store", () => ({
 
 describe("SettingsPage", () => {
   beforeEach(() => {
-    authState.user = { id: "user-1", email: "reader@example.com", displayName: "Reader", avatarUrl: null, createdAt: "2024-01-01T00:00:00.000Z" };
+    authState.user = { id: "user-1", email: "reader@example.com", displayName: "Reader", role: "USER", avatarUrl: null, createdAt: "2024-01-01T00:00:00.000Z" };
     authState.updateProfile.mockReset().mockResolvedValue(undefined);
     authState.changePassword.mockReset().mockResolvedValue(undefined);
     authState.logout.mockReset().mockResolvedValue(undefined);

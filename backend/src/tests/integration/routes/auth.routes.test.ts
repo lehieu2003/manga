@@ -128,7 +128,7 @@ async function makeAuthApp() {
   const { authRoutes } = await import("../../../app/routes/v1/auth.routes.js");
   const app = Fastify();
   app.decorate("authenticate", async (request) => {
-    request.user = { sub: "user-1", email: "reader@example.com" };
+    request.user = { sub: "user-1", email: "reader@example.com", role: "USER" };
   });
   app.decorate("jwt", { sign: () => "access-token" } as never);
   app.setErrorHandler((error, _request, reply) => {
@@ -159,6 +159,7 @@ function makeBaseUser() {
     email: string;
     passwordHash: string;
     displayName: string;
+    role: "USER" | "ADMIN";
     avatarUrl: string | null;
     createdAt: Date;
   } = {
@@ -166,6 +167,7 @@ function makeBaseUser() {
     email: "reader@example.com",
     passwordHash: "hash",
     displayName: "Reader",
+    role: "USER",
     avatarUrl: null,
     createdAt: new Date("2024-01-01T00:00:00.000Z")
   };

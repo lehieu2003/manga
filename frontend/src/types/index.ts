@@ -2,6 +2,7 @@ export type User = {
   id: string;
   email: string;
   displayName: string;
+  role: "USER" | "ADMIN";
   avatarUrl: string | null;
   createdAt: string;
 };
@@ -117,6 +118,53 @@ export type CatalogSyncResponse = {
     mangaCount: number;
     cachedTotal: number;
   };
+};
+
+export type AdminRagStatus = {
+  cached: {
+    manga: number;
+    chapters: number;
+  };
+  ragDocuments: {
+    total: number;
+    manga: number;
+    chapter: number;
+    latestIndexedAt: string | null;
+    embeddingModel: string | null;
+  };
+  chat: {
+    activeConversations: number;
+    messages: number;
+  };
+  coverage: {
+    mangaIndexed: number;
+    chapterIndexed: number;
+  };
+};
+
+export type AdminRagDocumentRow = {
+  id: string;
+  sourceType: "MANGA" | "CHAPTER";
+  sourceId: string;
+  parentSourceId: string | null;
+  title: string;
+  contentPreview: string;
+  metadata: unknown;
+  contentHash: string;
+  embeddingModel: string;
+  indexedAt: string | null;
+  updatedAt: string;
+};
+
+export type AdminRagReindexResponse = {
+  status: "completed";
+  summary: {
+    created: number;
+    updated: number;
+    skipped: number;
+    failed: number;
+  };
+  durationMs: number;
 };
 
 export type AdminCacheMangaRow = Pick<MangaSummary, "id" | "title" | "coverUrl" | "status" | "year" | "tags"> & {

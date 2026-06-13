@@ -6,7 +6,7 @@ import { HomePage } from "@/features/catalog/pages/HomePage";
 import type { LibraryItem } from "@/types";
 
 const state = vi.hoisted(() => ({
-  user: { id: "user-1", email: "reader@example.com", displayName: "Reader", avatarUrl: null, createdAt: "2024-01-01T00:00:00.000Z" } as const,
+  user: { id: "user-1", email: "reader@example.com", displayName: "Reader", role: "USER", avatarUrl: null, createdAt: "2024-01-01T00:00:00.000Z" } as const,
   libraryItems: [] as LibraryItem[]
 }));
 

@@ -47,7 +47,7 @@ describe("adminCatalogRoutes", () => {
 
     expect(response.statusCode).toBe(401);
     expect(response.json()).toMatchObject({
-      error: { code: "ADMIN_SYNC_TOKEN_REQUIRED" }
+      error: { code: "ADMIN_AUTH_REQUIRED" }
     });
     expect(importMangaChapters).not.toHaveBeenCalled();
 
