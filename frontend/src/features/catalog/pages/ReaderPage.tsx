@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { MessageCircle, X } from "lucide-react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/features/auth/stores/auth.store";
 import { ReaderCanvas } from "@/features/catalog/reader/ReaderCanvas";
@@ -17,6 +18,7 @@ import { preloadPages } from "@/features/catalog/reader/reader.logic";
 import { readReaderSettings, writeReaderSettings } from "@/features/catalog/reader/readerSettings";
 import type { ReaderFit, ReaderMode, ReaderQuality } from "@/features/catalog/reader/reader.types";
 import { useReaderData } from "@/features/catalog/reader/useReaderData";
+import { CommentSection } from "@/features/comments/CommentSection";
 
 export function ReaderPage() {
   const { chapterId = "" } = useParams();
@@ -28,6 +30,7 @@ export function ReaderPage() {
   const { mode, fit, quality } = settings;
   const [pageIndex, setPageIndex] = useState(0);
   const [isToolbarVisible, setIsToolbarVisible] = useState(true);
+  const [commentsOpen, setCommentsOpen] = useState(false);
   const imageRefs = useRef<Array<HTMLImageElement | null>>([]);
   const lastScrollYRef = useRef(0);
   const toolbarTimerRef = useRef<number | null>(null);
@@ -165,6 +168,26 @@ export function ReaderPage() {
         onReveal={showToolbarBriefly}
       />
       <ReaderCanvas mode={mode} fit={fit} pages={data.pages} pageIndex={pageIndex} imageRefs={imageRefs} onGoToPage={goToPage} onRevealControls={showToolbarBriefly} />
+      <button className="reader-comment-launcher" onClick={() => setCommentsOpen(true)} type="button" aria-label="Open chapter comments">
+        <MessageCircle size={18} />
+      </button>
+      {commentsOpen ? (
+        <div className="reader-comment-drawer" role="dialog" aria-label="Chapter comments">
+          <div className="reader-comment-backdrop" onClick={() => setCommentsOpen(false)} />
+          <aside className="reader-comment-panel">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-[var(--accent)]">Chapter thread</p>
+                <h2 className="text-lg font-black text-[var(--text)]">Comments</h2>
+              </div>
+              <button className="btn reader-icon-button min-h-9" onClick={() => setCommentsOpen(false)} type="button" aria-label="Close comments">
+                <X size={17} />
+              </button>
+            </div>
+            <CommentSection targetType="CHAPTER" targetId={chapterId} user={user} compact />
+          </aside>
+        </div>
+      ) : null}
     </div>
   );
 }

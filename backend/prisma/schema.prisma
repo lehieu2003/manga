@@ -32,6 +32,30 @@ enum UserRole {
   ADMIN
 }
 
+enum CommentTargetType {
+  MANGA
+  CHAPTER
+}
+
+enum CommentStatus {
+  VISIBLE
+  DELETED
+  HIDDEN
+}
+
+enum CommentReactionType {
+  LIKE
+  HEART
+  SAD
+  LAUGH
+  ANGRY
+}
+
+enum NotificationType {
+  COMMENT_REPLY
+  COMMENT_REACTION
+}
+
 model User {
   id              String            @id @default(cuid())
   email           String            @unique
@@ -46,6 +70,10 @@ model User {
   progress        ReadingProgress[]
   searchHistory   SearchHistory[]
   chatConversations ChatConversation[]
+  comments        Comment[]
+  commentReactions CommentReaction[]
+  notifications   Notification[]     @relation("NotificationRecipient")
+  notificationActors Notification[]   @relation("NotificationActor")
 
   @@index([role])
 }
@@ -205,4 +233,70 @@ model ChatMessage {
   conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId, createdAt])
+}
+
+model Comment {
+  id            String                @id @default(cuid())
+  targetType    CommentTargetType
+  targetId      String
+  authorId      String
+  parentId      String?
+  rootId        String?
+  depth         Int                   @default(0)
+  path          String
+  content       String
+  isSpoiler     Boolean               @default(false)
+  status        CommentStatus         @default(VISIBLE)
+  deletedAt     DateTime?
+  hiddenAt      DateTime?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  author        User                  @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent        Comment?              @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies       Comment[]             @relation("CommentReplies")
+  root          Comment?              @relation("CommentRoot", fields: [rootId], references: [id], onDelete: Cascade)
+  descendants   Comment[]             @relation("CommentRoot")
+  reactions     CommentReaction[]
+  notifications Notification[]
+
+  @@index([targetType, targetId, parentId, createdAt])
+  @@index([targetType, targetId, rootId, path])
+  @@index([authorId, createdAt])
+  @@index([parentId])
+  @@index([rootId])
+}
+
+model CommentReaction {
+  id        String              @id @default(cuid())
+  commentId String
+  userId    String
+  type      CommentReactionType
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  comment   Comment             @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([userId, updatedAt])
+  @@index([commentId, type])
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String
+  actorId     String
+  type        NotificationType
+  commentId   String
+  targetType  CommentTargetType
+  targetId    String
+  readAt      DateTime?
+  createdAt   DateTime         @default(now())
+  user        User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor       User             @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  comment     Comment          @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@index([actorId, createdAt])
+  @@index([commentId])
+  @@index([targetType, targetId, createdAt])
 }

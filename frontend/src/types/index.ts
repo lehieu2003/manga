@@ -227,3 +227,51 @@ export type SendChatMessageResponse = {
   conversationId: string;
   message: ChatMessage;
 };
+
+export type CommentTargetType = "MANGA" | "CHAPTER";
+export type CommentStatus = "VISIBLE" | "DELETED" | "HIDDEN";
+export type CommentReactionType = "LIKE" | "HEART" | "SAD" | "LAUGH" | "ANGRY";
+export type NotificationType = "COMMENT_REPLY" | "COMMENT_REACTION";
+
+export type CommentAuthor = Pick<User, "id" | "displayName" | "avatarUrl" | "role">;
+
+export type CommentItem = {
+  id: string;
+  targetType: CommentTargetType;
+  targetId: string;
+  author: CommentAuthor | null;
+  parentId: string | null;
+  rootId: string | null;
+  depth: number;
+  content: string;
+  isSpoiler: boolean;
+  status: CommentStatus;
+  deletedAt: string | null;
+  hiddenAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  replyCount: number;
+  reactionCounts: Record<CommentReactionType, number>;
+  currentUserReaction: CommentReactionType | null;
+};
+
+export type CommentListResponse = {
+  data: CommentItem[];
+  nextCursor: string | null;
+};
+
+export type UserNotification = {
+  id: string;
+  actor: Pick<User, "id" | "displayName" | "avatarUrl">;
+  type: NotificationType;
+  commentId: string;
+  targetType: CommentTargetType;
+  targetId: string;
+  readAt: string | null;
+  createdAt: string;
+};
+
+export type NotificationListResponse = {
+  data: UserNotification[];
+  unreadCount: number;
+};

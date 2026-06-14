@@ -5,6 +5,7 @@ import { ContinueReadingPanel } from "@/features/catalog/detail/ContinueReadingP
 import { MangaHero } from "@/features/catalog/detail/MangaHero";
 import { getMangaDetailChapterView } from "@/features/catalog/detail/detail.logic";
 import { useMangaDetail } from "@/features/catalog/detail/useMangaDetail";
+import { CommentSection } from "@/features/comments/CommentSection";
 import { useToast } from "@/stores/toast.store";
 
 export function MangaDetailPage() {
@@ -41,6 +42,7 @@ export function MangaDetailPage() {
         chapters={detail.chapters}
         needsSync={chaptersNeedSync}
       />
+      <CommentSection targetType="MANGA" targetId={mangaId} user={user} />
     </div>
   );
 }

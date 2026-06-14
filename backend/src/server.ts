@@ -15,6 +15,7 @@ import { adminRagRoutes } from "./app/routes/v1/admin-rag.routes.js";
 import { authRoutes } from "./app/routes/v1/auth.routes.js";
 import { catalogRoutes } from "./app/routes/v1/catalog.routes.js";
 import { chatRoutes } from "./app/routes/v1/chat.routes.js";
+import { commentRoutes } from "./app/routes/v1/comment.routes.js";
 import { coverRoutes } from "./app/routes/v1/cover.routes.js";
 import { pageRoutes } from "./app/routes/v1/page.routes.js";
 import { healthRoutes } from "./app/routes/health.routes.js";
@@ -66,6 +67,7 @@ export async function buildApp() {
   });
   await app.register(cors, {
     origin: env.CORS_ORIGIN.split(",").map((origin) => origin.trim()),
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true
   });
   await app.register(jwt, {
@@ -89,6 +91,7 @@ export async function buildApp() {
   await app.register(authRoutes, { prefix: "/api" });
   await app.register(catalogRoutes, { prefix: "/api" });
   await app.register(chatRoutes, { prefix: "/api" });
+  await app.register(commentRoutes, { prefix: "/api" });
   await app.register(coverRoutes, { prefix: "/api" });
   await app.register(pageRoutes, { prefix: "/api" });
   await app.register(libraryRoutes, { prefix: "/api" });

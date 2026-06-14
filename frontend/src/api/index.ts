@@ -2,6 +2,7 @@ import { adminApi, clearAdminToken, getAdminToken, setAdminToken } from "./endpo
 import { authApi } from "./endpoints/auth.api";
 import { catalogApi } from "./endpoints/catalog.api";
 import { chatApi } from "./endpoints/chat.api";
+import { commentsApi } from "./endpoints/comments.api";
 import { libraryApi } from "./endpoints/library.api";
 import { progressApi } from "./endpoints/progress.api";
 import { API_ORIGIN, clearTokens, getAccessToken, getAuthTokenSnapshot, getRefreshToken, setTokens, subscribeAuthTokens } from "./interceptors/auth.interceptor";
@@ -14,6 +15,7 @@ export const api = {
   ...authApi,
   ...catalogApi,
   ...chatApi,
+  ...commentsApi,
   ...libraryApi,
   ...progressApi
 };
