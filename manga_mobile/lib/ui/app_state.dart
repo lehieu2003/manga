@@ -10,6 +10,9 @@ class AppState extends ChangeNotifier {
     required this.authRepository,
     required this.catalogRepository,
     required this.libraryRepository,
+    required this.commentRepository,
+    required this.notificationRepository,
+    required this.chatRepository,
     ReaderSettingsStore? readerSettingsStore,
     ThemeStore? themeStore,
   }) : readerSettingsStore = readerSettingsStore ?? ReaderSettingsStore(),
@@ -18,6 +21,9 @@ class AppState extends ChangeNotifier {
   final AuthRepository authRepository;
   final CatalogRepository catalogRepository;
   final LibraryRepository libraryRepository;
+  final CommentRepository commentRepository;
+  final NotificationRepository notificationRepository;
+  final ChatRepository chatRepository;
   final ReaderSettingsStore readerSettingsStore;
   final ThemeStore themeStore;
 

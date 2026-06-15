@@ -6,6 +6,8 @@ import 'features/auth/auth_screens.dart';
 import 'features/detail/manga_detail_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/library/library_screen.dart';
+import 'features/chat/chat_assistant.dart';
+import 'features/notifications/notification_center.dart';
 import 'features/reader/reader_screen.dart';
 import 'features/search/search_screen.dart';
 import 'features/settings/settings_screen.dart';
@@ -97,6 +99,7 @@ class AppShell extends StatelessWidget {
     final location = GoRouterState.of(context).matchedLocation;
     final app = AppScope.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final routeContext = _routeContext(location);
     final index = switch (location) {
       '/search' => 1,
       '/library' => 2,
@@ -118,9 +121,17 @@ class AppShell extends StatelessWidget {
             onPressed: () => context.go('/search'),
             icon: const Icon(Icons.search),
           ),
+          const NotificationCenterButton(),
         ],
       ),
       body: SafeArea(child: child),
+      floatingActionButton: app.isSignedIn
+          ? ChatAssistantButton(
+              mangaId: routeContext.mangaId,
+              chapterId: routeContext.chapterId,
+            )
+          : null,
+
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: index,
         onTap: (value) {
@@ -160,4 +171,19 @@ class AppShell extends StatelessWidget {
       ),
     );
   }
+}
+
+_RouteContext _routeContext(String location) {
+  final manga = RegExp(r'^/manga/([^/]+)').firstMatch(location);
+  if (manga != null) return _RouteContext(mangaId: manga.group(1));
+  final chapter = RegExp(r'^/read/([^/]+)').firstMatch(location);
+  if (chapter != null) return _RouteContext(chapterId: chapter.group(1));
+  return const _RouteContext();
+}
+
+class _RouteContext {
+  const _RouteContext({this.mangaId, this.chapterId});
+
+  final String? mangaId;
+  final String? chapterId;
 }

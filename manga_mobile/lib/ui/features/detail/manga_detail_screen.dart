@@ -6,6 +6,8 @@ import '../../../domain/models/models.dart';
 import '../../app_state.dart';
 import '../../core/theme.dart';
 import '../../core/widgets.dart';
+import '../chat/chat_assistant.dart';
+import '../comments/comment_section.dart';
 
 class MangaDetailScreen extends StatefulWidget {
   const MangaDetailScreen({super.key, required this.mangaId});
@@ -165,6 +167,9 @@ class _MangaDetailScreenState extends State<MangaDetailScreen> {
     final app = AppScope.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('Manga detail')),
+      floatingActionButton: app.isSignedIn
+          ? ChatAssistantButton(mangaId: widget.mangaId)
+          : null,
       body: FutureBuilder<void>(
         future: _future,
         builder: (context, snapshot) {
@@ -428,6 +433,7 @@ class _MangaDetailScreenState extends State<MangaDetailScreen> {
                     child: Text(_loadingMore ? 'Loading...' : 'Load more'),
                   ),
                 ),
+              CommentSection(targetType: 'MANGA', targetId: widget.mangaId),
             ],
           );
         },

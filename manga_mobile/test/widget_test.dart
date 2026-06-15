@@ -137,6 +137,13 @@ void main() {
     );
     expect(find.text('NEW'), findsOneWidget);
     expect(find.text('Group A'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Reader discussion'),
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Login to join the discussion.'), findsNothing);
+    expect(find.widgetWithText(TextField, 'Share a thought'), findsOneWidget);
   });
 
   testWidgets(
@@ -169,8 +176,51 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byTooltip('Vertical mode'), findsOneWidget);
       expect(settingsStore.saved.paged, isTrue);
+
+      expect(find.byTooltip('Chapter comments'), findsOneWidget);
+      await tester.tap(find.byTooltip('Chapter comments'));
+      await tester.pumpAndSettle();
+      expect(find.text('Chapter comments'), findsOneWidget);
+      expect(find.text('Reader discussion'), findsOneWidget);
     },
   );
+
+  testWidgets('notification center shows unread count and opens target', (
+    tester,
+  ) async {
+    final app = _buildApp(signedIn: true);
+    await tester.pumpWidget(MyApp(appState: app));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1'), findsOneWidget);
+    await tester.tap(find.byTooltip('Notifications'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Reader replied to your comment'), findsOneWidget);
+    await tester.tap(find.text('Reader replied to your comment'));
+    await tester.pumpAndSettle();
+    expect((app.notificationRepository as FakeNotificationRepository).readIds, [
+      'notification-1',
+    ]);
+  });
+
+  testWidgets('chat assistant sends starter prompt and opens source', (
+    tester,
+  ) async {
+    final app = _buildApp(signedIn: true);
+    await tester.pumpWidget(MyApp(appState: app));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Open manga assistant'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Recommend something completed.'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Alpha Manga'), findsWidgets);
+    await tester.tap(find.text('Alpha Manga').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Manga detail'), findsOneWidget);
+  });
 
   testWidgets('settings validates password confirmation with snackbar', (
     tester,
@@ -209,6 +259,9 @@ TestAppState _buildApp({bool signedIn = false}) {
     authRepository: FakeAuthRepository(api, user),
     catalogRepository: FakeCatalogRepository(api),
     libraryRepository: FakeLibraryRepository(api),
+    commentRepository: FakeCommentRepository(api),
+    notificationRepository: FakeNotificationRepository(api),
+    chatRepository: FakeChatRepository(api),
     readerSettingsStore: FakeReaderSettingsStore(),
     themeStore: FakeThemeStore(),
   )..isBooting = false;
@@ -228,6 +281,9 @@ class TestAppState extends AppState {
     required super.authRepository,
     required super.catalogRepository,
     required super.libraryRepository,
+    required super.commentRepository,
+    required super.notificationRepository,
+    required super.chatRepository,
     super.readerSettingsStore,
     super.themeStore,
   });
@@ -440,6 +496,194 @@ class FakeLibraryRepository extends LibraryRepository {
     pageIndex: pageIndex,
     completed: completed,
   );
+}
+
+class FakeCommentRepository extends CommentRepository {
+  FakeCommentRepository(super.api);
+
+  final List<CommentItem> comments = [
+    CommentItem(
+      id: 'comment-1',
+      targetType: 'MANGA',
+      targetId: 'manga-1',
+      parentId: null,
+      rootId: null,
+      depth: 0,
+      content: 'Great chapter list.',
+      isSpoiler: false,
+      status: 'VISIBLE',
+      createdAt: _now,
+      updatedAt: _now,
+      replyCount: 1,
+      reactionCounts: const {'LIKE': 1},
+      author: CommentAuthor(
+        id: 'user-1',
+        displayName: 'Reader',
+        role: 'USER',
+      ),
+    ),
+    CommentItem(
+      id: 'comment-2',
+      targetType: 'CHAPTER',
+      targetId: 'chapter-1',
+      parentId: null,
+      rootId: null,
+      depth: 0,
+      content: 'Spoiler comment.',
+      isSpoiler: true,
+      status: 'VISIBLE',
+      createdAt: _now,
+      updatedAt: _now,
+      replyCount: 0,
+      reactionCounts: const {},
+      author: CommentAuthor(
+        id: 'user-2',
+        displayName: 'Other',
+        role: 'USER',
+      ),
+    ),
+  ];
+
+  @override
+  Future<CommentListResponse> listComments({
+    required String targetType,
+    required String targetId,
+    String? parentId,
+    String? cursor,
+    int limit = 20,
+  }) async {
+    return CommentListResponse(
+      data: comments
+          .where(
+            (comment) =>
+                comment.targetType == targetType &&
+                comment.targetId == targetId &&
+                comment.parentId == parentId,
+          )
+          .toList(),
+    );
+  }
+
+  @override
+  Future<CommentItem> createComment({
+    required String targetType,
+    required String targetId,
+    String? parentId,
+    required String content,
+    required bool isSpoiler,
+  }) async {
+    final item = CommentItem(
+      id: 'comment-${comments.length + 1}',
+      targetType: targetType,
+      targetId: targetId,
+      parentId: parentId,
+      rootId: parentId,
+      depth: parentId == null ? 0 : 1,
+      content: content,
+      isSpoiler: isSpoiler,
+      status: 'VISIBLE',
+      createdAt: _now,
+      updatedAt: _now,
+      replyCount: 0,
+      reactionCounts: const {},
+      author: CommentAuthor(
+        id: 'user-1',
+        displayName: 'Reader',
+        role: 'USER',
+      ),
+    );
+    comments.add(item);
+    return item;
+  }
+
+  @override
+  Future<CommentItem> updateComment(
+    String id, {
+    String? content,
+    bool? isSpoiler,
+  }) async {
+    return comments.firstWhere((comment) => comment.id == id);
+  }
+
+  @override
+  Future<CommentItem> deleteComment(String id) async {
+    return comments.firstWhere((comment) => comment.id == id);
+  }
+
+  @override
+  Future<void> setReaction(String id, String type) async {}
+
+  @override
+  Future<void> removeReaction(String id) async {}
+}
+
+class FakeNotificationRepository extends NotificationRepository {
+  FakeNotificationRepository(super.api);
+
+  final List<String> readIds = [];
+
+  @override
+  Future<NotificationListResponse> listNotifications({int limit = 30}) async {
+    return NotificationListResponse(
+      unreadCount: readIds.contains('notification-1') ? 0 : 1,
+      data: [
+        UserNotification(
+          id: 'notification-1',
+          actor: CommentAuthor(
+            id: 'user-1',
+            displayName: 'Reader',
+            role: 'USER',
+          ),
+          type: 'COMMENT_REPLY',
+          commentId: 'comment-1',
+          targetType: 'MANGA',
+          targetId: 'manga-1',
+          readAt: readIds.contains('notification-1') ? _now : null,
+          createdAt: _now,
+        ),
+      ],
+    );
+  }
+
+  @override
+  Future<void> markRead(String id) async {
+    readIds.add(id);
+  }
+
+  @override
+  Future<void> markAllRead() async {
+    readIds.add('notification-1');
+  }
+}
+
+class FakeChatRepository extends ChatRepository {
+  FakeChatRepository(super.api);
+
+  @override
+  Future<SendChatMessageResponse> sendMessage({
+    String? conversationId,
+    required String message,
+    String? mangaId,
+    String? chapterId,
+  }) async {
+    return SendChatMessageResponse(
+      conversationId: conversationId ?? 'conversation-1',
+      message: ChatMessage(
+        id: 'assistant-1',
+        role: 'assistant',
+        content: 'Try Alpha Manga.',
+        createdAt: _now,
+        sources: const [
+          ChatSource(
+            type: 'manga',
+            id: 'manga-1',
+            title: 'Alpha Manga',
+            reason: 'Matches your prompt.',
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 final _now = DateTime(2026, 6, 10);

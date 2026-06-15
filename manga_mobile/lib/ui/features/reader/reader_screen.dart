@@ -9,6 +9,8 @@ import '../../../domain/models/models.dart';
 import '../../app_state.dart';
 import '../../core/theme.dart';
 import '../../core/widgets.dart';
+import '../chat/chat_assistant.dart';
+import '../comments/comment_section.dart';
 
 class ReaderScreen extends StatefulWidget {
   const ReaderScreen({super.key, required this.chapterId, this.mangaId});
@@ -157,6 +159,28 @@ class _ReaderScreenState extends State<ReaderScreen> {
     );
   }
 
+  void _openComments() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: SizedBox(
+            height: MediaQuery.sizeOf(context).height * 0.78,
+            child: SingleChildScrollView(
+              child: CommentSection(
+                targetType: 'CHAPTER',
+                targetId: widget.chapterId,
+                compact: true,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -169,6 +193,11 @@ class _ReaderScreenState extends State<ReaderScreen> {
             'Page ${_pages.isEmpty ? 0 : _pageIndex + 1}/${_pages.length}',
           ),
           actions: [
+            IconButton(
+              tooltip: 'Chapter comments',
+              onPressed: _openComments,
+              icon: const Icon(Icons.mode_comment_outlined),
+            ),
             IconButton(
               tooltip: _dataSaver ? 'Use original quality' : 'Use data saver',
               onPressed: _toggleQuality,
@@ -227,6 +256,12 @@ class _ReaderScreenState extends State<ReaderScreen> {
             );
           },
         ),
+        floatingActionButton: _app.isSignedIn
+            ? ChatAssistantButton(
+                mangaId: widget.mangaId,
+                chapterId: widget.chapterId,
+              )
+            : null,
       ),
     );
   }
