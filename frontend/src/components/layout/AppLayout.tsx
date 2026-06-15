@@ -4,6 +4,7 @@ import { getAdminToken } from "@/api";
 import { ScrollToTopButton } from "@/components/layout/ScrollToTopButton";
 import { useAuth } from "@/features/auth/stores/auth.store";
 import { FloatingChatWidget } from "@/features/chat/components/FloatingChatWidget";
+import { NotificationCenter } from "@/features/notifications/NotificationCenter";
 import { useTheme } from "@/features/theme/theme.store";
 
 const navItems = [
@@ -55,6 +56,7 @@ export function AppLayout() {
           </nav>
 
           <div className="flex items-center gap-2">
+            <NotificationCenter user={user} />
             <button className="btn reader-icon-button min-h-9" onClick={toggleTheme} title={themeLabel} aria-label={themeLabel} type="button">
               <ThemeIcon size={17} />
             </button>

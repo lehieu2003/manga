@@ -61,13 +61,13 @@ export async function refreshSession() {
 
 export async function request<T>(path: string, options: RequestInit = {}, allowRefresh = true): Promise<T> {
   const token = getAccessToken();
+  const headers = new Headers(options.headers);
+  if (options.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers
-    }
+    headers
   });
 
   if (response.status === 401 && allowRefresh && getRefreshToken()) {
