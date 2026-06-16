@@ -40,7 +40,7 @@ class ChatAssistantButton extends StatelessWidget {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.35),
+              color: color.withValues(alpha: 0.35),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),

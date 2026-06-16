@@ -115,8 +115,9 @@ class NotificationSheet extends StatelessWidget {
                     Expanded(
                       child: Text(
                         'Notifications',
-                        style: Theme.of(context).textTheme.titleLarge
-                            ?.copyWith(fontWeight: FontWeight.w900),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                     ),
                     TextButton.icon(
@@ -167,17 +168,17 @@ class NotificationSheet extends StatelessWidget {
                           title: Text(_notificationTitle(item)),
                           subtitle: Text(_formatDateTime(item.createdAt)),
                           onTap: () async {
+                            final router = GoRouter.of(context);
+                            final path = item.targetType == 'MANGA'
+                                ? '/manga/${item.targetId}'
+                                : '/read/${item.targetId}';
                             if (item.readAt == null) {
                               await repo.markRead(item.id);
                               await onChanged();
                             }
-                            final router = GoRouter.of(context);
-                            if (context.mounted) Navigator.pop(context);
-                            router.push(
-                              item.targetType == 'MANGA'
-                                  ? '/manga/${item.targetId}'
-                                  : '/read/${item.targetId}',
-                            );
+                            if (!context.mounted) return;
+                            Navigator.pop(context);
+                            router.push(path);
                           },
                         );
                       },

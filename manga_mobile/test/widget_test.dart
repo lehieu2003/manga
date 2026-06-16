@@ -88,6 +88,25 @@ void main() {
     expect(find.text('Author: ONE'), findsNothing);
   });
 
+  testWidgets('app drawer opens and navigates to discovery routes', (
+    tester,
+  ) async {
+    final app = _buildApp();
+    await tester.pumpWidget(MyApp(appState: app));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(DrawerButton));
+    await tester.pumpAndSettle();
+
+    expect(find.text('MangaDex powered reader'), findsOneWidget);
+    expect(find.text('Popular'), findsWidgets);
+
+    await tester.tap(find.text('Popular').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Popular manga'), findsOneWidget);
+  });
+
   testWidgets('library shows summaries, clears filters, and updates actions', (
     tester,
   ) async {

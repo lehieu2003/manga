@@ -94,8 +94,9 @@ class _CommentSectionState extends State<CommentSection> {
                       const SizedBox(height: 4),
                       Text(
                         'Reader discussion',
-                        style: Theme.of(context).textTheme.titleLarge
-                            ?.copyWith(fontWeight: FontWeight.w900),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                     ],
                   ),
@@ -190,9 +191,9 @@ class _CommentCardState extends State<CommentCard> {
   Future<CommentListResponse>? _repliesFuture;
 
   Future<void> _delete() async {
-    await AppScope.of(context).commentRepository.deleteComment(
-      widget.comment.id,
-    );
+    await AppScope.of(
+      context,
+    ).commentRepository.deleteComment(widget.comment.id);
     await widget.onChanged();
   }
 
@@ -225,8 +226,7 @@ class _CommentCardState extends State<CommentCard> {
     final visible = comment.isVisible;
     final canEdit = visible && user?.id == comment.author?.id;
     final canDelete =
-        visible &&
-        (user?.id == comment.author?.id || user?.role == 'ADMIN');
+        visible && (user?.id == comment.author?.id || user?.role == 'ADMIN');
     final margin = EdgeInsets.only(
       left: (widget.depth > 5 ? 5 : widget.depth) * 14,
       bottom: 10,

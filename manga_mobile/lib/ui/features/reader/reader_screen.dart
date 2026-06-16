@@ -119,11 +119,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
   void _saveReaderSettings() {
     unawaited(
       _app.readerSettingsStore.saveSettings(
-        ReaderSettings(
-          paged: _paged,
-          contain: _contain,
-          dataSaver: _dataSaver,
-        ),
+        ReaderSettings(paged: _paged, contain: _contain, dataSaver: _dataSaver),
       ),
     );
   }
