@@ -16,6 +16,9 @@ Future<void> main() async {
     authRepository: AuthRepository(apiClient),
     catalogRepository: CatalogRepository(apiClient),
     libraryRepository: LibraryRepository(apiClient),
+    commentRepository: CommentRepository(apiClient),
+    notificationRepository: NotificationRepository(apiClient),
+    chatRepository: ChatRepository(apiClient),
   );
   runApp(MyApp(appState: appState));
   appState.restore();
