@@ -99,6 +99,7 @@ class AppShell extends StatelessWidget {
     final location = GoRouterState.of(context).matchedLocation;
     final app = AppScope.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final showSearchAction = MediaQuery.sizeOf(context).width >= 360;
     final routeContext = _routeContext(location);
     final index = switch (location) {
       '/search' => 1,
@@ -116,11 +117,12 @@ class AppShell extends StatelessWidget {
                 app.setThemeMode(isDark ? ThemeMode.light : ThemeMode.dark),
             icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
           ),
-          IconButton(
-            tooltip: 'Search',
-            onPressed: () => context.go('/search'),
-            icon: const Icon(Icons.search),
-          ),
+          if (showSearchAction)
+            IconButton(
+              tooltip: 'Search',
+              onPressed: () => context.go('/search'),
+              icon: const Icon(Icons.search),
+            ),
           const NotificationCenterButton(),
         ],
       ),

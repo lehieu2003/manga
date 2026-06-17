@@ -25,31 +25,34 @@ class ChatAssistantButton extends StatelessWidget {
 
     final color = Theme.of(context).colorScheme.primary;
 
-    return GestureDetector(
-      onTap: () => showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        builder: (_) =>
-            ChatAssistantSheet(mangaId: mangaId, chapterId: chapterId),
-      ),
-      child: Container(
-        width: 60,
-        height: 60,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(alpha: 0.35),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+    return Tooltip(
+      message: 'Open manga assistant',
+      child: GestureDetector(
+        onTap: () => showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          builder: (_) =>
+              ChatAssistantSheet(mangaId: mangaId, chapterId: chapterId),
         ),
-        child: const Icon(
-          Icons.chat_bubble_outline,
-          color: Colors.white,
-          size: 26,
+        child: Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: 0.35),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.chat_bubble_outline,
+            color: Colors.white,
+            size: 26,
+          ),
         ),
       ),
     );

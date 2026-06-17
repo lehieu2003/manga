@@ -14,38 +14,34 @@ class NotificationCenterButton extends StatefulWidget {
 }
 
 class _NotificationCenterButtonState extends State<NotificationCenterButton> {
-  Future<NotificationListResponse>? _future;
   int _unread = 0;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (AppScope.of(context).isSignedIn && _future == null) {
-      _future = _load();
+    if (AppScope.of(context).isSignedIn && _unread == 0) {
+      _loadUnread();
     }
   }
 
-  Future<NotificationListResponse> _load() async {
+  Future<void> _loadUnread() async {
     final data = await AppScope.of(
       context,
     ).notificationRepository.listNotifications();
     if (mounted) setState(() => _unread = data.unreadCount);
-    return data;
   }
 
   Future<void> _open() async {
-    setState(() => _future = _load());
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (context) => NotificationSheet(
-        future: _future!,
-        onChanged: () async {
-          final refreshed = await _load();
-          setState(() => _future = Future.value(refreshed));
+        onUnreadChanged: (value) {
+          if (mounted) setState(() => _unread = value);
         },
       ),
     );
+    await _loadUnread();
   }
 
   @override
@@ -86,15 +82,39 @@ class _NotificationCenterButtonState extends State<NotificationCenterButton> {
   }
 }
 
-class NotificationSheet extends StatelessWidget {
-  const NotificationSheet({
-    super.key,
-    required this.future,
-    required this.onChanged,
-  });
+class NotificationSheet extends StatefulWidget {
+  const NotificationSheet({super.key, required this.onUnreadChanged});
 
-  final Future<NotificationListResponse> future;
-  final Future<void> Function() onChanged;
+  final ValueChanged<int> onUnreadChanged;
+
+  @override
+  State<NotificationSheet> createState() => _NotificationSheetState();
+}
+
+class _NotificationSheetState extends State<NotificationSheet> {
+  Future<NotificationListResponse>? _future;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= _load();
+  }
+
+  Future<NotificationListResponse> _load() async {
+    final data = await AppScope.of(
+      context,
+    ).notificationRepository.listNotifications();
+    widget.onUnreadChanged(data.unreadCount);
+    return data;
+  }
+
+  Future<void> _refresh() async {
+    final next = _load();
+    setState(() {
+      _future = next;
+    });
+    await next;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -102,91 +122,124 @@ class NotificationSheet extends StatelessWidget {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-        child: FutureBuilder<NotificationListResponse>(
-          future: future,
-          builder: (context, snapshot) {
-            final data = snapshot.data;
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Notifications',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
+        child: SizedBox(
+          height: MediaQuery.sizeOf(context).height * 0.75,
+          child: FutureBuilder<NotificationListResponse>(
+            future: _future,
+            builder: (context, snapshot) {
+              final data = snapshot.data;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Notifications',
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w900),
                         ),
                       ),
-                    ),
-                    TextButton.icon(
-                      onPressed: data == null || data.unreadCount == 0
-                          ? null
-                          : () async {
-                              await repo.markAllRead();
-                              await onChanged();
-                            },
-                      icon: const Icon(Icons.done_all),
-                      label: const Text('Read all'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                if (snapshot.connectionState == ConnectionState.waiting)
-                  const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                else if (snapshot.hasError)
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(snapshot.error.toString()),
-                  )
-                else if (data == null || data.data.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Text('No notifications yet.'),
-                  )
-                else
-                  Flexible(
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: data.data.length,
-                      separatorBuilder: (_, _) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final item = data.data[index];
-                        return ListTile(
-                          leading: Icon(
-                            item.readAt == null
-                                ? Icons.mark_unread_chat_alt
-                                : Icons.chat_bubble_outline,
-                            color: item.readAt == null
-                                ? MangaTheme.amber
-                                : MangaTheme.muted,
-                          ),
-                          title: Text(_notificationTitle(item)),
-                          subtitle: Text(_formatDateTime(item.createdAt)),
-                          onTap: () async {
-                            final router = GoRouter.of(context);
-                            final path = item.targetType == 'MANGA'
-                                ? '/manga/${item.targetId}'
-                                : '/read/${item.targetId}';
-                            if (item.readAt == null) {
-                              await repo.markRead(item.id);
-                              await onChanged();
-                            }
-                            if (!context.mounted) return;
-                            Navigator.pop(context);
-                            router.push(path);
-                          },
-                        );
-                      },
-                    ),
+                      TextButton.icon(
+                        onPressed: data == null || data.unreadCount == 0
+                            ? null
+                            : () async {
+                                await repo.markAllRead();
+                                await _refresh();
+                              },
+                        icon: const Icon(Icons.done_all),
+                        label: const Text('Read all'),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: switch (snapshot.connectionState) {
+                      ConnectionState.waiting => const Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                      _ when snapshot.hasError => _NotificationMessage(
+                        message: snapshot.error.toString(),
+                        onRetry: _refresh,
+                      ),
+                      _ when data == null || data.data.isEmpty =>
+                        const _NotificationMessage(
+                          message: 'No notifications yet.',
+                        ),
+                      _ => RefreshIndicator(
+                        onRefresh: _refresh,
+                        child: ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          itemCount: data.data.length,
+                          separatorBuilder: (_, _) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final item = data.data[index];
+                            return ListTile(
+                              leading: Icon(
+                                item.readAt == null
+                                    ? Icons.mark_unread_chat_alt
+                                    : Icons.chat_bubble_outline,
+                                color: item.readAt == null
+                                    ? MangaTheme.amber
+                                    : MangaTheme.muted,
+                              ),
+                              title: Text(_notificationTitle(item)),
+                              subtitle: Text(_formatDateTime(item.createdAt)),
+                              onTap: () async {
+                                final router = GoRouter.of(context);
+                                final path = item.targetType == 'MANGA'
+                                    ? '/manga/${item.targetId}'
+                                    : '/read/${item.targetId}';
+                                if (item.readAt == null) {
+                                  await repo.markRead(item.id);
+                                  await _refresh();
+                                }
+                                if (!context.mounted) return;
+                                Navigator.pop(context);
+                                router.push(path);
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    },
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NotificationMessage extends StatelessWidget {
+  const _NotificationMessage({required this.message, this.onRetry});
+
+  final String message;
+  final Future<void> Function()? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(message, textAlign: TextAlign.center),
+              if (onRetry != null) ...[
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                ),
               ],
-            );
-          },
+            ],
+          ),
         ),
       ),
     );
