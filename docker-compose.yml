@@ -6,11 +6,11 @@ services:
       POSTGRES_PASSWORD: manga
       POSTGRES_DB: manga_reader
     ports:
-      - "55432:5432"
+      - '55432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U manga -d manga_reader"]
+      test: ['CMD-SHELL', 'pg_isready -U manga -d manga_reader']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -18,26 +18,31 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
-    command: ["redis-server", "--save", "", "--appendonly", "no"]
+      - '6379:6379'
+    command: ['redis-server', '--save', '', '--appendonly', 'no']
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
       timeout: 5s
       retries: 10
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    ports:
+      - '5540:5540'
 
   backend:
     build:
       context: ./backend
       target: dev
     env_file:
-      - ./backend/.env.example
+      - ./backend/.env
     environment:
       DATABASE_URL: postgresql://manga:manga@postgres:5432/manga_reader?schema=public
       REDIS_URL: redis://redis:6379
       CORS_ORIGIN: http://localhost:5173
-      CHOKIDAR_USEPOLLING: "true"
-      CHOKIDAR_INTERVAL: "1000"
+      CHOKIDAR_USEPOLLING: 'true'
+      CHOKIDAR_INTERVAL: '1000'
       LOG_FILE: /app/logs/backend.log
       LOG_LEVEL: info
       RAG_CHAT_ENABLED: ${RAG_CHAT_ENABLED:-false}
@@ -46,7 +51,7 @@ services:
       GPT_MODEL_MINI: ${GPT_MODEL_MINI:-gpt-4.1-mini}
       GPT_EMBEDDING_MODEL: ${GPT_EMBEDDING_MODEL:-text-embedding-3-small}
     ports:
-      - "4000:4000"
+      - '4000:4000'
     volumes:
       - ./backend:/app
       - backend_node_modules:/app/node_modules
@@ -56,6 +61,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
 
   frontend:
     build:
@@ -63,11 +71,11 @@ services:
       target: dev
     environment:
       VITE_API_URL: http://localhost:4000/api
-      CHOKIDAR_USEPOLLING: "true"
-      CHOKIDAR_INTERVAL: "1000"
-      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: 'true'
+      CHOKIDAR_INTERVAL: '1000'
+      WATCHPACK_POLLING: 'true'
     ports:
-      - "5173:5173"
+      - '5173:5173'
     volumes:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules

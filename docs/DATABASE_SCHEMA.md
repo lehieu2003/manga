@@ -21,11 +21,14 @@ Important fields:
 - `passwordHash`: hashed password, never the raw password.
 - `displayName`: user-facing name.
 - `avatarUrl`: optional profile image URL.
+- `emailVerifiedAt`: when the user confirmed the registration OTP.
 - `createdAt` / `updatedAt`: lifecycle timestamps.
 
 Relations:
 
 - A user can have many refresh sessions.
+- A user can have many password reset tokens.
+- A user can have many email verification codes.
 - A user can have many library items.
 - A user can have many reading progress records.
 - A user can have many search history records.
@@ -43,6 +46,41 @@ Important fields:
 - `revokedAt`: set when the session is manually revoked or rotated.
 
 The table is indexed by `userId` so session cleanup and account-level session queries can find records efficiently.
+
+## PasswordResetToken
+
+`PasswordResetToken` stores one-time password reset links.
+
+Important fields:
+
+- `tokenHash`: unique hash of the reset token. The raw token is only sent in the reset link.
+- `expiresAt`: when the reset link is no longer valid.
+- `usedAt`: set when a reset token has been consumed or invalidated.
+
+Constraints and indexes:
+
+- Reset tokens are linked to `User` and cascade when the user is deleted.
+- Tokens are indexed by `userId` and `expiresAt` for account-level invalidation.
+- Expiry is indexed so cleanup jobs can remove old rows later.
+
+Requesting a new password reset marks older unused reset tokens for that user as used and sends the reset URL through the configured email sender. Completing a reset updates the password, marks the token used, and revokes active refresh sessions.
+
+## EmailVerificationCode
+
+`EmailVerificationCode` stores short-lived OTP codes for registration email verification.
+
+Important fields:
+
+- `codeHash`: hash of the six-digit OTP. The raw OTP is only sent by email.
+- `expiresAt`: when the OTP is no longer valid.
+- `usedAt`: set when an OTP has been consumed or invalidated.
+
+Constraints and indexes:
+
+- Codes are linked to `User` and cascade when the user is deleted.
+- Codes are indexed by `userId` and `expiresAt` for resend and cleanup behavior.
+
+Creating or resending a verification code marks older unused codes for that user as used. Verifying the latest valid code sets `User.emailVerifiedAt` and issues the first token pair.
 
 ## LibraryItem
 

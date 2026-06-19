@@ -7,7 +7,7 @@ export const userRepository = {
   findByIdOrThrow(id: string) {
     return prisma.user.findUniqueOrThrow({ where: { id } });
   },
-  create(data: { email: string; passwordHash: string; displayName: string }) {
+  create(data: { email: string; passwordHash: string; displayName: string; emailVerifiedAt?: Date | null }) {
     return prisma.user.create({ data });
   },
   updateProfile(userId: string, data: { displayName?: string; avatarUrl?: string | null }) {
@@ -15,5 +15,8 @@ export const userRepository = {
   },
   updatePassword(userId: string, passwordHash: string) {
     return prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+  },
+  markEmailVerified(userId: string) {
+    return prisma.user.update({ where: { id: userId }, data: { emailVerifiedAt: new Date() } });
   }
 };

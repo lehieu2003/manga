@@ -5,9 +5,11 @@ import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { HomePage } from "@/features/catalog/pages/HomePage";
 import { LibraryPage } from "@/features/library/pages/LibraryPage";
 import { LoginPage } from "@/features/auth/pages/LoginPage";
+import { ForgotPasswordPage } from "@/features/auth/pages/ForgotPasswordPage";
 import { MangaDetailPage } from "@/features/catalog/pages/MangaDetailPage";
 import { ReaderPage } from "@/features/catalog/pages/ReaderPage";
 import { RegisterPage } from "@/features/auth/pages/RegisterPage";
+import { ResetPasswordPage } from "@/features/auth/pages/ResetPasswordPage";
 import { SearchPage } from "@/features/catalog/pages/SearchPage";
 import { SettingsPage } from "@/features/profile/pages/SettingsPage";
 
@@ -40,6 +42,8 @@ export function App() {
         />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

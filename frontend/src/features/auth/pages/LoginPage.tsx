@@ -24,7 +24,7 @@ export function LoginPage() {
   }
 
   return (
-    <AuthPanel title="Welcome back" footer={<Link to="/register">Create an account</Link>}>
+    <AuthPanel title="Welcome back" footer={<AuthFooter />}>
       <form className="space-y-4" onSubmit={onSubmit}>
         <Field label="Email" value={email} onChange={setEmail} type="email" />
         <Field label="Password" value={password} onChange={setPassword} type="password" />
@@ -34,5 +34,14 @@ export function LoginPage() {
         </button>
       </form>
     </AuthPanel>
+  );
+}
+
+function AuthFooter() {
+  return (
+    <div className="grid gap-2">
+      <Link to="/forgot-password">Forgot password?</Link>
+      <Link to="/register">Create an account</Link>
+    </div>
   );
 }

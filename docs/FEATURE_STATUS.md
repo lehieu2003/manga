@@ -2,6 +2,8 @@
 
 Tài liệu này mô tả trạng thái hiện tại của MangaDex Reader để developer mới hoặc maintainer biết phần nào đã xong, phần nào mới ở mức MVP, và bước tiếp theo nên làm gì.
 
+Xem thêm [User feature roadmap](USER_FEATURE_ROADMAP.md) để triển khai chi tiết các feature còn thiếu với role `USER`.
+
 ## Tổng Quan Sản Phẩm
 
 MangaDex Reader là app đọc truyện fullstack dùng MangaDex làm nguồn metadata và chapter images. Backend đóng vai trò API/cache/proxy, frontend web là reader-first React app, và mobile Flutter app dùng cùng backend API.
@@ -70,7 +72,9 @@ Mobile hiện là reader client của backend với parity cơ bản cho home, d
 ### Auth Và Session
 
 - Đăng ký tài khoản bằng email, password và display name.
+- Đăng ký gửi OTP qua email; user phải xác nhận mã OTP trước khi nhận token đăng nhập.
 - Đăng nhập bằng email/password.
+- Login bị chặn nếu email chưa được xác minh.
 - JWT access token và refresh token rotation.
 - Web tự refresh session khi API trả `401`.
 - Mobile restore session bằng token store.
@@ -78,6 +82,7 @@ Mobile hiện là reader client của backend với parity cơ bản cho home, d
 - Logout gọi backend để revoke refresh token rồi clear local session.
 - Settings có account screen cho update display name/avatar URL và change password.
 - Change password verify current password, revoke refresh sessions cũ và issue token mới cho browser/client hiện tại.
+- Forgot password / reset password đã có flow email-link bằng one-time token, generic forgot response để tránh account enumeration, Gmail/SMTP sender khi cấu hình đủ, và reset xong revoke refresh sessions cũ.
 
 ### MangaDex Catalog
 
@@ -246,6 +251,7 @@ Mobile hiện là reader client của backend với parity cơ bản cho home, d
 
 - Bookmark chapter riêng biệt với follow manga.
 - Favorite chapter.
+- Custom manga lists.
 - Custom reading statuses chi tiết hơn.
 - Reading streak hoặc reading activity timeline.
 - Search history UI.
@@ -259,8 +265,6 @@ Mobile hiện là reader client của backend với parity cơ bản cho home, d
 
 ### Auth Và Account
 
-- Forgot password / reset password.
-- Email verification.
 - OAuth login.
 - Multi-device session management UI.
 - Avatar upload/storage.
@@ -285,11 +289,11 @@ Mobile hiện là reader client của backend với parity cơ bản cho home, d
 
 ### Content Và Moderation
 
-- User comments.
 - Ratings/reviews.
-- Custom manga lists.
 - Persistent admin audit log.
 - Report broken chapter/image.
+- Report comment hoặc report user-generated content.
+- Block/mute user.
 - Content preference controls beyond current safe/suggestive API query.
 
 ## API Surface Hiện Có
@@ -342,6 +346,10 @@ Auth:
 - `POST /api/auth/login`
 - `POST /api/auth/refresh`
 - `POST /api/auth/logout`
+- `POST /api/auth/email/verify`
+- `POST /api/auth/email/verification`
+- `POST /api/auth/password/forgot`
+- `POST /api/auth/password/reset`
 - `GET /api/me`
 - `PATCH /api/me`
 - `PUT /api/me/password`
@@ -355,6 +363,27 @@ Library/progress:
 - `GET /api/progress/manga/:mangaId`
 - `GET /api/progress/:chapterId`
 - `PUT /api/progress/:chapterId`
+
+Comments/notifications:
+
+- `GET /api/comments`
+- `POST /api/comments`
+- `PATCH /api/comments/:id`
+- `DELETE /api/comments/:id`
+- `POST /api/comments/:id/reaction`
+- `DELETE /api/comments/:id/reaction`
+- `GET /api/notifications`
+- `PATCH /api/notifications/:id/read`
+- `PATCH /api/notifications/read-all`
+- `GET /api/notifications/stream`
+
+Chat:
+
+- `POST /api/chat/messages`
+- `GET /api/chat/conversations`
+- `GET /api/chat/conversations/:id/messages`
+- `DELETE /api/chat/conversations/:id`
+- `GET /api/chat/rag/status`
 
 ## Web Routes Hiện Có
 

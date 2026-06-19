@@ -35,7 +35,8 @@ type AuthState = {
     email: string;
     password: string;
     displayName: string;
-  }) => Promise<void>;
+  }) => Promise<{ email: string; expiresAt: string }>;
+  verifyEmail: (input: { email: string; code: string }) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (input: UpdateProfileInput) => Promise<void>;
   changePassword: (input: ChangePasswordInput) => Promise<void>;
@@ -96,11 +97,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(
     async (input: { email: string; password: string; displayName: string }) => {
       const payload = await api.register(input);
-      dispatch({ type: 'sessionLoaded', user: payload.user });
-      setTokens(payload.accessToken, payload.refreshToken);
+      return { email: payload.email, expiresAt: payload.expiresAt };
     },
     [],
   );
+
+  const verifyEmail = useCallback(async (input: { email: string; code: string }) => {
+    const payload = await api.verifyEmail(input);
+    dispatch({ type: 'sessionLoaded', user: payload.user });
+    setTokens(payload.accessToken, payload.refreshToken);
+  }, []);
 
   const logout = useCallback(async () => {
     const refreshToken = getRefreshToken();
@@ -131,6 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading: state.isLoading,
       login,
       register,
+      verifyEmail,
       logout,
       updateProfile,
       changePassword,
@@ -140,6 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       state.isLoading,
       login,
       register,
+      verifyEmail,
       logout,
       updateProfile,
       changePassword,

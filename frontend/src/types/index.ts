@@ -4,6 +4,7 @@ export type User = {
   displayName: string;
   role: "USER" | "ADMIN";
   avatarUrl: string | null;
+  emailVerifiedAt: string | null;
   createdAt: string;
 };
 
