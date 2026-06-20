@@ -22,6 +22,9 @@ describe("media URL helpers", () => {
     expect(normalizeCoverProxyUrl("https://uploads.mangadex.org/covers/11111111-1111-4111-8111-111111111111/cover.512.jpg")).toBe(
       "/api/covers/11111111-1111-4111-8111-111111111111/cover.512.jpg"
     );
+    expect(normalizeCoverProxyUrl("https://uploads.mangadex.dev/covers/11111111-1111-4111-8111-111111111111/cover.512.jpg")).toBe(
+      "/api/covers/11111111-1111-4111-8111-111111111111/cover.512.jpg"
+    );
   });
 
   it("returns absolute media proxy URLs when a public media base URL is configured", async () => {

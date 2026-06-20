@@ -5,6 +5,7 @@ import { searchHistoryRepository } from "../../domain/repositories/index.js";
 import { getCachedChapters, getCachedGenres, getCachedManga, markCachedChapterUnreadable, saveManga, saveMangaBatch, searchCachedManga } from "../../domain/services/catalog-cache.service.js";
 import { listMangaDexTags, resolveMangaDexTagFilters } from "../../domain/services/mangadex-tag-registry.service.js";
 import { HttpError } from "../../shared/errors/http-error.js";
+import { normalizeCoverProxyUrl } from "../../shared/utils/media-url.js";
 import type { chaptersQuerySchema, mangaSearchQuerySchema } from "../validators/catalog.validator.js";
 
 type ChaptersQuery = z.infer<typeof chaptersQuerySchema>;
@@ -61,11 +62,11 @@ export async function searchCatalogManga(query: MangaSearchQuery, options: { use
             authorOrArtist: creatorFallbackIds
           });
           await saveMangaBatch(creatorResult.data);
-          return { ...creatorResult, source: "live" as const };
+          return { ...creatorResult, data: normalizeMangaMedia(creatorResult.data), source: "live" as const };
         }
       }
       await saveMangaBatch(result.data);
-      return { ...result, source: "live" as const };
+      return { ...result, data: normalizeMangaMedia(result.data), source: "live" as const };
     } catch (error) {
       const fallback = await searchCachedManga(cacheFilters);
       if (fallback.data.length > 0) return { ...fallback, source: "cache" as const };
@@ -103,13 +104,21 @@ export async function getCatalogManga(id: string) {
     try {
       const manga = await getManga(id);
       await saveManga(manga);
-      return manga;
+      return normalizeMangaMediaItem(manga);
     } catch (error) {
       const fallback = await getCachedManga(id);
       if (fallback) return fallback;
       throw error;
     }
   });
+}
+
+function normalizeMangaMedia<T extends { coverUrl?: string }>(items: T[]) {
+  return items.map(normalizeMangaMediaItem);
+}
+
+function normalizeMangaMediaItem<T extends { coverUrl?: string }>(item: T): T {
+  return { ...item, coverUrl: normalizeCoverProxyUrl(item.coverUrl) };
 }
 
 export async function listCatalogChapters(id: string, query: ChaptersQuery) {
