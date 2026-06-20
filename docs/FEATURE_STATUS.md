@@ -141,6 +141,8 @@ Mobile hiện là reader client của backend với parity cơ bản cho home, d
 - Library có search theo title, tag, manga status hoặc library status.
 - Library có sort theo last read, recently updated, title A-Z, status và favorite first.
 - Library có filter summary hiển thị shelf view, visible count, sort mode và search query.
+- Bookmark chapter/page đã có backend CRUD và reader web có nút lưu/xóa bookmark cho page hiện tại.
+- Library web hiển thị bookmarked chapters gần đây và link quay lại đúng page đã lưu.
 - Mobile có repository/API support cho library.
 
 ### Reading Progress
@@ -249,7 +251,6 @@ Mobile hiện là reader client của backend với parity cơ bản cho home, d
 
 ### Library Và Personalization
 
-- Bookmark chapter riêng biệt với follow manga.
 - Favorite chapter.
 - Custom manga lists.
 - Custom reading statuses chi tiết hơn.
@@ -360,6 +361,11 @@ Library/progress:
 - `GET /api/library/:mangaId`
 - `POST /api/library/:mangaId`
 - `DELETE /api/library/:mangaId`
+- `GET /api/bookmarks`
+- `GET /api/bookmarks/chapter/:chapterId`
+- `POST /api/bookmarks`
+- `PATCH /api/bookmarks/:id`
+- `DELETE /api/bookmarks/:id`
 - `GET /api/progress/manga/:mangaId`
 - `GET /api/progress/:chapterId`
 - `PUT /api/progress/:chapterId`

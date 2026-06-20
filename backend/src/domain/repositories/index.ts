@@ -1,4 +1,5 @@
 export { cachedCatalogRepository } from "./cached-catalog.repository.js";
+export { bookmarkRepository } from "./bookmark.repository.js";
 export { commentRepository } from "./comment.repository.js";
 export { emailVerificationCodeRepository } from "./email-verification-code.repository.js";
 export { libraryRepository } from "./library.repository.js";

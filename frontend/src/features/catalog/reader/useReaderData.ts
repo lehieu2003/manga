@@ -8,6 +8,12 @@ import type { ReaderQuality } from "./reader.types";
 export function useReaderData({ chapterId, mangaId, user, quality }: { chapterId: string; mangaId: string; user?: User | null; quality: ReaderQuality }) {
   const queryClient = useQueryClient();
   const reader = useQuery({ queryKey: ["reader", chapterId], queryFn: () => api.getReader(chapterId), enabled: Boolean(chapterId), retry: false });
+  const bookmark = useQuery({
+    queryKey: ["bookmark", "chapter", chapterId],
+    queryFn: () => api.getChapterBookmark(chapterId),
+    enabled: Boolean(user && chapterId),
+    retry: false
+  });
   const chapters = useInfiniteQuery({
     queryKey: ["reader-chapters", mangaId],
     queryFn: ({ pageParam }) => api.getChapters(mangaId, { limit: 100, offset: pageParam }),
@@ -34,6 +40,21 @@ export function useReaderData({ chapterId, mangaId, user, quality }: { chapterId
       ]);
     }
   });
+  const { mutate: createBookmark } = useMutation({
+    mutationFn: (input: { mangaId: string; chapterId: string; pageIndex: number }) => api.createBookmark({ ...input, isFavorite: false }),
+    onSuccess: async (_data, input) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["bookmark", "chapter", input.chapterId] }),
+        queryClient.invalidateQueries({ queryKey: ["bookmarks"] })
+      ]);
+    }
+  });
+  const { mutate: removeBookmark } = useMutation({
+    mutationFn: (id: string) => api.removeBookmark(id),
+    onSuccess: async () => {
+      await Promise.all([queryClient.invalidateQueries({ queryKey: ["bookmark", "chapter", chapterId] }), queryClient.invalidateQueries({ queryKey: ["bookmarks"] })]);
+    }
+  });
   const pages = useMemo(() => {
     const urls = quality === "data-saver" ? reader.data?.dataSaverPageUrls : reader.data?.pageUrls;
     return urls?.map(assetUrl).filter((page): page is string => Boolean(page)) ?? [];
@@ -58,9 +79,12 @@ export function useReaderData({ chapterId, mangaId, user, quality }: { chapterId
   return {
     queryClient,
     reader,
+    bookmark,
     chapters,
     progress,
     saveProgress,
+    createBookmark,
+    removeBookmark,
     pages,
     sortedChapters,
     currentChapterIndex,

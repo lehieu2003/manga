@@ -63,6 +63,19 @@ vi.mock("@/api", async () => {
         ]
       })),
       getChapters: vi.fn(async () => ({ data: chapters, limit: 100, offset: 0, total: chapters.length })),
+      getChapterBookmark: vi.fn(async () => ({ bookmark: null })),
+      createBookmark: vi.fn(async (input: { mangaId: string; chapterId: string; pageIndex: number }) => ({
+        bookmark: {
+          id: "bookmark-1",
+          userId: "user-1",
+          note: null,
+          isFavorite: false,
+          createdAt: "2024-01-01T00:00:00.000Z",
+          updatedAt: "2024-01-01T00:00:00.000Z",
+          ...input
+        }
+      })),
+      removeBookmark: vi.fn(async () => ({ ok: true })),
       getMangaProgress: vi.fn(async () => ({
         progress: null,
         chaptersProgress: [
@@ -147,6 +160,22 @@ describe("ReaderPage", () => {
 
     expect(await screen.findByAltText("Page 1")).toHaveAttribute("src", expect.stringContaining("/data/chapter-2-1.jpg"));
     expect(screen.getByRole("button", { name: "Toggle reader quality" })).toHaveTextContent("Original");
+  });
+
+  it("bookmarks the current reader page", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(READER_SETTINGS_STORAGE_KEY, JSON.stringify({ mode: "paged", fit: "width", quality: "data-saver" }));
+    renderReader("/read/chapter-2?mangaId=manga-1");
+
+    expect(await screen.findByText("Page 1 / 3")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(await screen.findByText("Page 2 / 3")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Bookmark current page" }));
+
+    await waitFor(() => {
+      expect(api.createBookmark).toHaveBeenCalledWith({ mangaId: "manga-1", chapterId: "chapter-2", pageIndex: 1, isFavorite: false });
+    });
   });
 
   it("loads and persists device reader settings", async () => {

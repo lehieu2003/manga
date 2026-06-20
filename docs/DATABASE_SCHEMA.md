@@ -120,6 +120,26 @@ Constraints and indexes:
 
 Like library rows, progress stores MangaDex ids directly rather than requiring cached catalog rows to exist.
 
+## Bookmark
+
+`Bookmark` stores a user-created saved chapter/page location independently from follow status and reading progress.
+
+Important fields:
+
+- `mangaId`: MangaDex manga id.
+- `chapterId`: MangaDex chapter id.
+- `pageIndex`: zero-based bookmarked page.
+- `note`: optional user note for the saved location.
+- `isFavorite`: flag for favorite chapter/page use cases.
+
+Constraints and indexes:
+
+- A user can only have one bookmark row per chapter; saving the same chapter again updates the page and metadata.
+- Rows are indexed by `userId` and `updatedAt` for recent bookmark lists.
+- Rows are indexed by `userId` and `mangaId` for manga-scoped bookmark views.
+
+Like library and progress rows, bookmarks store MangaDex ids directly and can render even when cached manga/chapter metadata is incomplete.
+
 ## SearchHistory
 
 `SearchHistory` stores authenticated user search terms.

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, ArrowLeftRight, ChevronLeft, ChevronRight, CircleHelp, Columns2, Maximize2, Rows3 } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, Bookmark, ChevronLeft, ChevronRight, CircleHelp, Columns2, Maximize2, Rows3 } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { ChapterSummary } from "@/types";
 import type { ReaderChapterNavItem, ReaderFit, ReaderMode, ReaderNavigationDirection, ReaderQuality } from "./reader.types";
@@ -21,6 +21,8 @@ export function ReaderToolbar({
   fit,
   quality,
   navigationDirection,
+  isBookmarked,
+  bookmarkDisabled,
   onGoToChapter,
   onFetchMoreChapters,
   onModeChange,
@@ -28,6 +30,7 @@ export function ReaderToolbar({
   onFitToggle,
   onQualityToggle,
   onNavigationDirectionToggle,
+  onBookmarkToggle,
   onReveal
 }: {
   isVisible: boolean;
@@ -46,6 +49,8 @@ export function ReaderToolbar({
   fit: ReaderFit;
   quality: ReaderQuality;
   navigationDirection: ReaderNavigationDirection;
+  isBookmarked: boolean;
+  bookmarkDisabled: boolean;
   onGoToChapter: (id: string) => void;
   onFetchMoreChapters: () => void;
   onModeChange: (mode: ReaderMode) => void;
@@ -53,6 +58,7 @@ export function ReaderToolbar({
   onFitToggle: () => void;
   onQualityToggle: () => void;
   onNavigationDirectionToggle: () => void;
+  onBookmarkToggle: () => void;
   onReveal: () => void;
 }) {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
@@ -101,6 +107,16 @@ export function ReaderToolbar({
           ) : null}
           <button className="btn reader-icon-button" disabled={!nextChapter} onClick={() => nextChapter && onGoToChapter(nextChapter.id)} aria-label="Next chapter" type="button">
             <ChevronRight size={17} />
+          </button>
+          <button
+            className={`btn reader-icon-button ${isBookmarked ? "reader-bookmark-active" : ""}`}
+            disabled={bookmarkDisabled}
+            onClick={onBookmarkToggle}
+            aria-label={isBookmarked ? "Remove page bookmark" : "Bookmark current page"}
+            type="button"
+            title={bookmarkDisabled ? "Log in and open from manga detail to bookmark this page" : isBookmarked ? "Remove bookmark" : "Bookmark current page"}
+          >
+            <Bookmark size={17} fill={isBookmarked ? "currentColor" : "none"} />
           </button>
           <div className="reader-mode-group">
             <button className={`btn reader-icon-button border-0 ${mode === "vertical" ? "bg-[var(--surface-strong)]" : ""}`} onClick={() => onModeChange("vertical")} aria-label="Vertical mode" type="button">

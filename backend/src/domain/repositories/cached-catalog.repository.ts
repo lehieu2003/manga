@@ -12,5 +12,8 @@ export const cachedCatalogRepository = {
   },
   findChapterById(id: string) {
     return prisma.cachedChapter.findUnique({ where: { id } });
+  },
+  findChaptersByIds(ids: string[]) {
+    return prisma.cachedChapter.findMany({ where: { id: { in: ids } } });
   }
 };

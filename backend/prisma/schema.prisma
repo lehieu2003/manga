@@ -71,6 +71,7 @@ model User {
   emailVerificationCodes EmailVerificationCode[]
   libraryItems    LibraryItem[]
   progress        ReadingProgress[]
+  bookmarks       Bookmark[]
   searchHistory   SearchHistory[]
   chatConversations ChatConversation[]
   comments        Comment[]
@@ -148,6 +149,23 @@ model ReadingProgress {
 
   @@unique([userId, chapterId])
   @@index([userId, mangaId, updatedAt])
+}
+
+model Bookmark {
+  id         String   @id @default(cuid())
+  userId     String
+  mangaId    String
+  chapterId  String
+  pageIndex  Int      @default(0)
+  note       String?
+  isFavorite Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, chapterId])
+  @@index([userId, mangaId])
+  @@index([userId, updatedAt])
 }
 
 model SearchHistory {
