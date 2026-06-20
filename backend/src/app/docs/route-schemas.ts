@@ -32,6 +32,7 @@ const user = {
     displayName: { type: "string" },
     role: { type: "string", enum: ["USER", "ADMIN"] },
     avatarUrl: { type: ["string", "null"], format: "uri" },
+    emailVerifiedAt: { type: ["string", "null"], format: "date-time" },
     createdAt: dateTime
   },
   example: {
@@ -40,7 +41,23 @@ const user = {
     displayName: "Manga Reader",
     role: "USER",
     avatarUrl: null,
+    emailVerifiedAt: exampleDate,
     createdAt: exampleDate
+  }
+} as const;
+
+const emailVerificationPending = {
+  type: "object",
+  required: ["pendingVerification", "email", "expiresAt"],
+  properties: {
+    pendingVerification: { type: "boolean" },
+    email: { type: "string", format: "email" },
+    expiresAt: dateTime
+  },
+  example: {
+    pendingVerification: true,
+    email: "reader@example.com",
+    expiresAt: exampleDate
   }
 } as const;
 
@@ -344,7 +361,7 @@ export const authRouteSchemas = {
         displayName: { type: "string", minLength: 2, maxLength: 40 }
       }
     },
-    response: { 201: tokenPair, ...errors }
+    response: { 201: emailVerificationPending, ...errors }
   },
   login: {
     summary: "Login with email and password",
@@ -376,6 +393,56 @@ export const authRouteSchemas = {
       type: "object",
       required: ["refreshToken"],
       properties: { refreshToken: { type: "string", minLength: 20 } }
+    },
+    response: { 200: { type: "object", required: ["ok"], properties: { ok: { type: "boolean" } } }, ...errors }
+  },
+  verifyEmail: {
+    summary: "Verify registration email with OTP code",
+    tags: ["Auth"],
+    body: {
+      type: "object",
+      required: ["email", "code"],
+      properties: {
+        email: { type: "string", format: "email" },
+        code: { type: "string", minLength: 6, maxLength: 6 }
+      }
+    },
+    response: { 200: tokenPair, ...errors }
+  },
+  resendVerification: {
+    summary: "Resend registration email verification OTP",
+    tags: ["Auth"],
+    body: {
+      type: "object",
+      required: ["email"],
+      properties: {
+        email: { type: "string", format: "email" }
+      }
+    },
+    response: { 200: { type: "object", required: ["ok"], properties: { ok: { type: "boolean" } } }, ...errors }
+  },
+  forgotPassword: {
+    summary: "Request a password reset email",
+    tags: ["Auth"],
+    body: {
+      type: "object",
+      required: ["email"],
+      properties: {
+        email: { type: "string", format: "email" }
+      }
+    },
+    response: { 200: { type: "object", required: ["ok"], properties: { ok: { type: "boolean" } } }, ...errors }
+  },
+  resetPassword: {
+    summary: "Reset password with a one-time token",
+    tags: ["Auth"],
+    body: {
+      type: "object",
+      required: ["token", "newPassword"],
+      properties: {
+        token: { type: "string", minLength: 20 },
+        newPassword: { type: "string", minLength: 8, maxLength: 128 }
+      }
     },
     response: { 200: { type: "object", required: ["ok"], properties: { ok: { type: "boolean" } } }, ...errors }
   },

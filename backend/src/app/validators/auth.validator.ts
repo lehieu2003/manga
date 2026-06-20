@@ -27,3 +27,21 @@ export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1),
   newPassword: z.string().min(8).max(128)
 });
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email().transform((value) => value.toLowerCase())
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(20),
+  newPassword: z.string().min(8).max(128)
+});
+
+export const verifyEmailSchema = z.object({
+  email: z.string().email().transform((value) => value.toLowerCase()),
+  code: z.string().regex(/^\d{6}$/)
+});
+
+export const resendVerificationSchema = z.object({
+  email: z.string().email().transform((value) => value.toLowerCase())
+});

@@ -1,7 +1,9 @@
 export { cachedCatalogRepository } from "./cached-catalog.repository.js";
 export { commentRepository } from "./comment.repository.js";
+export { emailVerificationCodeRepository } from "./email-verification-code.repository.js";
 export { libraryRepository } from "./library.repository.js";
 export { progressRepository } from "./progress.repository.js";
+export { passwordResetTokenRepository } from "./password-reset-token.repository.js";
 export { refreshSessionRepository } from "./refresh-session.repository.js";
 export { searchHistoryRepository } from "./search-history.repository.js";
 export { userRepository } from "./user.repository.js";

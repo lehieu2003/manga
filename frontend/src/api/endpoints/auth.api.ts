@@ -3,7 +3,19 @@ import { refreshSession, request } from "../interceptors/auth.interceptor";
 
 export const authApi = {
   register(input: { email: string; password: string; displayName: string }) {
-    return request<{ user: User; accessToken: string; refreshToken: string }>("/auth/register", {
+    return request<{ pendingVerification: true; email: string; expiresAt: string }>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify(input)
+    });
+  },
+  verifyEmail(input: { email: string; code: string }) {
+    return request<{ user: User; accessToken: string; refreshToken: string }>("/auth/email/verify", {
+      method: "POST",
+      body: JSON.stringify(input)
+    });
+  },
+  resendVerification(input: { email: string }) {
+    return request<{ ok: true }>("/auth/email/verification", {
       method: "POST",
       body: JSON.stringify(input)
     });
@@ -29,6 +41,18 @@ export const authApi = {
       },
       false
     );
+  },
+  forgotPassword(input: { email: string }) {
+    return request<{ ok: true }>("/auth/password/forgot", {
+      method: "POST",
+      body: JSON.stringify(input)
+    });
+  },
+  resetPassword(input: { token: string; newPassword: string }) {
+    return request<{ ok: true }>("/auth/password/reset", {
+      method: "POST",
+      body: JSON.stringify(input)
+    });
   },
   updateMe(input: { displayName?: string; avatarUrl?: string | null }) {
     return request<{ user: User }>("/me", {

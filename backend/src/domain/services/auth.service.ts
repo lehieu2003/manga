@@ -6,6 +6,7 @@ import { env } from '../../shared/configs/app.config.js';
 import { HttpError } from '../../shared/errors/http-error.js';
 
 const REFRESH_BYTES = 48;
+const PASSWORD_RESET_BYTES = 32;
 
 export async function hashPassword(password: string) {
   return bcrypt.hash(password, 12);
@@ -21,6 +22,14 @@ export function hashToken(token: string) {
 
 export function createRefreshToken() {
   return crypto.randomBytes(REFRESH_BYTES).toString('base64url');
+}
+
+export function createPasswordResetToken() {
+  return crypto.randomBytes(PASSWORD_RESET_BYTES).toString('base64url');
+}
+
+export function createEmailVerificationCode() {
+  return crypto.randomInt(100_000, 1_000_000).toString();
 }
 
 export async function issueTokenPair(

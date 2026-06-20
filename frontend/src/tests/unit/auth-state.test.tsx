@@ -101,6 +101,7 @@ function makeBaseUser() {
     displayName: "Reader",
     role: "USER",
     avatarUrl: null,
+    emailVerifiedAt: "2024-01-01T00:00:00.000Z",
     createdAt: "2024-01-01T00:00:00.000Z"
   };
 }

@@ -10,6 +10,7 @@ try {
 const optionalUrl = z.preprocess((value) => (value === "" ? undefined : value), z.string().url().optional());
 const optionalSecret = z.preprocess((value) => (value === "" ? undefined : value), z.string().min(16).optional());
 const optionalNonEmpty = z.preprocess((value) => (value === "" ? undefined : value), z.string().min(1).optional());
+const optionalEmail = z.preprocess((value) => (value === "" ? undefined : value), z.string().email().optional());
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -20,6 +21,9 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(16).default("local-development-secret"),
   JWT_EXPIRES_IN: z.string().default("15m"),
   REFRESH_TOKEN_DAYS: z.coerce.number().int().positive().default(30),
+  PASSWORD_RESET_TOKEN_MINUTES: z.coerce.number().int().positive().default(30),
+  EMAIL_VERIFICATION_CODE_MINUTES: z.coerce.number().int().positive().default(10),
+  FRONTEND_URL: z.string().url().default("http://localhost:5173"),
   MANGADEX_BASE_URL: z.string().url().default("https://api.mangadex.org"),
   MANGADEX_UPLOADS_BASE_URL: optionalUrl,
   PUBLIC_MEDIA_BASE_URL: optionalUrl,
@@ -33,7 +37,12 @@ const envSchema = z.object({
   OPENAI_API_KEY: optionalNonEmpty,
   GPT_MODEL_NANO: z.string().min(1).default("gpt-4.1-nano"),
   GPT_MODEL_MINI: z.string().min(1).default("gpt-4.1-mini"),
-  GPT_EMBEDDING_MODEL: z.string().min(1).default("text-embedding-3-small")
+  GPT_EMBEDDING_MODEL: z.string().min(1).default("text-embedding-3-small"),
+  SMTP_HOST: optionalNonEmpty,
+  SMTP_PORT: z.coerce.number().int().positive().default(465),
+  SMTP_USER: optionalEmail,
+  SMTP_PASS: optionalNonEmpty,
+  MAIL_FROM: optionalEmail
 });
 
 export const env = envSchema.parse(process.env);

@@ -60,6 +60,7 @@ Set `JWT_SECRET`, `POSTGRES_PASSWORD`, and `CORS_ORIGIN` in `.env` for the VPS e
 ## Documentation
 
 - [Feature status](docs/FEATURE_STATUS.md): current implemented features, known limits, and not-yet-implemented roadmap items.
+- [User feature roadmap](docs/USER_FEATURE_ROADMAP.md): role `USER` feature gaps with detailed implementation plans.
 - [Focused gap roadmap](docs/FOCUSED_GAP_ROADMAP.md): milestone order for backend contracts, discovery accuracy, reader UX, personalization, account maturity, and mobile readiness.
 - [Database schema](docs/DATABASE_SCHEMA.md): current Prisma data model, catalog cache behavior, and operational checks for readable chapters.
 - [Catalog data workflow refactor](docs/catalog-data-workflow/README.md): step-by-step plan to separate frontend DB reads from MangaDex import/sync operations.
