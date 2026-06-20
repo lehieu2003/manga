@@ -173,8 +173,11 @@ Mobile hiện là reader client của backend với parity cơ bản cho home, d
 ### Reader
 
 - Reader hỗ trợ vertical/webtoon mode và paged mode.
-- Có keyboard navigation bằng Arrow Left / Arrow Right trong paged mode.
+- Có keyboard navigation bằng Arrow Left / Arrow Right trong paged mode, theo hướng đọc LTR/RTL đã chọn.
 - Có image fit toggle giữa width và contain.
+- Có quality toggle giữa data-saver và original page URLs.
+- Reader settings lưu local theo device cho mode, fit, quality và hướng đọc.
+- Paged mode có tap zones, swipe gestures và shortcut help trong toolbar.
 - Có next chapter / previous chapter controls khi URL có `mangaId`.
 - Có chapter selector trực tiếp trong reader, kèm trạng thái read/current/new.
 - Reader tự preload 1-2 ảnh kế tiếp trong paged mode.
@@ -221,7 +224,6 @@ Mobile hiện là reader client của backend với parity cơ bản cho home, d
 - Scanlation filter chỉ đầy đủ theo các chapter đã load; option list mở rộng dần khi infinite scroll load thêm.
 - Reading stats dựa trên chapters đã load và total từ feed; chưa có dashboard analytics.
 - Reader chapter navigation cần `mangaId` trên URL; nếu thiếu `mangaId`, reader vẫn đọc được chapter hiện tại nhưng disable previous/next và selector.
-- Reader quality state chỉ có `data-saver`; chưa có toggle original/data-saver thật.
 - Search history được ghi khi search có token, nhưng chưa có UI hiển thị lịch sử search.
 - Backend architecture có repositories/validators/middlewares, nhưng controllers mới chỉ tách rõ cho health.
 - Domain events chưa được phát ra runtime.
@@ -235,10 +237,8 @@ Mobile hiện là reader client của backend với parity cơ bản cho home, d
 
 ### Reader Và Chapter Navigation
 
-- Reader quality toggle giữa data saver và original.
-- Reader gestures cho mobile/web như tap left/right hoặc swipe.
-- Keyboard shortcut đầy đủ và tooltip hướng dẫn.
-- Better reader settings persistence theo user/device.
+- Mobile reader cần parity cho quality, persisted settings và gestures.
+- User-synced reader settings có thể thêm sau nếu cần đồng bộ đa thiết bị.
 
 ### Chapter List Nâng Cao
 

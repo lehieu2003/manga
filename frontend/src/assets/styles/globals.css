@@ -988,6 +988,11 @@ img {
   cursor: e-resize;
 }
 
+.reader-page-buttons {
+  position: relative;
+  z-index: 2;
+}
+
 .reader-page img {
   width: min(100%, 960px);
   height: auto;

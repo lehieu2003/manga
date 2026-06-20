@@ -2,7 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, type RefObject } from "react";
 import { api } from "@/api";
 import type { User } from "@/types";
-import type { ReaderMode } from "./reader.types";
+import type { ReaderMode, ReaderNavigationDirection } from "./reader.types";
 
 type SaveProgress = (input: { chapterId: string; mangaId: string; pageIndex: number; completed: boolean }) => void;
 
@@ -49,16 +49,34 @@ export function useReaderChapterAutoLoad({
   }, [currentChapterLoaded, fetchMoreChapters, hasMoreChapters, isFetchingMoreChapters, mangaId]);
 }
 
-export function useReaderKeyboardNavigation({ mode, pagesLength, goToPage }: { mode: ReaderMode; pagesLength: number; goToPage: (getNextIndex: (value: number) => number) => void }) {
+export function useReaderKeyboardNavigation({
+  mode,
+  navigationDirection,
+  pagesLength,
+  goToPage
+}: {
+  mode: ReaderMode;
+  navigationDirection: ReaderNavigationDirection;
+  pagesLength: number;
+  goToPage: (getNextIndex: (value: number) => number) => void;
+}) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (mode !== "paged") return;
-      if (event.key === "ArrowRight") goToPage((value) => Math.min(value + 1, Math.max(pagesLength - 1, 0)));
-      if (event.key === "ArrowLeft") goToPage((value) => Math.max(value - 1, 0));
+      const nextPage = () => goToPage((value) => Math.min(value + 1, Math.max(pagesLength - 1, 0)));
+      const previousPage = () => goToPage((value) => Math.max(value - 1, 0));
+      if (event.key === "ArrowRight") {
+        if (navigationDirection === "rtl") previousPage();
+        else nextPage();
+      }
+      if (event.key === "ArrowLeft") {
+        if (navigationDirection === "rtl") nextPage();
+        else previousPage();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [goToPage, mode, pagesLength]);
+  }, [goToPage, mode, navigationDirection, pagesLength]);
 }
 
 export function useVisibleReaderPage({

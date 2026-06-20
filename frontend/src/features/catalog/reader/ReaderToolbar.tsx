@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { ArrowLeft, ChevronLeft, ChevronRight, CircleHelp, Columns2, Maximize2, Rows3 } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, ChevronLeft, ChevronRight, CircleHelp, Columns2, Maximize2, Rows3 } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { ChapterSummary } from "@/types";
-import type { ReaderChapterNavItem, ReaderFit, ReaderMode, ReaderQuality } from "./reader.types";
+import type { ReaderChapterNavItem, ReaderFit, ReaderMode, ReaderNavigationDirection, ReaderQuality } from "./reader.types";
 
 export function ReaderToolbar({
   isVisible,
@@ -20,12 +20,14 @@ export function ReaderToolbar({
   mode,
   fit,
   quality,
+  navigationDirection,
   onGoToChapter,
   onFetchMoreChapters,
   onModeChange,
   onSwitchToPagedMode,
   onFitToggle,
   onQualityToggle,
+  onNavigationDirectionToggle,
   onReveal
 }: {
   isVisible: boolean;
@@ -43,15 +45,21 @@ export function ReaderToolbar({
   mode: ReaderMode;
   fit: ReaderFit;
   quality: ReaderQuality;
+  navigationDirection: ReaderNavigationDirection;
   onGoToChapter: (id: string) => void;
   onFetchMoreChapters: () => void;
   onModeChange: (mode: ReaderMode) => void;
   onSwitchToPagedMode: () => void;
   onFitToggle: () => void;
   onQualityToggle: () => void;
+  onNavigationDirectionToggle: () => void;
   onReveal: () => void;
 }) {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const nextTap = navigationDirection === "rtl" ? "left" : "right";
+  const previousTap = navigationDirection === "rtl" ? "right" : "left";
+  const nextSwipe = navigationDirection === "rtl" ? "right" : "left";
+  const previousSwipe = navigationDirection === "rtl" ? "left" : "right";
 
   return (
     <div className={`reader-toolbar ${isVisible ? "reader-toolbar-visible" : "reader-toolbar-hidden"}`} onPointerDown={onReveal} onFocus={onReveal}>
@@ -104,6 +112,10 @@ export function ReaderToolbar({
             <button className={`btn reader-icon-button border-0 ${fit === "contain" ? "bg-[var(--surface-strong)]" : ""}`} onClick={onFitToggle} aria-label="Toggle image fit" type="button">
               <Maximize2 size={17} />
             </button>
+            <button className="btn min-h-9 px-3 text-xs" onClick={onNavigationDirectionToggle} aria-label="Toggle page direction" type="button">
+              <ArrowLeftRight size={15} />
+              {navigationDirection.toUpperCase()}
+            </button>
             <button className="btn min-h-9 px-3 text-xs" onClick={onQualityToggle} aria-label="Toggle reader quality" type="button">
               {quality === "data-saver" ? "Data saver" : "Original"}
             </button>
@@ -125,11 +137,11 @@ export function ReaderToolbar({
                 <dl>
                   <div>
                     <dt>Left / right tap</dt>
-                    <dd>Previous or next page in paged mode.</dd>
+                    <dd>{nextTap} tap goes next; {previousTap} tap goes back in paged mode.</dd>
                   </div>
                   <div>
                     <dt>Swipe left / right</dt>
-                    <dd>Next or previous page in paged mode.</dd>
+                    <dd>Swipe {nextSwipe} goes next; swipe {previousSwipe} goes back in paged mode.</dd>
                   </div>
                   <div>
                     <dt>Arrow keys</dt>
