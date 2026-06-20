@@ -16,7 +16,6 @@ import {
 } from "@/features/catalog/reader/reader.effects";
 import { preloadPages } from "@/features/catalog/reader/reader.logic";
 import { readReaderSettings, writeReaderSettings } from "@/features/catalog/reader/readerSettings";
-import type { ReaderFit, ReaderMode, ReaderQuality } from "@/features/catalog/reader/reader.types";
 import { useReaderData } from "@/features/catalog/reader/useReaderData";
 import { CommentSection } from "@/features/comments/CommentSection";
 
@@ -27,7 +26,7 @@ export function ReaderPage() {
   const mangaId = params.get("mangaId") ?? "";
   const { user } = useAuth();
   const [settings, setSettings] = useState(readReaderSettings);
-  const { mode, fit, quality } = settings;
+  const { mode, fit, quality, navigationDirection } = settings;
   const [pageIndex, setPageIndex] = useState(0);
   const [isToolbarVisible, setIsToolbarVisible] = useState(true);
   const [commentsOpen, setCommentsOpen] = useState(false);
@@ -110,7 +109,7 @@ export function ReaderPage() {
     isFetchingMoreChapters: data.isFetchingMoreChapters,
     fetchMoreChapters: data.fetchMoreChapters
   });
-  useReaderKeyboardNavigation({ mode, pagesLength: data.pages.length, goToPage });
+  useReaderKeyboardNavigation({ mode, navigationDirection, pagesLength: data.pages.length, goToPage });
   useVisibleReaderPage({ mode, pagesLength: data.pages.length, imageRefs, setPageIndex });
   useReaderNextChapterPrefetch({ nextChapterId: data.nextChapter?.id, queryClient: data.queryClient });
   useReaderProgressPersistence({
@@ -154,11 +153,13 @@ export function ReaderPage() {
         mode={mode}
         fit={fit}
         quality={quality}
+        navigationDirection={navigationDirection}
         onGoToChapter={goToChapter}
         onFetchMoreChapters={data.fetchMoreChapters}
         onModeChange={(nextMode) => setSettings((value) => ({ ...value, mode: nextMode }))}
         onSwitchToPagedMode={switchToPagedMode}
         onFitToggle={() => setSettings((value) => ({ ...value, fit: value.fit === "width" ? "contain" : "width" }))}
+        onNavigationDirectionToggle={() => setSettings((value) => ({ ...value, navigationDirection: value.navigationDirection === "ltr" ? "rtl" : "ltr" }))}
         onQualityToggle={() =>
           setSettings((value) => {
             setPageIndex((index) => Math.min(index, Math.max(data.pages.length - 1, 0)));
@@ -167,7 +168,16 @@ export function ReaderPage() {
         }
         onReveal={showToolbarBriefly}
       />
-      <ReaderCanvas mode={mode} fit={fit} pages={data.pages} pageIndex={pageIndex} imageRefs={imageRefs} onGoToPage={goToPage} onRevealControls={showToolbarBriefly} />
+      <ReaderCanvas
+        mode={mode}
+        fit={fit}
+        navigationDirection={navigationDirection}
+        pages={data.pages}
+        pageIndex={pageIndex}
+        imageRefs={imageRefs}
+        onGoToPage={goToPage}
+        onRevealControls={showToolbarBriefly}
+      />
       <button className="reader-comment-launcher" onClick={() => setCommentsOpen(true)} type="button" aria-label="Open chapter comments">
         <MessageCircle size={18} />
       </button>

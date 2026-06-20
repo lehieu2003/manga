@@ -8,3 +8,4 @@ export type ReaderChapterNavItem = ChapterSummary & {
 export type ReaderQuality = "data-saver" | "original";
 export type ReaderMode = "vertical" | "paged";
 export type ReaderFit = "width" | "contain";
+export type ReaderNavigationDirection = "ltr" | "rtl";

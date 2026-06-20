@@ -151,11 +151,12 @@ describe("ReaderPage", () => {
 
   it("loads and persists device reader settings", async () => {
     const user = userEvent.setup();
-    localStorage.setItem(READER_SETTINGS_STORAGE_KEY, JSON.stringify({ mode: "paged", fit: "contain", quality: "original" }));
+    localStorage.setItem(READER_SETTINGS_STORAGE_KEY, JSON.stringify({ mode: "paged", fit: "contain", quality: "original", navigationDirection: "rtl" }));
     renderReader("/read/chapter-2?mangaId=manga-1");
 
     expect(await screen.findByAltText("Page 1")).toHaveAttribute("src", expect.stringContaining("/data/chapter-2-1.jpg"));
     expect(screen.getByRole("button", { name: "Toggle reader quality" })).toHaveTextContent("Original");
+    expect(screen.getByRole("button", { name: "Toggle page direction" })).toHaveTextContent("RTL");
     expect(screen.getAllByAltText(/Page /)).toHaveLength(1);
 
     await user.click(screen.getByRole("button", { name: "Vertical mode" }));
@@ -163,21 +164,62 @@ describe("ReaderPage", () => {
       expect(JSON.parse(localStorage.getItem(READER_SETTINGS_STORAGE_KEY) ?? "{}")).toMatchObject({
         mode: "vertical",
         fit: "contain",
-        quality: "original"
+        quality: "original",
+        navigationDirection: "rtl"
       });
     });
   });
 
-  it("moves pages with paged tap zones", async () => {
+  it("falls back when stored reader settings contain invalid values", async () => {
+    localStorage.setItem(READER_SETTINGS_STORAGE_KEY, JSON.stringify({ mode: "book", fit: "stretch", quality: "raw", navigationDirection: "down" }));
+    renderReader("/read/chapter-2?mangaId=manga-1");
+
+    expect(await screen.findByText("Page 1 / 3")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Toggle reader quality" })).toHaveTextContent("Data saver");
+    expect(screen.getByRole("button", { name: "Toggle page direction" })).toHaveTextContent("LTR");
+    expect(screen.getAllByAltText(/Page /)).toHaveLength(3);
+  });
+
+  it("moves pages with left-to-right paged tap zones", async () => {
     const user = userEvent.setup();
     localStorage.setItem(READER_SETTINGS_STORAGE_KEY, JSON.stringify({ mode: "paged", fit: "width", quality: "data-saver" }));
     renderReader("/read/chapter-2?mangaId=manga-1");
 
     expect(await screen.findByText("Page 1 / 3")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Next page tap zone" }));
+    await user.click(screen.getByRole("button", { name: "Right page tap zone" }));
     expect(await screen.findByText("Page 2 / 3")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Previous page tap zone" }));
+    await user.click(screen.getByRole("button", { name: "Left page tap zone" }));
+    expect(await screen.findByText("Page 1 / 3")).toBeInTheDocument();
+  });
+
+  it("moves pages with visible previous and next buttons", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(READER_SETTINGS_STORAGE_KEY, JSON.stringify({ mode: "paged", fit: "width", quality: "data-saver" }));
+    renderReader("/read/chapter-2?mangaId=manga-1");
+
+    expect(await screen.findByText("Page 1 / 3")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
+
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(await screen.findByText("Page 2 / 3")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeEnabled();
+
+    await user.click(screen.getByRole("button", { name: "Previous" }));
+    expect(await screen.findByText("Page 1 / 3")).toBeInTheDocument();
+  });
+
+  it("moves pages with right-to-left paged tap zones and arrow keys", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(READER_SETTINGS_STORAGE_KEY, JSON.stringify({ mode: "paged", fit: "width", quality: "data-saver", navigationDirection: "rtl" }));
+    renderReader("/read/chapter-2?mangaId=manga-1");
+
+    expect(await screen.findByText("Page 1 / 3")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Left page tap zone" }));
+    expect(await screen.findByText("Page 2 / 3")).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "ArrowRight" });
     expect(await screen.findByText("Page 1 / 3")).toBeInTheDocument();
   });
 
@@ -209,6 +251,18 @@ describe("ReaderPage", () => {
     expect(screen.getByText("Left / right tap")).toBeInTheDocument();
     expect(screen.getByText("Swipe left / right")).toBeInTheDocument();
     expect(screen.getByText("Arrow keys")).toBeInTheDocument();
+  });
+
+  it("shows shortcut help for right-to-left page direction", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(READER_SETTINGS_STORAGE_KEY, JSON.stringify({ mode: "paged", fit: "width", quality: "data-saver", navigationDirection: "rtl" }));
+    renderReader("/read/chapter-2?mangaId=manga-1");
+
+    await screen.findByText("Page 1 / 3");
+    await user.click(screen.getByRole("button", { name: "Reader shortcuts" }));
+
+    expect(screen.getByText("left tap goes next; right tap goes back in paged mode.")).toBeInTheDocument();
+    expect(screen.getByText("Swipe right goes next; swipe left goes back in paged mode.")).toBeInTheDocument();
   });
 
   it("saves vertical progress from the observed viewport page", async () => {
