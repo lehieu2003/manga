@@ -212,6 +212,68 @@ const libraryItem = {
   }
 } as const;
 
+const bookmarkItem = {
+  type: "object",
+  required: ["id", "userId", "mangaId", "chapterId", "pageIndex", "note", "isFavorite", "createdAt", "updatedAt"],
+  properties: {
+    id: idString,
+    userId: idString,
+    mangaId: uuid,
+    chapterId: uuid,
+    pageIndex: { type: "integer", minimum: 0 },
+    note: { type: ["string", "null"] },
+    isFavorite: { type: "boolean" },
+    createdAt: dateTime,
+    updatedAt: dateTime,
+    manga: {
+      anyOf: [
+        {
+          type: "object",
+          properties: {
+            id: uuid,
+            title: { type: "string" },
+            coverUrl: { type: ["string", "null"] },
+            status: { type: ["string", "null"] },
+            year: { type: ["integer", "null"] },
+            tags: { type: "array", items: { type: "string" } }
+          }
+        },
+        { type: "null" }
+      ]
+    },
+    chapter: {
+      anyOf: [
+        {
+          type: "object",
+          properties: {
+            id: uuid,
+            title: { type: "string" },
+            chapter: { type: ["string", "null"] },
+            volume: { type: ["string", "null"] },
+            translatedLanguage: { type: "string" },
+            pages: { type: "integer" },
+            scanlationGroup: { type: ["string", "null"] }
+          }
+        },
+        { type: "null" }
+      ]
+    }
+  },
+  example: {
+    id: "bookmark_01HZX9Y4B8J4ZQ9WQ7Y6K3N2P1",
+    userId: exampleUserId,
+    mangaId: exampleMangaId,
+    chapterId: exampleChapterId,
+    pageIndex: 8,
+    note: null,
+    isFavorite: false,
+    createdAt: exampleDate,
+    updatedAt: exampleDate,
+    manga: libraryItem.example.manga,
+    chapter: chapterSummary.example
+  }
+} as const;
+
 const pagination = <TItem extends object>(item: TItem) =>
   ({
     type: "object",
@@ -786,6 +848,114 @@ export const libraryRouteSchemas = {
     tags: ["Library"],
     security: secured,
     params: { type: "object", required: ["mangaId"], properties: { mangaId: uuid } },
+    response: {
+      200: {
+        type: "object",
+        required: ["ok"],
+        properties: { ok: { type: "boolean" } },
+        example: { ok: true }
+      },
+      ...errors
+    }
+  }
+} as const;
+
+export const bookmarkRouteSchemas = {
+  list: {
+    summary: "List authenticated user's bookmarks",
+    tags: ["Library"],
+    security: secured,
+    querystring: {
+      type: "object",
+      properties: {
+        limit: { type: "integer", minimum: 1, maximum: 100, default: 50 },
+        offset: { type: "integer", minimum: 0, default: 0 }
+      }
+    },
+    response: {
+      200: {
+        type: "object",
+        required: ["data", "limit", "offset", "total"],
+        properties: {
+          data: { type: "array", items: bookmarkItem },
+          limit: { type: "integer" },
+          offset: { type: "integer" },
+          total: { type: "integer" }
+        },
+        example: { data: [bookmarkItem.example], limit: 50, offset: 0, total: 1 }
+      },
+      ...errors
+    }
+  },
+  chapter: {
+    summary: "Get authenticated user's bookmark for one chapter",
+    tags: ["Library"],
+    security: secured,
+    params: { type: "object", required: ["chapterId"], properties: { chapterId: uuid } },
+    response: {
+      200: {
+        type: "object",
+        required: ["bookmark"],
+        properties: { bookmark: { anyOf: [bookmarkItem, { type: "null" }] } },
+        example: { bookmark: bookmarkItem.example }
+      },
+      ...errors
+    }
+  },
+  create: {
+    summary: "Create or update a bookmark for a chapter",
+    tags: ["Library"],
+    security: secured,
+    body: {
+      type: "object",
+      required: ["mangaId", "chapterId"],
+      properties: {
+        mangaId: uuid,
+        chapterId: uuid,
+        pageIndex: { type: "integer", minimum: 0, default: 0 },
+        note: { type: ["string", "null"], maxLength: 500 },
+        isFavorite: { type: "boolean", default: false }
+      }
+    },
+    response: {
+      200: {
+        type: "object",
+        required: ["bookmark"],
+        properties: { bookmark: bookmarkItem },
+        example: { bookmark: bookmarkItem.example }
+      },
+      ...errors
+    }
+  },
+  update: {
+    summary: "Update a bookmark",
+    tags: ["Library"],
+    security: secured,
+    params: { type: "object", required: ["id"], properties: { id: idString } },
+    body: {
+      type: "object",
+      properties: {
+        pageIndex: { type: "integer", minimum: 0 },
+        note: { type: ["string", "null"], maxLength: 500 },
+        isFavorite: { type: "boolean" }
+      },
+      minProperties: 1
+    },
+    response: {
+      200: {
+        type: "object",
+        required: ["bookmark"],
+        properties: { bookmark: bookmarkItem },
+        example: { bookmark: bookmarkItem.example }
+      },
+      ...errors
+    }
+  },
+  remove: {
+    summary: "Remove a bookmark",
+    tags: ["Library"],
+    security: secured,
+    params: { type: "object", required: ["id"], properties: { id: idString } },
     response: {
       200: {
         type: "object",

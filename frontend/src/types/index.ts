@@ -84,6 +84,27 @@ export type ReadingProgress = {
   updatedAt: string;
 };
 
+export type Bookmark = {
+  id: string;
+  userId: string;
+  mangaId: string;
+  chapterId: string;
+  pageIndex: number;
+  note: string | null;
+  isFavorite: boolean;
+  createdAt: string;
+  updatedAt: string;
+  manga?: Pick<MangaSummary, "id" | "title" | "coverUrl" | "status" | "year" | "tags"> | null;
+  chapter?: Pick<ChapterSummary, "id" | "title" | "chapter" | "volume" | "translatedLanguage" | "pages" | "scanlationGroup"> | null;
+};
+
+export type BookmarkListResponse = {
+  data: Bookmark[];
+  limit: number;
+  offset: number;
+  total: number;
+};
+
 export type MangaProgressPayload = {
   progress: ReadingProgress | null;
   chaptersProgress: ReadingProgress[];

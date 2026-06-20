@@ -808,6 +808,42 @@ img {
   color: var(--sakura);
 }
 
+.bookmark-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: center;
+  min-height: 3.5rem;
+  border: 1px solid color-mix(in srgb, var(--line), var(--accent) 10%);
+  border-radius: 0.6rem;
+  padding: 0.65rem 0.75rem;
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface-strong), transparent 52%);
+}
+
+.bookmark-row:hover {
+  border-color: color-mix(in srgb, var(--accent), var(--line) 34%);
+  color: var(--accent-strong);
+}
+
+.bookmark-row span {
+  display: grid;
+  min-width: 0;
+  gap: 0.12rem;
+}
+
+.bookmark-row strong,
+.bookmark-row small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bookmark-row small {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
 .reader-page {
   min-height: 100vh;
   padding-top: 4.75rem;
@@ -858,6 +894,12 @@ img {
 .reader-icon-button {
   width: 2.5rem;
   padding-inline: 0;
+}
+
+.reader-bookmark-active {
+  border-color: color-mix(in srgb, var(--accent), var(--line) 28%);
+  background: color-mix(in srgb, var(--accent), transparent 84%);
+  color: var(--accent-strong);
 }
 
 .reader-page-count {

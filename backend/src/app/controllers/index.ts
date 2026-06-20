@@ -29,6 +29,7 @@ export {
   registerUser,
   updateCurrentUser
 } from "./auth.controller.js";
+export { createBookmark, getBookmarkByChapter, listBookmarks, removeBookmark, updateBookmark } from "./bookmark.controller.js";
 export { getCatalogManga, getChapterReader, listCatalogChapters, listCatalogGenres, searchCatalogManga } from "./catalog.controller.js";
 export { getLiveness, getReadiness } from "./health.controller.js";
 export { getLibraryItem, listLibrary, removeLibraryItem, upsertLibraryItem } from "./library.controller.js";

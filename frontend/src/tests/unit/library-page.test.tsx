@@ -4,10 +4,11 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LibraryPage } from "@/features/library/pages/LibraryPage";
-import type { LibraryItem } from "@/types";
+import type { Bookmark, LibraryItem } from "@/types";
 
 const state = vi.hoisted(() => ({
-  items: [] as LibraryItem[]
+  items: [] as LibraryItem[],
+  bookmarks: [] as Bookmark[]
 }));
 
 vi.mock("@/api", async () => {
@@ -16,6 +17,7 @@ vi.mock("@/api", async () => {
     ...actual,
     api: {
       getLibrary: vi.fn(async () => ({ data: state.items })),
+      getBookmarks: vi.fn(async () => ({ data: state.bookmarks, limit: 6, offset: 0, total: state.bookmarks.length })),
       upsertLibrary: vi.fn(),
       removeLibrary: vi.fn()
     }
@@ -71,6 +73,7 @@ describe("LibraryPage", () => {
         manga: null
       })
     ];
+    state.bookmarks = [];
   });
 
   it("renders cached manga metadata and continue reading state", async () => {
@@ -79,6 +82,28 @@ describe("LibraryPage", () => {
     expect(await screen.findByText("Chainsaw Man")).toBeInTheDocument();
     expect(screen.getAllByText(/Continue chapter/).length).toBeGreaterThan(0);
     expect(screen.getByText("manga-missing")).toBeInTheDocument();
+  });
+
+  it("renders bookmarked chapters with exact page links", async () => {
+    state.bookmarks = [
+      {
+        id: "bookmark-1",
+        userId: "user-1",
+        mangaId: "manga-1",
+        chapterId: "chapter-1",
+        pageIndex: 4,
+        note: null,
+        isFavorite: false,
+        createdAt: "2024-01-06T00:00:00.000Z",
+        updatedAt: "2024-01-06T00:00:00.000Z",
+        manga: { id: "manga-1", title: "Chainsaw Man", coverUrl: "/api/covers/manga/cover.jpg", status: "ongoing", year: 2024, tags: ["Action"] },
+        chapter: { id: "chapter-1", title: "Dog and Chainsaw", chapter: "1", volume: null, translatedLanguage: "en", pages: 20, scanlationGroup: "Group A" }
+      }
+    ];
+    renderLibrary();
+
+    expect(await screen.findByRole("heading", { name: "Bookmarked chapters" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Chapter 1.*Page 5/s })).toHaveAttribute("href", "/read/chapter-1?mangaId=manga-1&page=5");
   });
 
   it("searches library by title, tag, and status", async () => {

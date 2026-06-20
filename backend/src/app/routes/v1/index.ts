@@ -2,6 +2,7 @@ export { adminRoutes } from "./admin.routes.js";
 export { adminCatalogRoutes } from "./admin.catalog.routes.js";
 export { adminRagRoutes } from "./admin-rag.routes.js";
 export { authRoutes } from "./auth.routes.js";
+export { bookmarkRoutes } from "./bookmark.routes.js";
 export { catalogRoutes } from "./catalog.routes.js";
 export { chatRoutes } from "./chat.routes.js";
 export { commentRoutes } from "./comment.routes.js";

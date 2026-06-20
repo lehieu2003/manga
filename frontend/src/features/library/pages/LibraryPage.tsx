@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Library } from "lucide-react";
+import { Bookmark, Library } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "@/api";
@@ -15,6 +15,7 @@ export function LibraryPage() {
   const [sortMode, setSortMode] = useState<LibrarySortMode>("lastRead");
   const queryClient = useQueryClient();
   const library = useQuery({ queryKey: ["library"], queryFn: api.getLibrary });
+  const bookmarks = useQuery({ queryKey: ["bookmarks"], queryFn: () => api.getBookmarks({ limit: 6 }), retry: false });
   const updateLibrary = useMutation({
     mutationFn: ({ mangaId, input }: { mangaId: string; input: Partial<Pick<LibraryItem, "status" | "isFavorite">> }) => api.upsertLibrary(mangaId, input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["library"] })
@@ -42,6 +43,31 @@ export function LibraryPage() {
         <p className="mb-2 text-xs font-bold uppercase tracking-[0.24em] text-[var(--accent)]">Personal shelf</p>
         <h1 className="text-3xl font-black">Library</h1>
       </div>
+      {bookmarks.data?.data.length ? (
+        <section className="surface rounded-lg p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--accent)]">Saved pages</p>
+              <h2 className="text-lg font-black text-[var(--text)]">Bookmarked chapters</h2>
+            </div>
+            <span className="chapter-legend">{bookmarks.data.total} saved</span>
+          </div>
+          <div className="grid gap-2 md:grid-cols-2">
+            {bookmarks.data.data.map((bookmark) => (
+              <Link key={bookmark.id} className="bookmark-row" to={`/read/${bookmark.chapterId}?mangaId=${bookmark.mangaId}&page=${bookmark.pageIndex + 1}`}>
+                <Bookmark size={16} fill={bookmark.isFavorite ? "currentColor" : "none"} />
+                <span>
+                  <strong>{bookmark.manga?.title ?? bookmark.mangaId}</strong>
+                  <small>
+                    Chapter {bookmark.chapter?.chapter ?? "?"}
+                    {bookmark.chapter?.title ? ` - ${bookmark.chapter.title}` : ""} · Page {bookmark.pageIndex + 1}
+                  </small>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
       <LibraryTabs tab={tab} onTabChange={setTab} />
       <LibraryControls tab={tab} query={query} sortMode={sortMode} shownCount={items.length} hasActiveFilters={hasActiveFilters} onQueryChange={setQuery} onSortModeChange={setSortMode} onClearFilters={clearFilters} />
       {!library.data?.data.length ? (

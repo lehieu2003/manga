@@ -24,6 +24,8 @@ export function ReaderPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const mangaId = params.get("mangaId") ?? "";
+  const requestedPageValue = Number(params.get("page") ?? "0");
+  const requestedPage = Number.isFinite(requestedPageValue) ? Math.max(requestedPageValue - 1, 0) : 0;
   const { user } = useAuth();
   const [settings, setSettings] = useState(readReaderSettings);
   const { mode, fit, quality, navigationDirection } = settings;
@@ -66,6 +68,16 @@ export function ReaderPage() {
     preloadPages(data.pages, pageIndex);
   }, [data.pages, pageIndex]);
 
+  const toggleBookmark = useCallback(() => {
+    const existingBookmark = data.bookmark.data?.bookmark;
+    if (existingBookmark) {
+      data.removeBookmark(existingBookmark.id);
+      return;
+    }
+    if (!user || !mangaId || !chapterId) return;
+    data.createBookmark({ mangaId, chapterId, pageIndex });
+  }, [chapterId, data, mangaId, pageIndex, user]);
+
   useEffect(() => {
     showToolbarBriefly();
     return () => {
@@ -99,9 +111,18 @@ export function ReaderPage() {
   useReaderInitialProgress({
     chapterId,
     progressChapterId: data.progress.data?.progress?.chapterId,
-    progressPageIndex: data.progress.data?.progress?.pageIndex,
+    progressPageIndex: requestedPage > 0 ? undefined : data.progress.data?.progress?.pageIndex,
     setPageIndex
   });
+  useEffect(() => {
+    if (requestedPage <= 0 || !data.pages.length) return;
+    setPageIndex(Math.min(requestedPage, data.pages.length - 1));
+  }, [data.pages.length, requestedPage]);
+  useEffect(() => {
+    if (requestedPage <= 0 || mode !== "vertical" || !data.pages.length) return;
+    const targetIndex = Math.min(requestedPage, data.pages.length - 1);
+    window.setTimeout(() => imageRefs.current[targetIndex]?.scrollIntoView({ block: "start" }), 0);
+  }, [data.pages.length, mode, requestedPage]);
   useReaderChapterAutoLoad({
     mangaId,
     currentChapterLoaded: data.currentChapterLoaded,
@@ -154,12 +175,15 @@ export function ReaderPage() {
         fit={fit}
         quality={quality}
         navigationDirection={navigationDirection}
+        isBookmarked={Boolean(data.bookmark.data?.bookmark)}
+        bookmarkDisabled={!user || !mangaId || !chapterId || data.bookmark.isLoading}
         onGoToChapter={goToChapter}
         onFetchMoreChapters={data.fetchMoreChapters}
         onModeChange={(nextMode) => setSettings((value) => ({ ...value, mode: nextMode }))}
         onSwitchToPagedMode={switchToPagedMode}
         onFitToggle={() => setSettings((value) => ({ ...value, fit: value.fit === "width" ? "contain" : "width" }))}
         onNavigationDirectionToggle={() => setSettings((value) => ({ ...value, navigationDirection: value.navigationDirection === "ltr" ? "rtl" : "ltr" }))}
+        onBookmarkToggle={toggleBookmark}
         onQualityToggle={() =>
           setSettings((value) => {
             setPageIndex((index) => Math.min(index, Math.max(data.pages.length - 1, 0)));

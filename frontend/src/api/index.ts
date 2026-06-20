@@ -1,5 +1,6 @@
 import { adminApi, clearAdminToken, getAdminToken, setAdminToken } from "./endpoints/admin.api";
 import { authApi } from "./endpoints/auth.api";
+import { bookmarksApi } from "./endpoints/bookmarks.api";
 import { catalogApi } from "./endpoints/catalog.api";
 import { chatApi } from "./endpoints/chat.api";
 import { commentsApi } from "./endpoints/comments.api";
@@ -13,6 +14,7 @@ export { clearAdminToken, getAdminToken, setAdminToken };
 export const api = {
   admin: adminApi,
   ...authApi,
+  ...bookmarksApi,
   ...catalogApi,
   ...chatApi,
   ...commentsApi,
