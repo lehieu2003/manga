@@ -16,7 +16,8 @@ export const mediaCacheControl = {
 type ProxyImageOptions = {
   request: FastifyRequest;
   reply: FastifyReply;
-  url: string;
+  url?: string;
+  urls?: string[];
   timeoutMs: number;
   cacheControl: string;
   fetchFailedMessage: string;
@@ -25,12 +26,41 @@ type ProxyImageOptions = {
 };
 
 export async function proxyMangaDexImage(options: ProxyImageOptions) {
+  const urls = options.urls?.length ? options.urls : options.url ? [options.url] : [];
+  if (urls.length === 0) {
+    throw new HttpError(500, "Image proxy did not receive an upstream URL", options.fetchFailedCode);
+  }
+
+  let response: Response | undefined;
+  let lastError: HttpError | undefined;
+
+  for (const url of urls) {
+    try {
+      response = await fetchUpstreamImage({ ...options, url });
+      if (response.ok || response.status === 304) break;
+      lastError = new HttpError(response.status, options.fetchFailedMessage, options.fetchFailedCode);
+    } catch (error) {
+      if (error instanceof HttpError) {
+        lastError = error;
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  if (!response || (!response.ok && response.status !== 304)) {
+    throw lastError ?? new HttpError(502, options.fetchFailedMessage, options.fetchFailedCode);
+  }
+
+  return sendImageResponse(options, response);
+}
+
+async function fetchUpstreamImage(options: ProxyImageOptions & { url: string }) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), options.timeoutMs);
 
-  let response: Response;
   try {
-    response = await fetch(options.url, {
+    return await fetch(options.url, {
       signal: controller.signal,
       headers: buildUpstreamHeaders(options.request)
     });
@@ -42,11 +72,9 @@ export async function proxyMangaDexImage(options: ProxyImageOptions) {
   } finally {
     clearTimeout(timeout);
   }
+}
 
-  if (!response.ok && response.status !== 304) {
-    throw new HttpError(response.status, options.fetchFailedMessage, options.fetchFailedCode);
-  }
-
+function sendImageResponse(options: ProxyImageOptions, response: Response) {
   options.reply.code(response.status);
   options.reply.header("Cache-Control", options.cacheControl);
   options.reply.header("Cross-Origin-Resource-Policy", "cross-origin");

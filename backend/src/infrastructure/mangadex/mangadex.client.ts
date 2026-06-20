@@ -29,6 +29,35 @@ export function getMangaDexUploadsBaseUrl() {
   return env.MANGADEX_BASE_URL.includes(".dev") ? "https://uploads.mangadex.dev" : "https://uploads.mangadex.org";
 }
 
+export function getMangaDexApiBaseUrls() {
+  return [
+    env.MANGADEX_BASE_URL,
+    "https://api.mangadex.org",
+    "https://api.mangadex.dev"
+  ].filter((url, index, urls) => urls.indexOf(url) === index);
+}
+
+export function getMangaDexCoverBaseUrls() {
+  return [
+    getMangaDexUploadsBaseUrl(),
+    "https://uploads.mangadex.org",
+    "https://uploads.mangadex.dev"
+  ].filter((url, index, urls) => urls.indexOf(url) === index);
+}
+
+function normalizeReaderImageBaseUrl(baseUrl: string) {
+  try {
+    const url = new URL(baseUrl);
+    if (url.hostname === "uploads.mangadex.dev" || url.hostname.includes("dev.mangadex.network")) {
+      return "https://uploads.mangadex.org";
+    }
+  } catch {
+    return baseUrl;
+  }
+
+  return baseUrl;
+}
+
 function firstLocalized(value: Record<string, string> | undefined, preferred = ["vi", "en", "ja-ro", "ja"]) {
   if (!value) return "";
   for (const lang of preferred) {
@@ -44,50 +73,60 @@ function appendArrayParams(params: URLSearchParams, key: string, values: string[
 }
 
 async function requestMangaDex<T>(path: string, params?: URLSearchParams): Promise<T> {
-  const url = new URL(path, env.MANGADEX_BASE_URL);
-  if (params) {
-    url.search = params.toString();
-  }
+  let lastError: HttpError | undefined;
 
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10_000);
-    try {
-      const response = await fetch(url, {
-        headers: {
-          Accept: "application/json",
-          "User-Agent": USER_AGENT
-        },
-        signal: controller.signal
-      });
+  for (const baseUrl of getMangaDexApiBaseUrls()) {
+    const url = new URL(path, baseUrl);
+    if (params) {
+      url.search = params.toString();
+    }
 
-      if (response.status === 429 && attempt === 0) {
-        await new Promise((resolve) => setTimeout(resolve, 750));
-        continue;
-      }
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10_000);
+      try {
+        const response = await fetch(url, {
+          headers: {
+            Accept: "application/json",
+            "User-Agent": USER_AGENT
+          },
+          signal: controller.signal
+        });
 
-      if (!response.ok) {
-        throw new HttpError(response.status, `MangaDex request failed: ${response.statusText}`, "MANGADEX_ERROR");
-      }
+        if (response.status === 429 && attempt === 0) {
+          await new Promise((resolve) => setTimeout(resolve, 750));
+          continue;
+        }
 
-      return (await response.json()) as T;
-    } catch (error) {
-      if (error instanceof HttpError) {
+        if (!response.ok) {
+          const error = new HttpError(response.status, `MangaDex request failed: ${response.statusText}`, "MANGADEX_ERROR");
+          if (response.status >= 500) {
+            lastError = error;
+            break;
+          }
+          throw error;
+        }
+
+        return (await response.json()) as T;
+      } catch (error) {
+        if (error instanceof HttpError) {
+          throw error;
+        }
+        if (attempt === 0 && error instanceof Error && error.name === "AbortError") {
+          continue;
+        }
+        if (error instanceof Error) {
+          lastError = new HttpError(502, `Unable to reach MangaDex: ${error.message}`, "MANGADEX_UNREACHABLE");
+          break;
+        }
         throw error;
+      } finally {
+        clearTimeout(timeout);
       }
-      if (attempt === 0 && error instanceof Error && error.name === "AbortError") {
-        continue;
-      }
-      if (error instanceof Error) {
-        throw new HttpError(502, `Unable to reach MangaDex: ${error.message}`, "MANGADEX_UNREACHABLE");
-      }
-      throw error;
-    } finally {
-      clearTimeout(timeout);
     }
   }
 
-  throw new HttpError(504, "MangaDex request timed out", "MANGADEX_TIMEOUT");
+  throw lastError ?? new HttpError(504, "MangaDex request timed out", "MANGADEX_TIMEOUT");
 }
 
 function normalizeManga(entity: MangaDexSingleResponse["data"]): MangaSummary {
@@ -279,8 +318,9 @@ export async function getReader(chapterId: string): Promise<ReaderPayload> {
   }>(`/at-home/server/${chapterId}`);
 
   const { baseUrl, chapter } = result;
+  const normalizedBaseUrl = normalizeReaderImageBaseUrl(baseUrl);
   return {
-    baseUrl,
+    baseUrl: normalizedBaseUrl,
     hash: chapter.hash,
     pages: chapter.data,
     dataSaverPages: chapter.dataSaver,

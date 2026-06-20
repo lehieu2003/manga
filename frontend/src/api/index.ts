@@ -23,5 +23,7 @@ export const api = {
 export function assetUrl(url: string | undefined) {
   if (!url) return undefined;
   if (url.startsWith("/")) return `${API_ORIGIN}${url}`;
+  const mangadexCover = url.match(/^https:\/\/uploads\.mangadex\.(?:org|dev)\/covers\/([^/]+)\/(.+)$/);
+  if (mangadexCover) return `${API_ORIGIN}/api/covers/${mangadexCover[1]}/${mangadexCover[2]}`;
   return url;
 }
