@@ -59,6 +59,7 @@ Set `JWT_SECRET`, `POSTGRES_PASSWORD`, and `CORS_ORIGIN` in `.env` for the VPS e
 
 ## Documentation
 
+- [Agent rules](AGENTS.md): coding-agent rules, including detailed commit message requirements.
 - [Feature status](docs/FEATURE_STATUS.md): current implemented features, known limits, and not-yet-implemented roadmap items.
 - [User feature roadmap](docs/USER_FEATURE_ROADMAP.md): role `USER` feature gaps with detailed implementation plans.
 - [Focused gap roadmap](docs/FOCUSED_GAP_ROADMAP.md): milestone order for backend contracts, discovery accuracy, reader UX, personalization, account maturity, and mobile readiness.
