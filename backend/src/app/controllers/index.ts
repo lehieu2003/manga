@@ -34,4 +34,5 @@ export { getCatalogManga, getChapterReader, listCatalogChapters, listCatalogGenr
 export { getLiveness, getReadiness } from "./health.controller.js";
 export { getLibraryItem, listLibrary, removeLibraryItem, upsertLibraryItem } from "./library.controller.js";
 export { proxyChapterPageImage, proxyCoverImage } from "./media.controller.js";
+export { clearSearchHistory, listSearchHistory } from "./search-history.controller.js";
 export { getChapterProgress, getMangaProgress, saveChapterProgress } from "./progress.controller.js";

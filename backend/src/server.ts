@@ -22,6 +22,7 @@ import { pageRoutes } from "./app/routes/v1/page.routes.js";
 import { healthRoutes } from "./app/routes/health.routes.js";
 import { libraryRoutes } from "./app/routes/v1/library.routes.js";
 import { progressRoutes } from "./app/routes/v1/progress.routes.js";
+import { searchHistoryRoutes } from "./app/routes/v1/search-history.routes.js";
 import { syncMangaDexCatalog } from "./domain/services/catalog-sync.service.js";
 
 declare module "fastify" {
@@ -98,6 +99,7 @@ export async function buildApp() {
   await app.register(pageRoutes, { prefix: "/api" });
   await app.register(libraryRoutes, { prefix: "/api" });
   await app.register(progressRoutes, { prefix: "/api" });
+  await app.register(searchHistoryRoutes, { prefix: "/api" });
 
   if (env.SYNC_ON_STARTUP) {
     void syncMangaDexCatalog({ limit: env.SYNC_LIMIT, includeChapters: false })

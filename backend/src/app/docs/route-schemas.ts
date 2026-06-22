@@ -274,6 +274,23 @@ const bookmarkItem = {
   }
 } as const;
 
+const searchHistoryItem = {
+  type: "object",
+  required: ["id", "userId", "query", "createdAt"],
+  properties: {
+    id: idString,
+    userId: idString,
+    query: { type: "string" },
+    createdAt: dateTime
+  },
+  example: {
+    id: "search_01HZX9Y4B8J4ZQ9WQ7Y6K3N2P1",
+    userId: exampleUserId,
+    query: "one punch man",
+    createdAt: exampleDate
+  }
+} as const;
+
 const pagination = <TItem extends object>(item: TItem) =>
   ({
     type: "object",
@@ -540,6 +557,53 @@ export const authRouteSchemas = {
       }
     },
     response: { 200: tokenPair, ...errors }
+  },
+  searchHistory: {
+    summary: "List the authenticated user's search history",
+    tags: ["Auth"],
+    security: secured,
+    querystring: {
+      type: "object",
+      properties: {
+        limit: { type: "integer", minimum: 1, maximum: 50, default: 8 },
+        offset: { type: "integer", minimum: 0, default: 0 }
+      }
+    },
+    response: {
+      200: {
+        type: "object",
+        required: ["data", "limit", "offset", "total"],
+        properties: {
+          data: { type: "array", items: searchHistoryItem },
+          limit: { type: "integer" },
+          offset: { type: "integer" },
+          total: { type: "integer" }
+        },
+        example: { data: [searchHistoryItem.example], limit: 8, offset: 0, total: 1 }
+      },
+      ...errors
+    }
+  },
+  clearSearchHistory: {
+    summary: "Clear the authenticated user's search history",
+    tags: ["Auth"],
+    security: secured,
+    response: {
+      200: {
+        type: "object",
+        required: ["ok", "summary"],
+        properties: {
+          ok: { type: "boolean" },
+          summary: {
+            type: "object",
+            required: ["affectedCount"],
+            properties: { affectedCount: { type: "integer" } }
+          }
+        },
+        example: { ok: true, summary: { affectedCount: 3 } }
+      },
+      ...errors
+    }
   }
 } as const;
 

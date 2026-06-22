@@ -13,20 +13,20 @@ The library currently tracks followed manga, status, favorites, and reading prog
 - Bookmark a chapter or exact page without changing manga follow status.
 - Favorite individual chapters.
 - Create custom lists for manga.
-- Review search history and remove entries.
+- Review search history and remove entries. Done for web/backend.
 - See reading activity and streaks after activity semantics are stable.
 
 ## Key Changes
 
-- Backend: add bookmarks, favorite chapters, custom lists, user-owned search history endpoints, and activity aggregation.
-- Web: add bookmark actions in detail/reader, custom list management in library, search history UI, and activity timeline.
+- Backend: bookmarks and user-owned search history endpoints are in place; add favorite chapters, custom lists, and activity aggregation next.
+- Web: bookmark actions and search history UI are in place; add custom list management and activity timeline next.
 - Mobile: add bookmark and search history support after backend contracts stabilize; activity timeline can follow web behavior.
 
 ## Public Interfaces / Types
 
 - Add `GET /api/bookmarks`, `POST /api/bookmarks`, `PATCH /api/bookmarks/:id`, and `DELETE /api/bookmarks/:id`.
 - Add favorite chapter support either as bookmark metadata or a separate `favoriteChapter` resource.
-- Add `GET /api/me/search-history` and `DELETE /api/me/search-history`.
+- `GET /api/me/search-history` and `DELETE /api/me/search-history` are implemented.
 - Add custom list routes for create, rename, delete, add manga, and remove manga.
 - Add Prisma models for bookmarks and custom lists; reuse existing search history data.
 
@@ -35,7 +35,7 @@ The library currently tracks followed manga, status, favorites, and reading prog
 - Reader exposes a bookmark action for current chapter and page.
 - Manga detail shows bookmarked chapters and quick jump actions.
 - Library keeps existing tabs and adds custom lists as a separate shelf concept.
-- Search page can show recent searches for logged-in users and allow clearing them.
+- Search page shows recent searches for logged-in users and allows clearing them.
 - Activity timeline starts with deterministic events: progress saved, bookmark created, list item added.
 
 ## Edge Cases
@@ -55,7 +55,7 @@ The library currently tracks followed manga, status, favorites, and reading prog
 ## Acceptance Criteria
 
 - Users can bookmark a chapter/page independently from following manga.
-- Search history is visible and user-clearable.
+- Search history is visible and user-clearable. Done for web/backend.
 - Custom lists do not conflict with library status.
 - Activity data is deterministic and testable.
 - Existing library/progress behavior remains backward compatible.

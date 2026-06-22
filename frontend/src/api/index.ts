@@ -6,6 +6,7 @@ import { chatApi } from "./endpoints/chat.api";
 import { commentsApi } from "./endpoints/comments.api";
 import { libraryApi } from "./endpoints/library.api";
 import { progressApi } from "./endpoints/progress.api";
+import { searchHistoryApi } from "./endpoints/search-history.api";
 import { API_ORIGIN, clearTokens, getAccessToken, getAuthTokenSnapshot, getRefreshToken, setTokens, subscribeAuthTokens } from "./interceptors/auth.interceptor";
 
 export { clearTokens, getAccessToken, getAuthTokenSnapshot, getRefreshToken, setTokens, subscribeAuthTokens };
@@ -19,7 +20,8 @@ export const api = {
   ...chatApi,
   ...commentsApi,
   ...libraryApi,
-  ...progressApi
+  ...progressApi,
+  ...searchHistoryApi
 };
 
 export function assetUrl(url: string | undefined) {

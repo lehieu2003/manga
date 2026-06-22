@@ -143,6 +143,7 @@ Mobile hiện là reader client của backend với parity cơ bản cho home, d
 - Library có filter summary hiển thị shelf view, visible count, sort mode và search query.
 - Bookmark chapter/page đã có backend CRUD và reader web có nút lưu/xóa bookmark cho page hiện tại.
 - Library web hiển thị bookmarked chapters gần đây và link quay lại đúng page đã lưu.
+- Search history self-service đã có endpoint cho user xem/xóa lịch sử search và web Search page hiển thị recent searches khi đã login.
 - Mobile có repository/API support cho library.
 
 ### Reading Progress
@@ -226,7 +227,7 @@ Mobile hiện là reader client của backend với parity cơ bản cho home, d
 - Scanlation filter chỉ đầy đủ theo các chapter đã load; option list mở rộng dần khi infinite scroll load thêm.
 - Reading stats dựa trên chapters đã load và total từ feed; chưa có dashboard analytics.
 - Reader chapter navigation cần `mangaId` trên URL; nếu thiếu `mangaId`, reader vẫn đọc được chapter hiện tại nhưng disable previous/next và selector.
-- Search history được ghi khi search có token, nhưng chưa có UI hiển thị lịch sử search.
+- Search history được ghi khi search có token và có UI web hiển thị/xóa lịch sử search cho user hiện tại.
 - Backend architecture có repositories/validators/middlewares, nhưng controllers mới chỉ tách rõ cho health.
 - Domain events chưa được phát ra runtime.
 - Queue/storage/email infrastructure chưa có implementation thật.
@@ -255,7 +256,6 @@ Mobile hiện là reader client của backend với parity cơ bản cho home, d
 - Custom manga lists.
 - Custom reading statuses chi tiết hơn.
 - Reading streak hoặc reading activity timeline.
-- Search history UI.
 
 ### Manga Discovery
 
@@ -354,6 +354,8 @@ Auth:
 - `GET /api/me`
 - `PATCH /api/me`
 - `PUT /api/me/password`
+- `GET /api/me/search-history`
+- `DELETE /api/me/search-history`
 
 Library/progress:
 
