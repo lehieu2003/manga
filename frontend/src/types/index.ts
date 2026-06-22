@@ -221,6 +221,8 @@ export type AdminSearchHistoryRow = {
   createdAt: string;
 };
 
+export type SearchHistoryItem = AdminSearchHistoryRow;
+
 export type ChatSource = {
   type: "manga" | "chapter";
   id: string;
