@@ -22,16 +22,54 @@ class AuthRepository {
     return _auth('/auth/login', {'email': email, 'password': password});
   }
 
-  Future<User> register({
+  Future<User?> register({
     required String email,
     required String password,
     required String displayName,
-  }) {
-    return _auth('/auth/register', {
+  }) async {
+    final payload = await _api.post('/auth/register', {
       'email': email,
       'password': password,
       'displayName': displayName,
-    });
+    }, (json) => json);
+
+    final accessToken = payload['accessToken'] as String?;
+    final refreshToken = payload['refreshToken'] as String?;
+    if (accessToken != null && refreshToken != null) {
+      await _api.tokenStore.save(
+        TokenPair(accessToken: accessToken, refreshToken: refreshToken),
+      );
+    }
+
+    final userJson = payload['user'] as Map<String, dynamic>?;
+    return userJson == null ? null : User.fromJson(userJson);
+  }
+
+  Future<void> verifyEmail({required String email, required String code}) {
+    return _api.post('/auth/email/verify', {
+      'email': email,
+      'code': code,
+    }, (json) => json);
+  }
+
+  Future<void> resendVerificationEmail({required String email}) {
+    return _api.post('/auth/email/verification', {
+      'email': email,
+    }, (json) => json);
+  }
+
+  Future<void> resetPassword({
+    required String token,
+    required String newPassword,
+  }) {
+    return _api.post('/auth/password/reset', {
+      'token': token,
+      'newPassword': newPassword,
+    }, (json) => json);
+  }
+
+  Future<void> forgotPassword({required String email}) {
+    return _api.post('/auth/password/forgot', {'email': email}, (json) => json);
   }
 
   Future<User> updateProfile({String? displayName, String? avatarUrl}) async {
@@ -79,12 +117,15 @@ class AuthRepository {
       body: body,
       decode: (json) => json,
     );
-    await _api.tokenStore.save(
-      TokenPair(
-        accessToken: payload['accessToken'] as String,
-        refreshToken: payload['refreshToken'] as String,
-      ),
-    );
+
+    final accessToken = payload['accessToken'] as String?;
+    final refreshToken = payload['refreshToken'] as String?;
+    if (accessToken != null && refreshToken != null) {
+      await _api.tokenStore.save(
+        TokenPair(accessToken: accessToken, refreshToken: refreshToken),
+      );
+    }
+
     return User.fromJson(payload['user'] as Map<String, dynamic>);
   }
 }
