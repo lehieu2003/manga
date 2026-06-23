@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'app_state.dart';
-import 'features/auth/auth_screens.dart';
+import 'features/auth/login_screen.dart';
+import 'features/auth/register_screen.dart';
+import 'features/auth/forgot_password_screen.dart';
+import 'features/auth/reset_password_screen.dart';
+import 'features/auth/verify_email_screen.dart';
 import 'features/chat/chat_assistant.dart';
 import 'features/detail/manga_detail_screen.dart';
 import 'features/home/home_screen.dart';
@@ -72,6 +76,20 @@ GoRouter buildRouter(AppState appState) {
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: '/forgot',
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/reset',
+        builder: (context, state) =>
+            ResetPasswordScreen(token: state.uri.queryParameters['token']),
+      ),
+      GoRoute(
+        path: '/verify',
+        builder: (context, state) =>
+            VerifyEmailScreen(email: state.uri.queryParameters['email']),
       ),
       GoRoute(
         path: '/manga/:mangaId',

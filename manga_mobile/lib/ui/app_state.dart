@@ -62,12 +62,11 @@ class AppState extends ChangeNotifier {
     String password,
     String displayName,
   ) async {
-    user = await authRepository.register(
+    await authRepository.register(
       email: email,
       password: password,
       displayName: displayName,
     );
-    notifyListeners();
   }
 
   Future<void> updateProfile({String? displayName, String? avatarUrl}) async {
