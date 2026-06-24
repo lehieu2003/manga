@@ -28,7 +28,7 @@ class MangaCardTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             AspectRatio(
-              aspectRatio: 0.72,
+              aspectRatio: 0.65,
               child: cover.isEmpty
                   ? ColoredBox(
                       color: scheme.surfaceContainerHighest,
@@ -99,7 +99,7 @@ class MangaGrid extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 0.48,
+        childAspectRatio: 0.5,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
       ),
