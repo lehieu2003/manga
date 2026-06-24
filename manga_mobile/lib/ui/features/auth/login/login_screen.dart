@@ -17,7 +17,7 @@ class LoginScreen extends StatelessWidget {
     final app = AppScope.of(context);
 
     return BlocProvider(
-      create: (_) => LoginCubit(authRepository: app.authRepository),
+      create: (_) => LoginCubit(appState: app),
       child: _LoginView(from: from),
     );
   }
@@ -55,7 +55,6 @@ class _LoginViewState extends State<_LoginView> {
   @override
   Widget build(BuildContext context) {
     return BlocListener<LoginCubit, LoginState>(
-      // Chỉ navigate khi success — tách riêng khỏi BlocBuilder
       listenWhen: (prev, curr) => curr.isSuccess,
       listener: (context, state) => context.go(widget.from ?? '/'),
       child: BlocBuilder<LoginCubit, LoginState>(

@@ -54,6 +54,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> login(String email, String password) async {
     user = await authRepository.login(email: email, password: password);
+
     notifyListeners();
   }
 

@@ -31,7 +31,15 @@ GoRouter buildRouter(AppState appState) {
       if (protected && !appState.isSignedIn) {
         return '/login?from=${Uri.encodeComponent(state.uri.toString())}';
       }
-      if (authRoute && appState.isSignedIn) return '/';
+      if (authRoute && appState.isSignedIn) {
+        final from = state.uri.queryParameters['from'];
+
+        if (from != null && from.startsWith('/')) {
+          return from;
+        }
+
+        return '/';
+      }
       return null;
     },
     routes: [
