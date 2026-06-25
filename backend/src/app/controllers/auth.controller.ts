@@ -1,4 +1,10 @@
 import type { FastifyInstance } from 'fastify';
+import type { MultipartFile } from '@fastify/multipart';
+import { createWriteStream } from 'node:fs';
+import { mkdir } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { join, resolve } from 'node:path';
+import { pipeline } from 'node:stream/promises';
 import { domainEvents } from '../../domain/events/index.js';
 import {
   emailVerificationCodeRepository,
@@ -41,6 +47,13 @@ type ResendVerificationInput = z.infer<typeof resendVerificationSchema>;
 type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
+
+const avatarExtensions = new Map([
+  ['image/jpeg', 'jpg'],
+  ['image/png', 'png'],
+  ['image/webp', 'webp'],
+  ['image/gif', 'gif'],
+]);
 
 function publicUser(user: {
   id: string;
@@ -255,6 +268,39 @@ export async function updateCurrentUser(
       : {}),
     ...(input.avatarUrl !== undefined ? { avatarUrl: input.avatarUrl } : {}),
   });
+  await domainEvents.publish({ type: 'auth.profile_updated', userId: user.id });
+  return { user: publicUser(user) };
+}
+
+export async function uploadCurrentUserAvatar(
+  userId: string,
+  file: MultipartFile | undefined,
+  requestOrigin: string,
+) {
+  if (!file) {
+    throw new HttpError(400, 'Avatar file is required', 'AVATAR_FILE_REQUIRED');
+  }
+
+  const extension = avatarExtensions.get(file.mimetype);
+  if (!extension) {
+    file.file.resume();
+    throw new HttpError(
+      400,
+      'Avatar must be a JPEG, PNG, WebP, or GIF image',
+      'INVALID_AVATAR_TYPE',
+    );
+  }
+
+  const avatarDir = resolve(env.UPLOAD_DIR, 'avatars');
+  await mkdir(avatarDir, { recursive: true });
+  const fileName = `${userId}-${Date.now()}-${randomUUID()}.${extension}`;
+  const filePath = join(avatarDir, fileName);
+
+  await pipeline(file.file, createWriteStream(filePath));
+
+  const uploadBaseUrl = (env.PUBLIC_UPLOAD_BASE_URL ?? `${requestOrigin.replace(/\/$/, '')}/uploads`).replace(/\/$/, '');
+  const avatarUrl = `${uploadBaseUrl}/avatars/${encodeURIComponent(fileName)}`;
+  const user = await userRepository.updateProfile(userId, { avatarUrl });
   await domainEvents.publish({ type: 'auth.profile_updated', userId: user.id });
   return { user: publicUser(user) };
 }

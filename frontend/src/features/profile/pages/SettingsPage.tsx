@@ -8,21 +8,36 @@ import { SessionSettingsSection } from "../components/SessionSettingsSection";
 import { createPasswordFormState, createProfileFormState, passwordFormReducer, profileFormReducer } from "../settings/settings.reducers";
 
 export function SettingsPage() {
-  const { user, updateProfile, changePassword, logout } = useAuth();
+  const { user, updateProfile, uploadAvatar, changePassword, logout } = useAuth();
   const navigate = useNavigate();
   const [profileForm, dispatchProfile] = useReducer(profileFormReducer, createProfileFormState(user?.displayName ?? "", user?.avatarUrl ?? ""));
   const [passwordForm, dispatchPassword] = useReducer(passwordFormReducer, createPasswordFormState());
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     dispatchProfile({ type: "loaded", displayName: user?.displayName ?? "", avatarUrl: user?.avatarUrl ?? "" });
   }, [user?.avatarUrl, user?.displayName]);
 
+  useEffect(() => {
+    if (!avatarFile) {
+      setAvatarPreviewUrl(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(avatarFile);
+    setAvatarPreviewUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [avatarFile]);
+
   const saveProfile = async (event: FormEvent) => {
     event.preventDefault();
     dispatchProfile({ type: "saveStarted" });
     try {
-      await updateProfile({ displayName: profileForm.displayName, avatarUrl: profileForm.avatarUrl.trim() || null });
+      if (avatarFile) await uploadAvatar(avatarFile);
+      await updateProfile({ displayName: profileForm.displayName });
+      setAvatarFile(null);
       dispatchProfile({ type: "saveSucceeded" });
     } catch (error) {
       dispatchProfile({ type: "saveFailed", error: error instanceof Error ? error.message : "Unable to save profile" });
@@ -65,7 +80,14 @@ export function SettingsPage() {
       </div>
 
       <section className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
-        <ProfileSettingsForm user={user} profileForm={profileForm} dispatchProfile={dispatchProfile} onSubmit={saveProfile} />
+        <ProfileSettingsForm
+          user={user}
+          profileForm={profileForm}
+          avatarPreviewUrl={avatarPreviewUrl}
+          dispatchProfile={dispatchProfile}
+          onAvatarChange={setAvatarFile}
+          onSubmit={saveProfile}
+        />
         <SecuritySettingsForm passwordForm={passwordForm} dispatchPassword={dispatchPassword} onSubmit={savePassword} />
       </section>
 

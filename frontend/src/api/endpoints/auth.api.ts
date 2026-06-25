@@ -60,6 +60,14 @@ export const authApi = {
       body: JSON.stringify(input)
     });
   },
+  uploadAvatar(file: File) {
+    const formData = new FormData();
+    formData.append("avatar", file);
+    return request<{ user: User }>("/me/avatar", {
+      method: "POST",
+      body: formData
+    });
+  },
   changePassword(input: { currentPassword: string; newPassword: string }) {
     return request<{ user: User; accessToken: string; refreshToken: string }>("/me/password", {
       method: "PUT",

@@ -78,6 +78,11 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> uploadAvatar(String filePath) async {
+    user = await authRepository.uploadAvatar(filePath);
+    notifyListeners();
+  }
+
   Future<void> changePassword(
     String currentPassword,
     String newPassword,

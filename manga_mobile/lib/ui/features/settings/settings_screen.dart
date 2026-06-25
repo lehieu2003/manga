@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../app_state.dart';
-import '../../core/theme.dart';
-import 'settings_cubit.dart';
-import 'settings_state.dart';
+import 'cubit/settings_cubit.dart';
+import 'cubit/settings_state.dart';
+import 'widgets/profile_settings_card.dart';
+import 'widgets/security_settings_card.dart';
+import 'widgets/settings_feedback_messages.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -30,12 +33,13 @@ class _SettingsView extends StatefulWidget {
 
 class _SettingsViewState extends State<_SettingsView> {
   final _displayName = TextEditingController();
-  final _avatarUrl = TextEditingController();
   final _currentPassword = TextEditingController();
   final _newPassword = TextEditingController();
   final _confirmPassword = TextEditingController();
+  final _imagePicker = ImagePicker();
 
   bool _initialized = false;
+  XFile? _avatarFile;
 
   @override
   void didChangeDependencies() {
@@ -46,13 +50,11 @@ class _SettingsViewState extends State<_SettingsView> {
 
     final user = AppScope.of(context).user;
     _displayName.text = user?.displayName ?? '';
-    _avatarUrl.text = user?.avatarUrl ?? '';
   }
 
   @override
   void dispose() {
     _displayName.dispose();
-    _avatarUrl.dispose();
     _currentPassword.dispose();
     _newPassword.dispose();
     _confirmPassword.dispose();
@@ -62,8 +64,18 @@ class _SettingsViewState extends State<_SettingsView> {
   void _saveProfile(BuildContext context) {
     context.read<SettingsCubit>().saveProfile(
       displayName: _displayName.text,
-      avatarUrl: _avatarUrl.text,
+      avatarPath: _avatarFile?.path,
     );
+  }
+
+  Future<void> _pickAvatar() async {
+    final image = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      imageQuality: 88,
+    );
+    if (image == null || !mounted) return;
+    setState(() => _avatarFile = image);
   }
 
   void _changePassword(BuildContext context) {
@@ -107,6 +119,10 @@ class _SettingsViewState extends State<_SettingsView> {
           _confirmPassword.clear();
         }
 
+        if (state.isSuccess && state.action == SettingsAction.profile) {
+          setState(() => _avatarFile = null);
+        }
+
         if (state.isSuccess && state.action == SettingsAction.logout) {
           context.go('/login');
         }
@@ -124,152 +140,23 @@ class _SettingsViewState extends State<_SettingsView> {
               ),
               const SizedBox(height: 10),
 
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Profile',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          color: MangaTheme.amber,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      TextFormField(
-                        decoration: const InputDecoration(labelText: 'Email'),
-                        initialValue: user?.email ?? '',
-                        readOnly: true,
-                        onTapOutside: (_) {
-                          FocusScope.of(context).unfocus();
-                        },
-                      ),
-                      const SizedBox(height: 12),
-
-                      TextFormField(
-                        controller: _displayName,
-                        decoration: const InputDecoration(
-                          labelText: 'Display name',
-                        ),
-                        onTapOutside: (_) {
-                          FocusScope.of(context).unfocus();
-                        },
-                      ),
-                      const SizedBox(height: 12),
-
-                      TextFormField(
-                        controller: _avatarUrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Avatar URL',
-                        ),
-                        onTapOutside: (_) {
-                          FocusScope.of(context).unfocus();
-                        },
-                      ),
-                      const SizedBox(height: 12),
-
-                      FilledButton.icon(
-                        onPressed: state.isLoading
-                            ? null
-                            : () => _saveProfile(context),
-                        icon: const Icon(Icons.save),
-                        label: Text(
-                          state.isSavingProfile ? 'Saving...' : 'Save profile',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              ProfileSettingsCard(
+                user: user,
+                displayNameController: _displayName,
+                avatarPath: _avatarFile?.path,
+                state: state,
+                onPickAvatar: _pickAvatar,
+                onSave: () => _saveProfile(context),
+              ),
+              SecuritySettingsCard(
+                currentPasswordController: _currentPassword,
+                newPasswordController: _newPassword,
+                confirmPasswordController: _confirmPassword,
+                state: state,
+                onChangePassword: () => _changePassword(context),
               ),
 
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Security',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          color: MangaTheme.amber,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      TextFormField(
-                        controller: _currentPassword,
-                        obscureText: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Current password',
-                        ),
-                        onTapOutside: (_) {
-                          FocusScope.of(context).unfocus();
-                        },
-                      ),
-                      const SizedBox(height: 12),
-
-                      TextFormField(
-                        controller: _newPassword,
-                        obscureText: true,
-                        decoration: const InputDecoration(
-                          labelText: 'New password',
-                        ),
-                        onTapOutside: (_) {
-                          FocusScope.of(context).unfocus();
-                        },
-                      ),
-                      const SizedBox(height: 12),
-
-                      TextFormField(
-                        controller: _confirmPassword,
-                        obscureText: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Confirm new password',
-                        ),
-                        onTapOutside: (_) {
-                          FocusScope.of(context).unfocus();
-                        },
-                      ),
-                      const SizedBox(height: 12),
-
-                      FilledButton.icon(
-                        onPressed: state.isLoading
-                            ? null
-                            : () => _changePassword(context),
-                        icon: const Icon(Icons.key),
-                        label: Text(
-                          state.isChangingPassword
-                              ? 'Changing...'
-                              : 'Change password',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              if (state.message != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    state.message!,
-                    style: const TextStyle(color: MangaTheme.amber),
-                  ),
-                ),
-
-              if (state.error != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    state.error!,
-                    style: const TextStyle(color: MangaTheme.sakura),
-                  ),
-                ),
-
+              SettingsFeedbackMessages(state: state),
               const SizedBox(height: 10),
 
               OutlinedButton.icon(
