@@ -107,4 +107,15 @@ class AppScope extends InheritedNotifier<AppState> {
     }
     return scope.notifier!;
   }
+
+  static AppState read(BuildContext context) {
+    final element = context.getElementForInheritedWidgetOfExactType<AppScope>();
+    final scope = element?.widget as AppScope?;
+
+    if (scope == null || scope.notifier == null) {
+      throw StateError('AppScope is missing');
+    }
+
+    return scope.notifier!;
+  }
 }
