@@ -3,13 +3,13 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:manga_mobile/ui/features/chat/chat_assistant_button.dart';
 
 import '../../../data/services/reader_settings_store.dart';
 import '../../../domain/models/models.dart';
 import '../../app_state.dart';
 import '../../core/theme.dart';
 import '../../core/widgets.dart';
-import '../chat/chat_assistant.dart';
 import '../comments/comment_section.dart';
 
 class ReaderScreen extends StatefulWidget {

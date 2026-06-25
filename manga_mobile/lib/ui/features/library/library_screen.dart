@@ -134,6 +134,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 labelText: 'Search title, tag, or status',
                 prefixIcon: Icon(Icons.search),
               ),
+              onTapOutside: (_) {
+                FocusScope.of(context).unfocus();
+              },
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 10),

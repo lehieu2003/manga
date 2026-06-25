@@ -151,6 +151,9 @@ class _SearchScreenState extends State<SearchScreen> {
               onPressed: () => _load(reset: true),
             ),
           ),
+          onTapOutside: (_) {
+            FocusScope.of(context).unfocus();
+          },
           onSubmitted: (_) => _load(reset: true),
         ),
         const SizedBox(height: 10),
@@ -165,6 +168,9 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
                 onChanged: (_) => setState(() {}),
                 onSubmitted: (_) => _load(reset: true),
+                onTapOutside: (_) {
+                  FocusScope.of(context).unfocus();
+                },
               ),
             ),
             const SizedBox(width: 10),
@@ -177,6 +183,9 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
                 onChanged: (_) => setState(() {}),
                 onSubmitted: (_) => _load(reset: true),
+                onTapOutside: (_) {
+                  FocusScope.of(context).unfocus();
+                },
               ),
             ),
           ],
@@ -213,6 +222,9 @@ class _SearchScreenState extends State<SearchScreen> {
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(labelText: 'Year'),
                 onSubmitted: (_) => _load(reset: true),
+                onTapOutside: (_) {
+                  FocusScope.of(context).unfocus();
+                },
               ),
             ),
           ],
