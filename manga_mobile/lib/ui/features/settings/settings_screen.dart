@@ -143,6 +143,9 @@ class _SettingsViewState extends State<_SettingsView> {
                         decoration: const InputDecoration(labelText: 'Email'),
                         initialValue: user?.email ?? '',
                         readOnly: true,
+                        onTapOutside: (_) {
+                          FocusScope.of(context).unfocus();
+                        },
                       ),
                       const SizedBox(height: 12),
 
@@ -151,6 +154,9 @@ class _SettingsViewState extends State<_SettingsView> {
                         decoration: const InputDecoration(
                           labelText: 'Display name',
                         ),
+                        onTapOutside: (_) {
+                          FocusScope.of(context).unfocus();
+                        },
                       ),
                       const SizedBox(height: 12),
 
@@ -159,6 +165,9 @@ class _SettingsViewState extends State<_SettingsView> {
                         decoration: const InputDecoration(
                           labelText: 'Avatar URL',
                         ),
+                        onTapOutside: (_) {
+                          FocusScope.of(context).unfocus();
+                        },
                       ),
                       const SizedBox(height: 12),
 
@@ -197,6 +206,9 @@ class _SettingsViewState extends State<_SettingsView> {
                         decoration: const InputDecoration(
                           labelText: 'Current password',
                         ),
+                        onTapOutside: (_) {
+                          FocusScope.of(context).unfocus();
+                        },
                       ),
                       const SizedBox(height: 12),
 
@@ -206,6 +218,9 @@ class _SettingsViewState extends State<_SettingsView> {
                         decoration: const InputDecoration(
                           labelText: 'New password',
                         ),
+                        onTapOutside: (_) {
+                          FocusScope.of(context).unfocus();
+                        },
                       ),
                       const SizedBox(height: 12),
 
@@ -215,6 +230,9 @@ class _SettingsViewState extends State<_SettingsView> {
                         decoration: const InputDecoration(
                           labelText: 'Confirm new password',
                         ),
+                        onTapOutside: (_) {
+                          FocusScope.of(context).unfocus();
+                        },
                       ),
                       const SizedBox(height: 12),
 

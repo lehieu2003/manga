@@ -1,12 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:manga_mobile/ui/features/chat/chat_assistant_button.dart';
 
 import '../../../domain/models/models.dart';
 import '../../app_state.dart';
 import '../../core/theme.dart';
 import '../../core/widgets.dart';
-import '../chat/chat_assistant.dart';
 import '../comments/comment_section.dart';
 
 class MangaDetailScreen extends StatefulWidget {
@@ -376,6 +376,9 @@ class _MangaDetailScreenState extends State<MangaDetailScreen> {
                         labelText: 'Search chapter',
                         prefixIcon: Icon(Icons.search),
                       ),
+                      onTapOutside: (_) {
+                        FocusScope.of(context).unfocus();
+                      },
                       onChanged: _onChapterSearchChanged,
                     ),
                   ),

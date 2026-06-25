@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:manga_mobile/ui/features/chat/chat_assistant_button.dart';
 
 import 'app_state.dart';
 import 'features/auth/login/login_screen.dart';
@@ -7,7 +8,6 @@ import 'features/auth/register/register_screen.dart';
 import 'features/auth/forgot_password/forgot_password_screen.dart';
 import 'features/auth/reset_password/reset_password_screen.dart';
 import 'features/auth/verify_email/verify_email_screen.dart';
-import 'features/chat/chat_assistant.dart';
 import 'features/detail/manga_detail_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/library/library_screen.dart';
