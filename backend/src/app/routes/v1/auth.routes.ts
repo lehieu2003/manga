@@ -10,6 +10,7 @@ import {
   resendEmailVerification,
   resetPassword,
   updateCurrentUser,
+  uploadCurrentUserAvatar,
   verifyEmail,
 } from '../../controllers/auth.controller.js';
 import {
@@ -115,6 +116,19 @@ export async function authRoutes(app: FastifyInstance) {
     },
   );
 
+  app.post(
+    '/me/avatar',
+    { schema: authRouteSchemas.uploadAvatar, preHandler: app.authenticate },
+    async (request) => {
+      const file = await request.file();
+      return uploadCurrentUserAvatar(
+        request.user.sub,
+        file,
+        getRequestOrigin(request.headers),
+      );
+    },
+  );
+
   app.put(
     '/me/password',
     { schema: authRouteSchemas.changePassword, preHandler: app.authenticate },
@@ -123,4 +137,10 @@ export async function authRoutes(app: FastifyInstance) {
       return changeCurrentUserPassword(app, request.user.sub, body);
     },
   );
+}
+
+function getRequestOrigin(headers: { host?: string; ['x-forwarded-proto']?: string | string[] }) {
+  const protoHeader = headers['x-forwarded-proto'];
+  const protocol = Array.isArray(protoHeader) ? protoHeader[0] : protoHeader;
+  return `${protocol ?? 'http'}://${headers.host ?? 'localhost:4000'}`;
 }

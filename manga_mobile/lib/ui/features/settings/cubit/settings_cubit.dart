@@ -1,6 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../app_state.dart';
+import '../../../app_state.dart';
 import 'settings_state.dart';
 
 class SettingsCubit extends Cubit<SettingsState> {
@@ -10,7 +10,7 @@ class SettingsCubit extends Cubit<SettingsState> {
 
   Future<void> saveProfile({
     required String displayName,
-    required String avatarUrl,
+    String? avatarPath,
   }) async {
     emit(
       state.copyWith(
@@ -23,12 +23,11 @@ class SettingsCubit extends Cubit<SettingsState> {
 
     try {
       final cleanDisplayName = displayName.trim();
-      final cleanAvatarUrl = avatarUrl.trim();
 
-      await appState.updateProfile(
-        displayName: cleanDisplayName,
-        avatarUrl: cleanAvatarUrl.isEmpty ? null : cleanAvatarUrl,
-      );
+      if (avatarPath != null) {
+        await appState.uploadAvatar(avatarPath);
+      }
+      await appState.updateProfile(displayName: cleanDisplayName);
 
       if (isClosed) return;
 

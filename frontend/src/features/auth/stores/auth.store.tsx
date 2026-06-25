@@ -39,6 +39,7 @@ type AuthState = {
   verifyEmail: (input: { email: string; code: string }) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (input: UpdateProfileInput) => Promise<void>;
+  uploadAvatar: (file: File) => Promise<void>;
   changePassword: (input: ChangePasswordInput) => Promise<void>;
 };
 
@@ -125,6 +126,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'userUpdated', user: payload.user });
   }, []);
 
+  const uploadAvatar = useCallback(async (file: File) => {
+    const payload = await api.uploadAvatar(file);
+    dispatch({ type: 'userUpdated', user: payload.user });
+  }, []);
+
   const changePassword = useCallback(async (input: ChangePasswordInput) => {
     const payload = await api.changePassword(input);
     dispatch({ type: 'sessionLoaded', user: payload.user });
@@ -140,6 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       verifyEmail,
       logout,
       updateProfile,
+      uploadAvatar,
       changePassword,
     }),
     [
@@ -150,6 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       verifyEmail,
       logout,
       updateProfile,
+      uploadAvatar,
       changePassword,
     ],
   );

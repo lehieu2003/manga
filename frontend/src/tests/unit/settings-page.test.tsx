@@ -1,13 +1,14 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { SettingsPage } from "@/features/profile/pages/SettingsPage";
 
 const authState = vi.hoisted(() => ({
   user: { id: "user-1", email: "reader@example.com", displayName: "Reader", role: "USER", avatarUrl: null, createdAt: "2024-01-01T00:00:00.000Z" },
   updateProfile: vi.fn(),
+  uploadAvatar: vi.fn(),
   changePassword: vi.fn(),
   logout: vi.fn()
 }));
@@ -20,8 +21,18 @@ describe("SettingsPage", () => {
   beforeEach(() => {
     authState.user = { id: "user-1", email: "reader@example.com", displayName: "Reader", role: "USER", avatarUrl: null, createdAt: "2024-01-01T00:00:00.000Z" };
     authState.updateProfile.mockReset().mockResolvedValue(undefined);
+    authState.uploadAvatar.mockReset().mockResolvedValue(undefined);
     authState.changePassword.mockReset().mockResolvedValue(undefined);
     authState.logout.mockReset().mockResolvedValue(undefined);
+    vi.stubGlobal("URL", {
+      ...URL,
+      createObjectURL: vi.fn(() => "blob:avatar-preview"),
+      revokeObjectURL: vi.fn()
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("renders current account identity", () => {
@@ -31,16 +42,18 @@ describe("SettingsPage", () => {
     expect(screen.getByDisplayValue("Reader")).toBeInTheDocument();
   });
 
-  it("saves display name and avatar URL", async () => {
+  it("saves display name and uploads a selected avatar image", async () => {
     const user = userEvent.setup();
     renderSettings();
+    const avatar = new File(["avatar-bytes"], "avatar.png", { type: "image/png" });
 
     await user.clear(screen.getByLabelText("Display name"));
     await user.type(screen.getByLabelText("Display name"), "Shelf Keeper");
-    await user.type(screen.getByLabelText("Avatar URL"), "https://example.com/avatar.png");
+    await user.upload(screen.getByLabelText("Avatar image"), avatar);
     await user.click(screen.getByRole("button", { name: /Save profile/ }));
 
-    expect(authState.updateProfile).toHaveBeenCalledWith({ displayName: "Shelf Keeper", avatarUrl: "https://example.com/avatar.png" });
+    expect(authState.uploadAvatar).toHaveBeenCalledWith(avatar);
+    expect(authState.updateProfile).toHaveBeenCalledWith({ displayName: "Shelf Keeper" });
     expect(await screen.findByText("Profile saved.")).toBeInTheDocument();
   });
 

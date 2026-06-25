@@ -82,6 +82,16 @@ class AuthRepository {
     return User.fromJson(payload['user'] as Map<String, dynamic>);
   }
 
+  Future<User> uploadAvatar(String filePath) async {
+    final payload = await _api.multipart(
+      '/me/avatar',
+      fieldName: 'avatar',
+      filePath: filePath,
+      decode: (json) => json,
+    );
+    return User.fromJson(payload['user'] as Map<String, dynamic>);
+  }
+
   Future<User> changePassword({
     required String currentPassword,
     required String newPassword,

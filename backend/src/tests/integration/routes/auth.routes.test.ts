@@ -1,4 +1,5 @@
 import Fastify from "fastify";
+import multipart from "@fastify/multipart";
 import { ZodError } from "zod";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { HttpError } from "../../../shared/errors/http-error.js";
@@ -178,6 +179,57 @@ describe("auth account routes", () => {
     });
 
     expect(response.statusCode).toBe(400);
+    expect(prismaMocks.userUpdate).not.toHaveBeenCalled();
+    await app.close();
+  });
+
+  it("uploads the authenticated user's avatar image", async () => {
+    const app = await makeAuthApp();
+    const updatedUser = makeUser({ avatarUrl: "http://api.test/uploads/avatars/user-1-avatar.png" });
+    prismaMocks.userUpdate.mockResolvedValue(updatedUser);
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/me/avatar",
+      headers: {
+        host: "api.test",
+        "content-type": `multipart/form-data; boundary=${multipartBoundary}`
+      },
+      payload: multipartPayload({
+        contentType: "image/png",
+        fileName: "avatar.png",
+        body: "avatar-bytes"
+      })
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ user: { avatarUrl: "http://api.test/uploads/avatars/user-1-avatar.png" } });
+    expect(prismaMocks.userUpdate).toHaveBeenCalledWith({
+      where: { id: "user-1" },
+      data: { avatarUrl: expect.stringMatching(/^http:\/\/api\.test\/uploads\/avatars\/user-1-\d+-[a-f0-9-]+\.png$/) }
+    });
+    await app.close();
+  });
+
+  it("rejects avatar uploads that are not images", async () => {
+    const app = await makeAuthApp();
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/me/avatar",
+      headers: {
+        host: "api.test",
+        "content-type": `multipart/form-data; boundary=${multipartBoundary}`
+      },
+      payload: multipartPayload({
+        contentType: "text/plain",
+        fileName: "avatar.txt",
+        body: "not-an-image"
+      })
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ error: { code: "INVALID_AVATAR_TYPE" } });
     expect(prismaMocks.userUpdate).not.toHaveBeenCalled();
     await app.close();
   });
@@ -364,6 +416,7 @@ async function makeAuthApp() {
     }
     return reply.code(500).send({ error: { code: "INTERNAL_SERVER_ERROR", message: error instanceof Error ? error.message : "Unexpected server error" } });
   });
+  await app.register(multipart);
   await app.register(authRoutes, { prefix: "/api" });
   return app;
 }
@@ -397,4 +450,20 @@ function makeBaseUser() {
     createdAt: new Date("2024-01-01T00:00:00.000Z")
   };
   return user;
+}
+
+const multipartBoundary = "avatar-boundary";
+
+function multipartPayload(input: { fileName: string; contentType: string; body: string }) {
+  return Buffer.from(
+    [
+      `--${multipartBoundary}`,
+      `Content-Disposition: form-data; name="avatar"; filename="${input.fileName}"`,
+      `Content-Type: ${input.contentType}`,
+      "",
+      input.body,
+      `--${multipartBoundary}--`,
+      ""
+    ].join("\r\n")
+  );
 }

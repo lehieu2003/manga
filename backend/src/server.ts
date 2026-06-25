@@ -1,9 +1,11 @@
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import jwt from "@fastify/jwt";
+import multipart from "@fastify/multipart";
 import rateLimit from "@fastify/rate-limit";
+import staticPlugin from "@fastify/static";
 import { createWriteStream, mkdirSync, type WriteStream } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import Fastify, { type FastifyReply, type FastifyRequest, type FastifyServerOptions } from "fastify";
 import { env } from "./shared/configs/app.config.js";
 import { connectRedis, redis } from "./infrastructure/cache/client.js";
@@ -80,6 +82,19 @@ export async function buildApp() {
     max: 120,
     timeWindow: "1 minute",
     ...(hasRedis ? { redis } : {})
+  });
+  await app.register(multipart, {
+    limits: {
+      fileSize: env.AVATAR_MAX_BYTES,
+      files: 1
+    }
+  });
+  const uploadRoot = resolve(env.UPLOAD_DIR);
+  mkdirSync(uploadRoot, { recursive: true });
+  await app.register(staticPlugin, {
+    root: uploadRoot,
+    prefix: "/uploads/",
+    decorateReply: false
   });
 
   registerAuthMiddleware(app);

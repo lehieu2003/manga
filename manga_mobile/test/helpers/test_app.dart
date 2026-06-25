@@ -81,6 +81,9 @@ class FakeAuthRepository extends AuthRepository {
       _user;
 
   @override
+  Future<User> uploadAvatar(String filePath) async => _user;
+
+  @override
   Future<User> changePassword({
     required String currentPassword,
     required String newPassword,

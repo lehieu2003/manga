@@ -544,6 +544,13 @@ export const authRouteSchemas = {
     },
     response: { 200: { type: "object", required: ["user"], properties: { user } }, ...errors }
   },
+  uploadAvatar: {
+    summary: "Upload the authenticated user's avatar image",
+    tags: ["Auth"],
+    security: secured,
+    consumes: ["multipart/form-data"],
+    response: { 200: { type: "object", required: ["user"], properties: { user } }, ...errors, 413: errorResponse }
+  },
   changePassword: {
     summary: "Change password and issue fresh tokens",
     tags: ["Auth"],

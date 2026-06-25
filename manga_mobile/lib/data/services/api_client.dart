@@ -120,6 +120,33 @@ class ApiClient {
     return _decodeResponse(response, decode);
   }
 
+  Future<T> multipart<T>(
+    String path, {
+    required String fieldName,
+    required String filePath,
+    required T Function(Map<String, dynamic> json) decode,
+    bool allowRefresh = true,
+  }) async {
+    final response = await _sendMultipart(
+      path,
+      fieldName: fieldName,
+      filePath: filePath,
+    );
+    if (response.statusCode == 401 &&
+        allowRefresh &&
+        await tokenStore.refreshToken != null) {
+      await _refreshSession();
+      return multipart(
+        path,
+        fieldName: fieldName,
+        filePath: filePath,
+        decode: decode,
+        allowRefresh: false,
+      );
+    }
+    return _decodeResponse(response, decode);
+  }
+
   Future<http.Response> _send(
     String path, {
     required String method,
@@ -146,6 +173,20 @@ class ApiClient {
       'DELETE' => _httpClient.delete(uri, headers: headers),
       _ => _httpClient.get(uri, headers: headers),
     };
+  }
+
+  Future<http.Response> _sendMultipart(
+    String path, {
+    required String fieldName,
+    required String filePath,
+  }) async {
+    final uri = Uri.parse('$baseUrl$path');
+    final request = http.MultipartRequest('POST', uri);
+    final token = await tokenStore.accessToken;
+    if (token != null) request.headers['Authorization'] = 'Bearer $token';
+    request.files.add(await http.MultipartFile.fromPath(fieldName, filePath));
+    final streamed = await _httpClient.send(request);
+    return http.Response.fromStream(streamed);
   }
 
   Future<void> _refreshSession() async {
