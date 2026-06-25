@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:manga_mobile/ui/features/chat/chat_assistant_button.dart';
+import 'package:manga_mobile/ui/features/search/search_discovery_preset.dart';
 
 import 'app_state.dart';
 import 'features/auth/login/login_screen.dart';
