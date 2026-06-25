@@ -1,30 +1,42 @@
 import 'package:flutter/material.dart';
-import 'package:manga_mobile/ui/features/chat/local_chat_message.dart.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../domain/models/models.dart';
 import '../../app_state.dart';
 import 'chat_bubble.dart';
+import 'cubit/chat_assistant_cubit.dart';
+import 'cubit/chat_assistant_state.dart';
 import 'starter_prompts.dart';
 
-class ChatAssistantSheet extends StatefulWidget {
+class ChatAssistantSheet extends StatelessWidget {
   const ChatAssistantSheet({super.key, this.mangaId, this.chapterId});
 
   final String? mangaId;
   final String? chapterId;
 
   @override
-  State<ChatAssistantSheet> createState() => _ChatAssistantSheetState();
+  Widget build(BuildContext context) {
+    final app = AppScope.read(context);
+    return BlocProvider(
+      create: (context) => ChatAssistantCubit(
+        chatRepository: app.chatRepository,
+        mangaId: mangaId,
+        chapterId: chapterId,
+      ),
+      child: const _ChatAssistantView(),
+    );
+  }
 }
 
-class _ChatAssistantSheetState extends State<ChatAssistantSheet> {
+class _ChatAssistantView extends StatefulWidget {
+  const _ChatAssistantView();
+
+  @override
+  State<_ChatAssistantView> createState() => _ChatAssistantViewState();
+}
+
+class _ChatAssistantViewState extends State<_ChatAssistantView> {
   final _input = TextEditingController();
   final _scrollController = ScrollController();
-
-  final List<LocalChatMessage> _messages = [];
-
-  String? _conversationId;
-  String? _pendingMessage;
-  bool _sending = false;
 
   @override
   void dispose() {
@@ -45,127 +57,79 @@ class _ChatAssistantSheetState extends State<ChatAssistantSheet> {
     });
   }
 
-  Future<void> _send([String? forcedMessage]) async {
+  void _send(BuildContext context, [String? forcedMessage]) {
     final content = (forcedMessage ?? _input.text).trim();
 
-    if (content.isEmpty || _sending) return;
+    if (content.isEmpty) return;
 
     _input.clear();
-
-    setState(() {
-      _sending = true;
-      _pendingMessage = content;
-
-      _messages.add(
-        LocalChatMessage(
-          message: ChatMessage(
-            id: 'local-${DateTime.now().microsecondsSinceEpoch}',
-            role: 'user',
-            content: content,
-            createdAt: DateTime.now(),
-          ),
-        ),
-      );
-
-      _messages.add(
-        LocalChatMessage(
-          message: ChatMessage(
-            id: 'pending-${DateTime.now().microsecondsSinceEpoch}',
-            role: 'assistant',
-            content: 'Thinking...',
-            createdAt: DateTime.now(),
-          ),
-          isPending: true,
-        ),
-      );
-    });
-
-    _scrollToBottom();
-
-    try {
-      final response = await AppScope.of(context).chatRepository.sendMessage(
-        conversationId: _conversationId,
-        message: content,
-        mangaId: widget.mangaId,
-        chapterId: widget.chapterId,
-      );
-
-      if (!mounted) return;
-
-      setState(() {
-        _conversationId = response.conversationId;
-        _messages.removeWhere((item) => item.isPending);
-        _messages.add(LocalChatMessage(message: response.message));
-        _pendingMessage = null;
-      });
-
-      _scrollToBottom();
-    } catch (error) {
-      if (!mounted) return;
-
-      setState(() {
-        final pendingIndex = _messages.indexWhere((item) => item.isPending);
-
-        if (pendingIndex >= 0) {
-          _messages[pendingIndex] = LocalChatMessage(
-            message: ChatMessage(
-              id: 'error-${DateTime.now().microsecondsSinceEpoch}',
-              role: 'assistant',
-              content: 'Something went wrong. Please try again.',
-              createdAt: DateTime.now(),
-            ),
-            isError: true,
-          );
-        }
-      });
-
-      _scrollToBottom();
-    } finally {
-      if (mounted) {
-        setState(() => _sending = false);
-      }
-    }
+    context.read<ChatAssistantCubit>().sendMessage(content);
   }
 
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottomInset),
-        child: SizedBox(
-          height: MediaQuery.sizeOf(context).height * 0.78,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(context),
-              const SizedBox(height: 12),
-              Expanded(
-                child: _messages.isEmpty
-                    ? StarterPrompts(onSend: _send)
-                    : ListView.builder(
-                        controller: _scrollController,
-                        itemCount: _messages.length,
-                        itemBuilder: (context, index) {
-                          return ChatBubble(
-                            item: _messages[index],
-                            pendingMessage: _pendingMessage,
-                            onRetry: () => _send(_pendingMessage),
-                          );
-                        },
-                      ),
+    return BlocConsumer<ChatAssistantCubit, ChatAssistantState>(
+      listenWhen: (previous, current) {
+        return previous.messages.length != current.messages.length ||
+            previous.sending != current.sending;
+      },
+      listener: (context, state) {
+        _scrollToBottom();
+      },
+      builder: (context, state) {
+        return GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: () {
+            FocusScope.of(context).unfocus();
+          },
+          child: SafeArea(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottomInset),
+              child: SizedBox(
+                height: MediaQuery.sizeOf(context).height * 0.78,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeader(context, state),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: state.messages.isEmpty
+                          ? StarterPrompts(
+                              onSend: (message) async {
+                                _send(context, message);
+                              },
+                            )
+                          : ListView.builder(
+                              controller: _scrollController,
+                              itemCount: state.messages.length,
+                              itemBuilder: (context, index) {
+                                return ChatBubble(
+                                  item: state.messages[index],
+                                  pendingMessage: state.pendingMessage,
+                                  onRetry: () {
+                                    context
+                                        .read<ChatAssistantCubit>()
+                                        .retryLastMessage();
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                    const SizedBox(height: 10),
+                    _buildInputBar(context, state),
+                  ],
+                ),
               ),
-              const SizedBox(height: 10),
-              _buildInputBar(),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, ChatAssistantState state) {
     return Row(
       children: [
         const CircleAvatar(child: Icon(Icons.smart_toy_outlined)),
@@ -175,7 +139,7 @@ class _ChatAssistantSheetState extends State<ChatAssistantSheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                _messages.isEmpty ? 'Ask the shelf' : 'Manga assistant',
+                state.messages.isEmpty ? 'Ask the shelf' : 'Manga assistant',
                 style: Theme.of(
                   context,
                 ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
@@ -192,7 +156,7 @@ class _ChatAssistantSheetState extends State<ChatAssistantSheet> {
     );
   }
 
-  Widget _buildInputBar() {
+  Widget _buildInputBar(BuildContext context, ChatAssistantState state) {
     return Row(
       children: [
         Expanded(
@@ -201,6 +165,7 @@ class _ChatAssistantSheetState extends State<ChatAssistantSheet> {
             maxLength: 1200,
             minLines: 1,
             maxLines: 3,
+            enabled: !state.sending,
             decoration: const InputDecoration(
               labelText: 'Ask for manga...',
               counterText: '',
@@ -208,12 +173,14 @@ class _ChatAssistantSheetState extends State<ChatAssistantSheet> {
             onTapOutside: (_) {
               FocusScope.of(context).unfocus();
             },
-            onSubmitted: (_) => _send(),
+            onSubmitted: (_) {
+              _send(context);
+            },
           ),
         ),
         const SizedBox(width: 8),
         IconButton.filled(
-          onPressed: _sending ? null : () => _send(),
+          onPressed: state.sending ? null : () => _send(context),
           icon: const Icon(Icons.send),
         ),
       ],
