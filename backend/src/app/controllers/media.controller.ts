@@ -3,6 +3,17 @@ import { cached, makeCacheKey } from "../../infrastructure/cache/cache.service.j
 import { getMangaDexCoverBaseUrls, getReader } from "../../infrastructure/mangadex/mangadex.client.js";
 import { HttpError } from "../../shared/errors/http-error.js";
 import { mediaCacheControl, proxyMangaDexImage } from "../services/media-proxy.service.js";
+import { coverParamsSchema, pageParamsSchema } from "../validators/media.validator.js";
+
+export async function handleProxyCoverImage(request: FastifyRequest, reply: FastifyReply) {
+  const { mangaId, fileName } = coverParamsSchema.parse(request.params);
+  return proxyCoverImage(request, reply, { mangaId, fileName });
+}
+
+export async function handleProxyChapterPageImage(request: FastifyRequest, reply: FastifyReply) {
+  const { chapterId, mode, fileName } = pageParamsSchema.parse(request.params);
+  return proxyChapterPageImage(request, reply, { chapterId, mode, fileName });
+}
 
 export async function proxyCoverImage(request: FastifyRequest, reply: FastifyReply, input: { mangaId: string; fileName: string }) {
   const urls = getMangaDexCoverBaseUrls().map((baseUrl) => `${baseUrl}/covers/${input.mangaId}/${input.fileName}`);

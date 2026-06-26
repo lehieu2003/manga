@@ -1,12 +1,40 @@
+import type { FastifyRequest } from "fastify";
 import type { z } from "zod";
 import { bookmarkRepository, cachedCatalogRepository } from "../../domain/repositories/index.js";
 import { HttpError } from "../../shared/errors/http-error.js";
 import { normalizeCoverProxyUrl } from "../../shared/utils/media-url.js";
-import type { bookmarkListQuerySchema, createBookmarkSchema, updateBookmarkSchema } from "../validators/bookmark.validator.js";
+import { bookmarkListQuerySchema, bookmarkParamsSchema, createBookmarkSchema, updateBookmarkSchema } from "../validators/bookmark.validator.js";
+import { chapterProgressParamsSchema } from "../validators/progress.validator.js";
 
 type BookmarkListQuery = z.infer<typeof bookmarkListQuerySchema>;
 type CreateBookmarkInput = z.infer<typeof createBookmarkSchema>;
 type UpdateBookmarkInput = z.infer<typeof updateBookmarkSchema>;
+
+export async function handleListBookmarks(request: FastifyRequest) {
+  const query = bookmarkListQuerySchema.parse(request.query ?? {});
+  return listBookmarks(request.user.sub, query);
+}
+
+export async function handleGetBookmarkByChapter(request: FastifyRequest) {
+  const { chapterId } = chapterProgressParamsSchema.parse(request.params);
+  return getBookmarkByChapter(request.user.sub, chapterId);
+}
+
+export async function handleCreateBookmark(request: FastifyRequest) {
+  const body = createBookmarkSchema.parse(request.body);
+  return createBookmark(request.user.sub, body);
+}
+
+export async function handleUpdateBookmark(request: FastifyRequest) {
+  const { id } = bookmarkParamsSchema.parse(request.params);
+  const body = updateBookmarkSchema.parse(request.body);
+  return updateBookmark(request.user.sub, id, body);
+}
+
+export async function handleRemoveBookmark(request: FastifyRequest) {
+  const { id } = bookmarkParamsSchema.parse(request.params);
+  return removeBookmark(request.user.sub, id);
+}
 
 export async function listBookmarks(userId: string, input: BookmarkListQuery) {
   const result = await bookmarkRepository.findByUser(userId, input);

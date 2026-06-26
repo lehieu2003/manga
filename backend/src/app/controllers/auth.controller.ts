@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { MultipartFile } from '@fastify/multipart';
 import { createWriteStream } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
@@ -25,7 +25,7 @@ import {
   verifyPassword,
 } from '../../domain/services/auth.service.js';
 import { HttpError } from '../../shared/errors/http-error.js';
-import type {
+import {
   changePasswordSchema,
   forgotPasswordSchema,
   loginSchema,
@@ -54,6 +54,69 @@ const avatarExtensions = new Map([
   ['image/webp', 'webp'],
   ['image/gif', 'gif'],
 ]);
+
+export async function handleRegisterUser(request: FastifyRequest, reply: FastifyReply) {
+  const body = registerSchema.parse(request.body);
+  return reply.code(201).send(await registerUser(body));
+}
+
+export async function handleLoginUser(request: FastifyRequest) {
+  const body = loginSchema.parse(request.body);
+  return loginUser(request.server, body);
+}
+
+export async function handleRefreshAuthToken(request: FastifyRequest) {
+  const body = refreshSchema.parse(request.body);
+  return refreshAuthToken(request.server, body);
+}
+
+export async function handleLogoutUser(request: FastifyRequest) {
+  const body = refreshSchema.parse(request.body);
+  return logoutUser(body);
+}
+
+export async function handleVerifyEmail(request: FastifyRequest) {
+  const body = verifyEmailSchema.parse(request.body);
+  return verifyEmail(request.server, body);
+}
+
+export async function handleResendEmailVerification(request: FastifyRequest) {
+  const body = resendVerificationSchema.parse(request.body);
+  return resendEmailVerification(body);
+}
+
+export async function handleRequestPasswordReset(request: FastifyRequest) {
+  const body = forgotPasswordSchema.parse(request.body);
+  return requestPasswordReset(body);
+}
+
+export async function handleResetPassword(request: FastifyRequest) {
+  const body = resetPasswordSchema.parse(request.body);
+  return resetPassword(body);
+}
+
+export async function handleGetCurrentUser(request: FastifyRequest) {
+  return getCurrentUser(request.user.sub);
+}
+
+export async function handleUpdateCurrentUser(request: FastifyRequest) {
+  const body = updateProfileSchema.parse(request.body);
+  return updateCurrentUser(request.user.sub, body);
+}
+
+export async function handleUploadCurrentUserAvatar(request: FastifyRequest) {
+  const file = await request.file();
+  return uploadCurrentUserAvatar(
+    request.user.sub,
+    file,
+    getRequestOrigin(request.headers),
+  );
+}
+
+export async function handleChangeCurrentUserPassword(request: FastifyRequest) {
+  const body = changePasswordSchema.parse(request.body);
+  return changeCurrentUserPassword(request.server, request.user.sub, body);
+}
 
 function publicUser(user: {
   id: string;
@@ -348,4 +411,10 @@ async function sendEmailVerificationCode(user: { id: string; email: string; disp
     expiresAt,
   });
   return { expiresAt };
+}
+
+function getRequestOrigin(headers: { host?: string; ['x-forwarded-proto']?: string | string[] }) {
+  const protoHeader = headers['x-forwarded-proto'];
+  const protocol = Array.isArray(protoHeader) ? protoHeader[0] : protoHeader;
+  return `${protocol ?? 'http'}://${headers.host ?? 'localhost:4000'}`;
 }

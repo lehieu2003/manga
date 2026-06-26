@@ -1,6 +1,25 @@
+import type { FastifyRequest } from "fastify";
 import { syncMangaDexCatalog } from "../../domain/services/catalog-sync.service.js";
 import { importMangaChapters, importMangaDetail, importMangaWithChapters } from "../../domain/services/catalog-import.service.js";
 import { env } from "../../shared/configs/app.config.js";
+import { mangaParamsSchema } from "../validators/catalog.validator.js";
+
+export async function handleImportAdminManga(request: FastifyRequest) {
+  const { id } = mangaParamsSchema.parse(request.params);
+  const query = request.query as Record<string, unknown>;
+  return importAdminManga(id, query);
+}
+
+export async function handleImportAdminMangaChapters(request: FastifyRequest) {
+  const { id } = mangaParamsSchema.parse(request.params);
+  const query = request.query as Record<string, unknown>;
+  return importAdminMangaChapters(id, query);
+}
+
+export async function handleSyncAdminCatalog(request: FastifyRequest) {
+  const query = request.query as Record<string, unknown>;
+  return syncAdminCatalog(query);
+}
 
 export async function importAdminManga(id: string, query: Record<string, unknown>) {
   const includeChapters = query.includeChapters === "true";

@@ -1,4 +1,4 @@
-import type { FastifyBaseLogger } from "fastify";
+import type { FastifyBaseLogger, FastifyRequest } from "fastify";
 import type { z } from "zod";
 import {
   clearAdminUserSearchHistory,
@@ -20,14 +20,110 @@ import {
   upsertAdminUserLibrary,
   upsertAdminUserProgress
 } from "../../domain/services/admin.service.js";
-import type { updateProfileSchema } from "../validators/auth.validator.js";
-import type { adminLibraryBodySchema, adminPageQuerySchema, adminProgressBodySchema, adminProgressQuerySchema } from "../validators/admin.validator.js";
+import { updateProfileSchema } from "../validators/auth.validator.js";
+import {
+  adminLibraryBodySchema,
+  adminMangaParamsSchema,
+  adminPageQuerySchema,
+  adminProgressBodySchema,
+  adminProgressQuerySchema,
+  adminUserChapterParamsSchema,
+  adminUserMangaParamsSchema,
+  adminUserParamsSchema
+} from "../validators/admin.validator.js";
 
 type AdminLibraryBody = z.infer<typeof adminLibraryBodySchema>;
 type AdminPageQuery = z.infer<typeof adminPageQuerySchema>;
 type AdminProgressBody = z.infer<typeof adminProgressBodySchema>;
 type AdminProgressQuery = z.infer<typeof adminProgressQuerySchema>;
 type UpdateProfileBody = z.infer<typeof updateProfileSchema>;
+
+export function handleGetAdminDashboardOverview() {
+  return getAdminDashboardOverview();
+}
+
+export function handleListAdminCachedMangaPage(request: FastifyRequest) {
+  return listAdminCachedMangaPage(adminPageQuerySchema.parse(request.query));
+}
+
+export function handleGetAdminCachedMangaItem(request: FastifyRequest) {
+  const { mangaId } = adminMangaParamsSchema.parse(request.params);
+  return getAdminCachedMangaItem(mangaId);
+}
+
+export function handleRemoveAdminCachedManga(request: FastifyRequest) {
+  const { mangaId } = adminMangaParamsSchema.parse(request.params);
+  return removeAdminCachedManga(request.log, mangaId);
+}
+
+export function handleRemoveAdminCachedChapters(request: FastifyRequest) {
+  const { mangaId } = adminMangaParamsSchema.parse(request.params);
+  return removeAdminCachedChapters(request.log, mangaId);
+}
+
+export function handleListAdminUsersPage(request: FastifyRequest) {
+  return listAdminUsersPage(adminPageQuerySchema.parse(request.query));
+}
+
+export function handleGetAdminUserDetail(request: FastifyRequest) {
+  const { userId } = adminUserParamsSchema.parse(request.params);
+  return getAdminUserDetail(userId);
+}
+
+export function handleUpdateAdminUserProfile(request: FastifyRequest) {
+  const { userId } = adminUserParamsSchema.parse(request.params);
+  return updateAdminUserProfile(request.log, userId, updateProfileSchema.parse(request.body));
+}
+
+export function handleRevokeAdminUserRefreshSessions(request: FastifyRequest) {
+  const { userId } = adminUserParamsSchema.parse(request.params);
+  return revokeAdminUserRefreshSessions(request.log, userId);
+}
+
+export function handleRemoveAdminUser(request: FastifyRequest) {
+  const { userId } = adminUserParamsSchema.parse(request.params);
+  return removeAdminUser(request.log, userId);
+}
+
+export function handleListAdminUserLibraryPage(request: FastifyRequest) {
+  const { userId } = adminUserParamsSchema.parse(request.params);
+  return listAdminUserLibraryPage(userId, adminPageQuerySchema.parse(request.query));
+}
+
+export function handleUpsertAdminUserLibraryItem(request: FastifyRequest) {
+  const { userId, mangaId } = adminUserMangaParamsSchema.parse(request.params);
+  return upsertAdminUserLibraryItem(request.log, userId, mangaId, adminLibraryBodySchema.parse(request.body));
+}
+
+export function handleRemoveAdminUserLibraryItem(request: FastifyRequest) {
+  const { userId, mangaId } = adminUserMangaParamsSchema.parse(request.params);
+  return removeAdminUserLibraryItem(request.log, userId, mangaId);
+}
+
+export function handleListAdminUserProgressPage(request: FastifyRequest) {
+  const { userId } = adminUserParamsSchema.parse(request.params);
+  return listAdminUserProgressPage(userId, adminProgressQuerySchema.parse(request.query));
+}
+
+export function handleUpsertAdminUserProgressItem(request: FastifyRequest) {
+  const { userId, chapterId } = adminUserChapterParamsSchema.parse(request.params);
+  return upsertAdminUserProgressItem(request.log, userId, chapterId, adminProgressBodySchema.parse(request.body));
+}
+
+export function handleRemoveAdminUserProgressItem(request: FastifyRequest) {
+  const { userId, chapterId } = adminUserChapterParamsSchema.parse(request.params);
+  return removeAdminUserProgressItem(request.log, userId, chapterId);
+}
+
+export function handleListAdminUserSearchHistoryPage(request: FastifyRequest) {
+  const { userId } = adminUserParamsSchema.parse(request.params);
+  return listAdminUserSearchHistoryPage(userId, adminPageQuerySchema.parse(request.query));
+}
+
+export function handleClearAdminUserSearchHistoryPage(request: FastifyRequest) {
+  const { userId } = adminUserParamsSchema.parse(request.params);
+  return clearAdminUserSearchHistoryPage(request.log, userId);
+}
 
 export function getAdminDashboardOverview() {
   return getAdminOverview();

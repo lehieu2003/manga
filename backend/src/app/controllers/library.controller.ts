@@ -1,10 +1,31 @@
+import type { FastifyRequest } from "fastify";
 import type { z } from "zod";
 import { domainEvents } from "../../domain/events/index.js";
 import { cachedCatalogRepository, libraryRepository } from "../../domain/repositories/index.js";
 import { normalizeCoverProxyUrl } from "../../shared/utils/media-url.js";
-import type { upsertLibrarySchema } from "../validators/library.validator.js";
+import { libraryParamsSchema, upsertLibrarySchema } from "../validators/library.validator.js";
 
 type UpsertLibraryInput = z.infer<typeof upsertLibrarySchema>;
+
+export async function handleListLibrary(request: FastifyRequest) {
+  return listLibrary(request.user.sub);
+}
+
+export async function handleGetLibraryItem(request: FastifyRequest) {
+  const { mangaId } = libraryParamsSchema.parse(request.params);
+  return getLibraryItem(request.user.sub, mangaId);
+}
+
+export async function handleUpsertLibraryItem(request: FastifyRequest) {
+  const { mangaId } = libraryParamsSchema.parse(request.params);
+  const body = upsertLibrarySchema.parse(request.body ?? {});
+  return upsertLibraryItem(request.user.sub, mangaId, body);
+}
+
+export async function handleRemoveLibraryItem(request: FastifyRequest) {
+  const { mangaId } = libraryParamsSchema.parse(request.params);
+  return removeLibraryItem(request.user.sub, mangaId);
+}
 
 export async function listLibrary(userId: string) {
   const items = await libraryRepository.findByUser(userId);

@@ -1,3 +1,4 @@
+import type { FastifyReply, FastifyRequest } from "fastify";
 import type { z } from "zod";
 import { cached, clearCacheByPrefix, makeCacheKey } from "../../infrastructure/cache/cache.service.js";
 import { getManga, getReader, searchManga, searchMangaCreators } from "../../infrastructure/mangadex/mangadex.client.js";
@@ -6,10 +7,52 @@ import { getCachedChapters, getCachedGenres, getCachedManga, markCachedChapterUn
 import { listMangaDexTags, resolveMangaDexTagFilters } from "../../domain/services/mangadex-tag-registry.service.js";
 import { HttpError } from "../../shared/errors/http-error.js";
 import { normalizeCoverProxyUrl } from "../../shared/utils/media-url.js";
-import type { chaptersQuerySchema, mangaSearchQuerySchema } from "../validators/catalog.validator.js";
+import { chapterParamsSchema, chaptersQuerySchema, mangaParamsSchema, mangaSearchQuerySchema } from "../validators/catalog.validator.js";
 
 type ChaptersQuery = z.infer<typeof chaptersQuerySchema>;
 type MangaSearchQuery = z.infer<typeof mangaSearchQuerySchema>;
+
+export async function handleSearchCatalogManga(request: FastifyRequest) {
+  const query = mangaSearchQuerySchema.parse(request.query);
+  let userId: string | undefined;
+
+  if (request.headers.authorization) {
+    try {
+      await request.jwtVerify();
+      userId = request.user.sub;
+    } catch {
+      return searchCatalogManga(query, {
+        onInvalidAuth: () => request.log.debug("Skipping search history for anonymous or invalid token")
+      });
+    }
+  }
+
+  return searchCatalogManga(query, { userId });
+}
+
+export async function handleListCatalogGenres() {
+  return listCatalogGenres();
+}
+
+export async function handleGetCatalogManga(request: FastifyRequest) {
+  const { id } = mangaParamsSchema.parse(request.params);
+  return getCatalogManga(id);
+}
+
+export async function handleListCatalogChapters(request: FastifyRequest, reply: FastifyReply) {
+  const { id } = mangaParamsSchema.parse(request.params);
+  const query = chaptersQuerySchema.parse(request.query);
+  const result = await listCatalogChapters(id, query);
+  if (result.needsSync) {
+    reply.code(202);
+  }
+  return result;
+}
+
+export async function handleGetChapterReader(request: FastifyRequest) {
+  const { id } = chapterParamsSchema.parse(request.params);
+  return getChapterReader(id);
+}
 
 export async function searchCatalogManga(query: MangaSearchQuery, options: { userId?: string; onInvalidAuth?: () => void } = {}) {
   const includedTagNames = [...new Set([...(query.genre ? [query.genre] : []), ...query.genres, ...query.includedTags])];

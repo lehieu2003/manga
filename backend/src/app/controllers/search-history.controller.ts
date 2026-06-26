@@ -1,9 +1,17 @@
-import type { FastifyBaseLogger } from "fastify";
+import type { FastifyBaseLogger, FastifyRequest } from "fastify";
 import type { z } from "zod";
 import { searchHistoryRepository } from "../../domain/repositories/index.js";
-import type { searchHistoryQuerySchema } from "../validators/search-history.validator.js";
+import { searchHistoryQuerySchema } from "../validators/search-history.validator.js";
 
 type SearchHistoryQuery = z.infer<typeof searchHistoryQuerySchema>;
+
+export async function handleListSearchHistory(request: FastifyRequest) {
+  return listSearchHistory(request.user.sub, searchHistoryQuerySchema.parse(request.query));
+}
+
+export async function handleClearSearchHistory(request: FastifyRequest) {
+  return clearSearchHistory(request.log, request.user.sub);
+}
 
 export async function listSearchHistory(userId: string, query: SearchHistoryQuery) {
   const result = await searchHistoryRepository.findByUser(userId, query);

@@ -1,10 +1,22 @@
-import type { FastifyBaseLogger } from "fastify";
+import type { FastifyBaseLogger, FastifyRequest } from "fastify";
 import type { z } from "zod";
 import { getAdminRagStatus, listAdminRagDocuments, reindexAdminRagCatalog } from "../../domain/services/admin-rag.service.js";
-import type { adminRagDocumentsQuerySchema, adminRagReindexBodySchema } from "../validators/admin-rag.validator.js";
+import { adminRagDocumentsQuerySchema, adminRagReindexBodySchema } from "../validators/admin-rag.validator.js";
 
 type AdminRagDocumentsQuery = z.infer<typeof adminRagDocumentsQuerySchema>;
 type AdminRagReindexBody = z.infer<typeof adminRagReindexBodySchema>;
+
+export function handleGetAdminRagStatusView() {
+  return getAdminRagStatusView();
+}
+
+export function handleListAdminRagDocumentPage(request: FastifyRequest) {
+  return listAdminRagDocumentPage(adminRagDocumentsQuerySchema.parse(request.query));
+}
+
+export function handleReindexAdminRag(request: FastifyRequest) {
+  return reindexAdminRag(request.log, adminRagReindexBodySchema.parse(request.body ?? {}));
+}
 
 export function getAdminRagStatusView() {
   return getAdminRagStatus();
