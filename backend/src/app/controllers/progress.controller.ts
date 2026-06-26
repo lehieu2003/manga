@@ -1,9 +1,26 @@
+import type { FastifyRequest } from "fastify";
 import type { z } from "zod";
 import { domainEvents } from "../../domain/events/index.js";
 import { cachedCatalogRepository, progressRepository } from "../../domain/repositories/index.js";
-import type { saveProgressSchema } from "../validators/progress.validator.js";
+import { chapterProgressParamsSchema, mangaProgressParamsSchema, saveProgressSchema } from "../validators/progress.validator.js";
 
 type SaveProgressInput = z.infer<typeof saveProgressSchema>;
+
+export async function handleGetMangaProgress(request: FastifyRequest) {
+  const { mangaId } = mangaProgressParamsSchema.parse(request.params);
+  return getMangaProgress(request.user.sub, mangaId);
+}
+
+export async function handleGetChapterProgress(request: FastifyRequest) {
+  const { chapterId } = chapterProgressParamsSchema.parse(request.params);
+  return getChapterProgress(request.user.sub, chapterId);
+}
+
+export async function handleSaveChapterProgress(request: FastifyRequest) {
+  const { chapterId } = chapterProgressParamsSchema.parse(request.params);
+  const body = saveProgressSchema.parse(request.body);
+  return saveChapterProgress(request.user.sub, chapterId, body);
+}
 
 export async function getMangaProgress(userId: string, mangaId: string) {
   const chaptersProgress = await progressRepository.findByManga(userId, mangaId);
