@@ -1,4 +1,4 @@
-import { CommentReactionType, CommentStatus, CommentTargetType, NotificationType, type Comment } from "@prisma/client";
+import { CommentReactionType, CommentStatus, CommentTargetType, NotificationSubjectType, NotificationType, type Comment } from "@prisma/client";
 import { prisma } from "../../infrastructure/database/client.js";
 import { HttpError } from "../../shared/errors/http-error.js";
 import { commentRepository } from "../repositories/comment.repository.js";
@@ -43,9 +43,9 @@ export async function createComment(input: { targetType: CommentTargetType; targ
       userId: parent.authorId,
       actorId: input.authorId,
       type: NotificationType.COMMENT_REPLY,
-      commentId: comment.id,
-      targetType: comment.targetType,
-      targetId: comment.targetId
+      subjectType: NotificationSubjectType.COMMENT,
+      subjectId: comment.id,
+      payload: { commentId: comment.id, targetType: comment.targetType, targetId: comment.targetId }
     });
   }
 
@@ -85,9 +85,9 @@ export async function upsertCommentReaction(userId: string, commentId: string, t
       userId: comment.authorId,
       actorId: userId,
       type: NotificationType.COMMENT_REACTION,
-      commentId,
-      targetType: comment.targetType,
-      targetId: comment.targetId
+      subjectType: NotificationSubjectType.COMMENT,
+      subjectId: commentId,
+      payload: { commentId, targetType: comment.targetType, targetId: comment.targetId }
     });
   }
   return { reaction };
@@ -134,7 +134,14 @@ async function assertComment(id: string) {
   return comment;
 }
 
-async function createNotification(input: { userId: string; actorId: string; type: NotificationType; commentId: string; targetType: CommentTargetType; targetId: string }) {
+async function createNotification(input: {
+  userId: string;
+  actorId: string;
+  type: NotificationType;
+  subjectType: NotificationSubjectType;
+  subjectId: string;
+  payload: { commentId: string; targetType: CommentTargetType; targetId: string };
+}) {
   const notification = await prisma.notification.create({ data: input });
   publishNotification(notification);
   return notification;
@@ -168,17 +175,34 @@ function serializeComment<T extends Comment & { author?: { id: string; displayNa
   };
 }
 
-function serializeNotification(notification: { id: string; actorId: string; type: NotificationType; commentId: string; targetType: CommentTargetType; targetId: string; readAt: Date | null; createdAt: Date; actor: { id: string; displayName: string; avatarUrl: string | null } }) {
+function serializeNotification(notification: {
+  id: string;
+  actorId: string;
+  type: NotificationType;
+  subjectType: NotificationSubjectType;
+  subjectId: string;
+  payload: unknown;
+  readAt: Date | null;
+  createdAt: Date;
+  actor: { id: string; displayName: string; avatarUrl: string | null };
+}) {
+  const payload = isCommentNotificationPayload(notification.payload) ? notification.payload : null;
   return {
     id: notification.id,
     actor: notification.actor,
     type: notification.type,
-    commentId: notification.commentId,
-    targetType: notification.targetType,
-    targetId: notification.targetId,
+    subjectType: notification.subjectType,
+    subjectId: notification.subjectId,
+    ...(payload ? payload : {}),
     readAt: notification.readAt,
     createdAt: notification.createdAt
   };
+}
+
+function isCommentNotificationPayload(value: unknown): value is { commentId: string; targetType: CommentTargetType; targetId: string } {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const payload = value as Record<string, unknown>;
+  return typeof payload.commentId === "string" && typeof payload.targetId === "string" && (payload.targetType === CommentTargetType.MANGA || payload.targetType === CommentTargetType.CHAPTER);
 }
 
 function buildReactionCounts(counts: Array<{ type: CommentReactionType; count: number }>) {

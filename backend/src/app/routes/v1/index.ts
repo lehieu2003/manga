@@ -11,3 +11,4 @@ export { libraryRoutes } from "./library.routes.js";
 export { pageRoutes } from "./page.routes.js";
 export { progressRoutes } from "./progress.routes.js";
 export { searchHistoryRoutes } from "./search-history.routes.js";
+export { socialConversationRoutes } from "./social-conversation.routes.js";
