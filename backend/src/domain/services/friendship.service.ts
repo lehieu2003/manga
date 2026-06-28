@@ -138,6 +138,27 @@ export async function listSentFriendRequests(userId: string) {
   return listFriendships(userId, FriendshipStatus.PENDING, "sent");
 }
 
+export async function searchSocialUsers(userId: string, input: { query?: string; limit: number }) {
+  const query = input.query?.trim();
+  const users = await prisma.user.findMany({
+    where: {
+      id: { not: userId },
+      ...(query
+        ? {
+            OR: [
+              { displayName: { contains: query, mode: "insensitive" } },
+              { email: { contains: query, mode: "insensitive" } }
+            ]
+          }
+        : {})
+    },
+    orderBy: [{ displayName: "asc" }, { createdAt: "desc" }],
+    take: Math.min(Math.max(input.limit, 1), 20),
+    select: { id: true, displayName: true, avatarUrl: true }
+  });
+  return { data: users };
+}
+
 async function listFriendships(userId: string, status: FriendshipStatus, direction?: "incoming" | "sent") {
   const rows = await prisma.friendship.findMany({
     where: {

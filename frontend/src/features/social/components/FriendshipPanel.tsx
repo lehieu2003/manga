@@ -7,7 +7,7 @@ import {
   X,
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
-import type { Friendship, SocialConversation } from '@/types';
+import type { Friendship, SocialConversation, User } from '@/types';
 import { Avatar } from './Avatar';
 import { LoadingRow } from './primitives';
 
@@ -15,10 +15,14 @@ type FriendshipPanelProps = {
   friends: Friendship[];
   incomingRequests: Friendship[];
   sentRequests: Friendship[];
+  userResults: Array<Pick<User, 'id' | 'displayName' | 'avatarUrl'>>;
+  userSearchQuery: string;
+  userSearchLoading: boolean;
   loading: boolean;
   busy: boolean;
   currentUserId: string;
   conversations: SocialConversation[];
+  onUserSearchChange: (value: string) => void;
   onSendRequest: (targetUserId: string) => void;
   onOpenFriend: (friendship: Friendship) => void;
   onAccept: (friendshipId: string) => void;
@@ -31,10 +35,14 @@ export function FriendshipPanel({
   friends,
   incomingRequests,
   sentRequests,
+  userResults,
+  userSearchQuery,
+  userSearchLoading,
   loading,
   busy,
   currentUserId,
   conversations,
+  onUserSearchChange,
   onSendRequest,
   onOpenFriend,
   onAccept,
@@ -42,13 +50,14 @@ export function FriendshipPanel({
   onBlock,
   onUnfriend,
 }: FriendshipPanelProps) {
-  const [addresseeId, setAddresseeId] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const selectedUser = userResults.find((user) => user.id === selectedUserId);
 
   const submitRequest = () => {
-    const targetUserId = addresseeId.trim();
-    if (!targetUserId) return;
-    onSendRequest(targetUserId);
-    setAddresseeId('');
+    if (!selectedUserId) return;
+    onSendRequest(selectedUserId);
+    setSelectedUserId('');
+    onUserSearchChange('');
   };
 
   return (
@@ -66,20 +75,42 @@ export function FriendshipPanel({
       >
         <input
           className='control'
-          value={addresseeId}
-          onChange={(event) => setAddresseeId(event.target.value)}
-          placeholder='User ID'
-          aria-label='Friend user ID'
+          value={userSearchQuery}
+          onChange={(event) => {
+            setSelectedUserId('');
+            onUserSearchChange(event.target.value);
+          }}
+          placeholder='Search readers'
+          aria-label='Search readers'
         />
         <button
           className='btn reader-icon-button'
           type='submit'
-          disabled={!addresseeId.trim() || busy}
+          disabled={!selectedUserId || busy}
           aria-label='Send friend request'
+          title={selectedUser ? `Send request to ${selectedUser.displayName}` : 'Select a reader first'}
         >
           <UserPlus size={16} />
         </button>
       </form>
+      <div className='social-friend-search-results' aria-label='Reader search results'>
+        {userSearchLoading ? <LoadingRow label='Searching readers' /> : null}
+        {!userSearchLoading && !userResults.length ? (
+          <p>No readers found</p>
+        ) : null}
+        {userResults.map((user) => (
+          <button
+            key={user.id}
+            className={user.id === selectedUserId ? 'social-friend-search-selected' : ''}
+            type='button'
+            aria-label={user.displayName}
+            onClick={() => setSelectedUserId(user.id)}
+          >
+            <Avatar label={user.displayName} src={user.avatarUrl} compact />
+            <span>{user.displayName}</span>
+          </button>
+        ))}
+      </div>
 
       {loading ? <LoadingRow label='Loading friends' /> : null}
 

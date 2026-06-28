@@ -1,7 +1,13 @@
-import type { Friendship, FriendshipListResponse, SocialConversationListResponse, SocialMessage, SocialMessageListResponse, SocialMessageType } from "@/types";
+import type { Friendship, FriendshipListResponse, SocialConversationListResponse, SocialMessage, SocialMessageListResponse, SocialMessageType, SocialUserSearchResponse } from "@/types";
 import { request } from "../interceptors/auth.interceptor";
 
 export const socialApi = {
+  searchSocialUsers(params: { query?: string; limit?: number } = {}) {
+    const query = new URLSearchParams();
+    if (params.query) query.set("query", params.query);
+    query.set("limit", String(params.limit ?? 12));
+    return request<SocialUserSearchResponse>(`/social/users?${query}`);
+  },
   listFriends() {
     return request<FriendshipListResponse>("/social/friends");
   },

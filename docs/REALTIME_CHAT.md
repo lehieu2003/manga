@@ -22,7 +22,8 @@ Completed:
 - Phase 1 friendship and durable DM creation is implemented: friend requests, accept, reject, block, unblock, unfriend, friend lists, notifications, rate limits, canonical friendships, and atomic DM creation exist.
 - Phase 2 backend is mostly implemented for direct messages: inbox, conversation detail, message history, idempotent text sends, soft delete, read checkpoints, post-commit message events, read events, typing events, and presence events exist.
 - Phase 2 frontend direct-message slice is implemented and verified: inbox list, selected thread, message history, optimistic text sends, socket reconciliation, delete action, typing indicator handling, and automatic read marking are covered by focused tests.
-- User-facing friendship and DM entry UI is implemented and verified: users can send a request by user ID, review incoming and sent requests, accept or reject requests, block or remove friends, and open an existing direct-message thread from the friend list.
+- User-facing friendship and DM entry UI is implemented and verified: users can search readers by display name/email, send a friend request from a selected result, review incoming and sent requests, accept or reject requests, block or remove friends, and open an existing direct-message thread from the friend list.
+- Social notification rendering is fixed for friendship events: friend requests and accepted-request notifications label as social events and route to `/messages` instead of falling through to comment notification copy/routes.
 
 In progress:
 
@@ -33,6 +34,8 @@ Latest verification:
 - `npm run typecheck` in `frontend`
 - `npm run build` in `frontend`
 - `npm test` in `frontend`
+- `npm run typecheck` in `backend`
+- `npm test -- src/tests/unit/friendship.service.test.ts` in `backend`
 
 Not started:
 

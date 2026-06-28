@@ -4,11 +4,13 @@ import { useToast } from '@/stores/toast.store';
 
 type UseFriendshipsOptions = {
   enabled: boolean;
+  userSearchQuery: string;
   onAcceptedConversation: (conversationId: string) => void;
 };
 
 export function useFriendships({
   enabled,
+  userSearchQuery,
   onAcceptedConversation,
 }: UseFriendshipsOptions) {
   const queryClient = useQueryClient();
@@ -28,6 +30,11 @@ export function useFriendships({
   const { data: sentRequestsData, isLoading: sentRequestsLoading } = useQuery({
     queryKey: ['social-friends', 'sent'],
     queryFn: () => api.listSentFriendRequests(),
+    enabled,
+  });
+  const { data: userSearchData, isLoading: userSearchLoading } = useQuery({
+    queryKey: ['social-users', userSearchQuery],
+    queryFn: () => api.searchSocialUsers({ query: userSearchQuery, limit: 8 }),
     enabled,
   });
 
@@ -92,8 +99,10 @@ export function useFriendships({
     friends: friendsData?.data ?? [],
     incomingRequests: incomingRequestsData?.data ?? [],
     sentRequests: sentRequestsData?.data ?? [],
+    userResults: userSearchData?.data ?? [],
     loading:
       friendsLoading || incomingRequestsLoading || sentRequestsLoading,
+    userSearchLoading,
     busy:
       sendFriendRequest.isPending ||
       acceptFriend.isPending ||

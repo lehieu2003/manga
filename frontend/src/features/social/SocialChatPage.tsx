@@ -22,6 +22,7 @@ export function SocialChatPage() {
     string | null
   >(null);
   const [draft, setDraft] = useState('');
+  const [friendSearchQuery, setFriendSearchQuery] = useState('');
 
   // --- Conversations ---
   const conversations = useQuery({
@@ -38,6 +39,7 @@ export function SocialChatPage() {
 
   const friendships = useFriendships({
     enabled: Boolean(user),
+    userSearchQuery: friendSearchQuery,
     onAcceptedConversation: setSelectedConversationId,
   });
 
@@ -147,10 +149,14 @@ export function SocialChatPage() {
           friends={friendships.friends}
           incomingRequests={friendships.incomingRequests}
           sentRequests={friendships.sentRequests}
+          userResults={friendships.userResults}
+          userSearchQuery={friendSearchQuery}
+          userSearchLoading={friendships.userSearchLoading}
           loading={friendships.loading}
           busy={friendships.busy}
           currentUserId={user?.id ?? ''}
           conversations={conversationItems}
+          onUserSearchChange={setFriendSearchQuery}
           onSendRequest={friendships.sendFriendRequest}
           onOpenFriend={openFriendConversation}
           onAccept={friendships.acceptFriendRequest}

@@ -1787,6 +1787,48 @@ img {
   font-size: 0.82rem;
 }
 
+.social-friend-search-results {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.social-friend-search-results p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.social-friend-search-results button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  min-height: 2.15rem;
+  border: 1px solid color-mix(in srgb, var(--line), transparent 20%);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--surface), transparent 24%);
+  color: var(--text);
+  padding: 0.25rem 0.45rem;
+  text-align: left;
+}
+
+.social-friend-search-results button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  font-weight: 850;
+}
+
+.social-friend-search-results button:hover,
+.social-friend-search-results .social-friend-search-selected {
+  border-color: color-mix(in srgb, var(--accent), var(--line) 35%);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
 .social-friend-section {
   display: grid;
   gap: 0.35rem;

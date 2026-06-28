@@ -255,7 +255,8 @@ export type SendChatMessageResponse = {
 export type CommentTargetType = "MANGA" | "CHAPTER";
 export type CommentStatus = "VISIBLE" | "DELETED" | "HIDDEN";
 export type CommentReactionType = "LIKE" | "HEART" | "SAD" | "LAUGH" | "ANGRY";
-export type NotificationType = "COMMENT_REPLY" | "COMMENT_REACTION";
+export type NotificationType = "COMMENT_REPLY" | "COMMENT_REACTION" | "FRIEND_REQUEST" | "FRIEND_ACCEPTED" | "CHAT_MESSAGE" | "GROUP_INVITE";
+export type NotificationSubjectType = "COMMENT" | "FRIENDSHIP" | "CONVERSATION" | "MESSAGE";
 
 export type CommentAuthor = Pick<User, "id" | "displayName" | "avatarUrl" | "role">;
 
@@ -288,9 +289,14 @@ export type UserNotification = {
   id: string;
   actor: Pick<User, "id" | "displayName" | "avatarUrl">;
   type: NotificationType;
-  commentId: string;
-  targetType: CommentTargetType;
-  targetId: string;
+  subjectType: NotificationSubjectType;
+  subjectId: string;
+  commentId?: string;
+  targetType?: CommentTargetType;
+  targetId?: string;
+  friendshipId?: string;
+  conversationId?: string;
+  messageId?: string;
   readAt: string | null;
   createdAt: string;
 };
@@ -321,6 +327,10 @@ export type Friendship = {
 
 export type FriendshipListResponse = {
   data: Friendship[];
+};
+
+export type SocialUserSearchResponse = {
+  data: Array<Pick<User, "id" | "displayName" | "avatarUrl">>;
 };
 
 export type SocialMember = {

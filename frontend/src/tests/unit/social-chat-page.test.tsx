@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   listFriends: vi.fn(),
   listIncomingFriendRequests: vi.fn(),
   listSentFriendRequests: vi.fn(),
+  searchSocialUsers: vi.fn(),
   sendFriendRequest: vi.fn(),
   acceptFriendRequest: vi.fn(),
   rejectFriendRequest: vi.fn(),
@@ -35,6 +36,7 @@ vi.mock("@/api", () => ({
     listFriends: mocks.listFriends,
     listIncomingFriendRequests: mocks.listIncomingFriendRequests,
     listSentFriendRequests: mocks.listSentFriendRequests,
+    searchSocialUsers: mocks.searchSocialUsers,
     sendFriendRequest: mocks.sendFriendRequest,
     acceptFriendRequest: mocks.acceptFriendRequest,
     rejectFriendRequest: mocks.rejectFriendRequest,
@@ -79,6 +81,7 @@ describe("SocialChatPage", () => {
     mocks.listFriends.mockResolvedValue({ data: [friendship] });
     mocks.listIncomingFriendRequests.mockResolvedValue({ data: [incomingFriendship] });
     mocks.listSentFriendRequests.mockResolvedValue({ data: [sentFriendship] });
+    mocks.searchSocialUsers.mockResolvedValue({ data: [searchResult] });
     mocks.sendFriendRequest.mockResolvedValue({ friendship: sentFriendship });
     mocks.acceptFriendRequest.mockResolvedValue({ friendship: acceptedFriendship, conversation });
     mocks.rejectFriendRequest.mockResolvedValue({ friendship: incomingFriendship });
@@ -162,7 +165,9 @@ describe("SocialChatPage", () => {
     expect(await screen.findByText("Incoming")).toBeInTheDocument();
     expect(screen.getByText("Pending")).toBeInTheDocument();
 
-    await user.type(screen.getByLabelText("Friend user ID"), "user-5");
+    expect(await screen.findByText("Kira")).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Search readers"), "kir");
+    await user.click(screen.getByRole("button", { name: "Kira" }));
     await user.click(screen.getByRole("button", { name: "Send friend request" }));
     expect(mocks.sendFriendRequest).toHaveBeenCalledWith("user-5");
 
@@ -201,6 +206,12 @@ const requester = {
 const pendingPeer = {
   id: "user-4",
   displayName: "Aya",
+  avatarUrl: null
+};
+
+const searchResult = {
+  id: "user-5",
+  displayName: "Kira",
   avatarUrl: null
 };
 

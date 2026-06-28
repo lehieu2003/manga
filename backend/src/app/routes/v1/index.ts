@@ -7,6 +7,7 @@ export { catalogRoutes } from "./catalog.routes.js";
 export { chatRoutes } from "./chat.routes.js";
 export { commentRoutes } from "./comment.routes.js";
 export { coverRoutes } from "./cover.routes.js";
+export { friendshipRoutes } from "./friendship.routes.js";
 export { libraryRoutes } from "./library.routes.js";
 export { pageRoutes } from "./page.routes.js";
 export { progressRoutes } from "./progress.routes.js";

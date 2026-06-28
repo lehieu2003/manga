@@ -1,10 +1,15 @@
 import type { FastifyRequest } from "fastify";
-import { acceptFriendRequest, blockFriendship, listFriends, listIncomingFriendRequests, listSentFriendRequests, rejectFriendRequest, sendFriendRequest, unfriend, unblockFriendship } from "../../domain/services/friendship.service.js";
-import { friendshipParamsSchema, sendFriendRequestSchema } from "../validators/friendship.validator.js";
+import { acceptFriendRequest, blockFriendship, listFriends, listIncomingFriendRequests, listSentFriendRequests, rejectFriendRequest, searchSocialUsers, sendFriendRequest, unfriend, unblockFriendship } from "../../domain/services/friendship.service.js";
+import { friendshipParamsSchema, sendFriendRequestSchema, socialUserSearchQuerySchema } from "../validators/friendship.validator.js";
 
 export async function handleSendFriendRequest(request: FastifyRequest) {
   const { addresseeId } = sendFriendRequestSchema.parse(request.body);
   return sendFriendRequest(request.user.sub, addresseeId);
+}
+
+export async function handleSearchSocialUsers(request: FastifyRequest) {
+  const query = socialUserSearchQuerySchema.parse(request.query);
+  return searchSocialUsers(request.user.sub, query);
 }
 
 export async function handleAcceptFriendRequest(request: FastifyRequest) {

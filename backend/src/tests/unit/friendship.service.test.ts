@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const prismaMocks = vi.hoisted(() => ({
   userFindUnique: vi.fn(),
+  userFindMany: vi.fn(),
   friendshipFindUnique: vi.fn(),
   friendshipCreate: vi.fn(),
   notificationCreate: vi.fn(),
@@ -11,7 +12,7 @@ const prismaMocks = vi.hoisted(() => ({
 
 vi.mock("../../infrastructure/database/client.js", () => ({
   prisma: {
-    user: { findUnique: prismaMocks.userFindUnique },
+    user: { findUnique: prismaMocks.userFindUnique, findMany: prismaMocks.userFindMany },
     friendship: { findUnique: prismaMocks.friendshipFindUnique, create: prismaMocks.friendshipCreate },
     notification: { create: prismaMocks.notificationCreate },
     $transaction: prismaMocks.transaction
@@ -87,5 +88,26 @@ describe("friendship service", () => {
     const result = await blockFriendship("user-b", "friendship-1");
 
     expect(result.friendship).toMatchObject({ status: FriendshipStatus.BLOCKED, blockedById: "user-b" });
+  });
+
+  it("searches public social users by display name and excludes the current user", async () => {
+    const { searchSocialUsers } = await import("../../domain/services/friendship.service.js");
+    prismaMocks.userFindMany.mockResolvedValue([{ id: "user-b", displayName: "Mina", avatarUrl: null }]);
+
+    const result = await searchSocialUsers("user-a", { query: "min", limit: 50 });
+
+    expect(result.data).toEqual([{ id: "user-b", displayName: "Mina", avatarUrl: null }]);
+    expect(prismaMocks.userFindMany).toHaveBeenCalledWith({
+      where: {
+        id: { not: "user-a" },
+        OR: [
+          { displayName: { contains: "min", mode: "insensitive" } },
+          { email: { contains: "min", mode: "insensitive" } }
+        ]
+      },
+      orderBy: [{ displayName: "asc" }, { createdAt: "desc" }],
+      take: 20,
+      select: { id: true, displayName: true, avatarUrl: true }
+    });
   });
 });

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { handleAcceptFriendRequest, handleBlockFriendship, handleListFriends, handleListIncomingFriendRequests, handleListSentFriendRequests, handleRejectFriendRequest, handleSendFriendRequest, handleUnfriend, handleUnblockFriendship } from "../../controllers/friendship.controller.js";
+import { handleAcceptFriendRequest, handleBlockFriendship, handleListFriends, handleListIncomingFriendRequests, handleListSentFriendRequests, handleRejectFriendRequest, handleSearchSocialUsers, handleSendFriendRequest, handleUnfriend, handleUnblockFriendship } from "../../controllers/friendship.controller.js";
 
 const friendRequestRateLimit = {
   max: 10,
@@ -7,6 +7,7 @@ const friendRequestRateLimit = {
 };
 
 export async function friendshipRoutes(app: FastifyInstance) {
+  app.get("/social/users", { preHandler: app.authenticate }, handleSearchSocialUsers);
   app.get("/social/friends", { preHandler: app.authenticate }, handleListFriends);
   app.get("/social/friends/requests", { preHandler: app.authenticate }, handleListIncomingFriendRequests);
   app.get("/social/friends/sent", { preHandler: app.authenticate }, handleListSentFriendRequests);
