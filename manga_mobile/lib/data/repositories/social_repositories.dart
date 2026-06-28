@@ -91,6 +91,140 @@ class NotificationRepository {
   }
 }
 
+class SocialRepository {
+  SocialRepository(this._api);
+
+  final ApiClient _api;
+
+  Future<SocialUserSearchResponse> searchUsers({
+    String? query,
+    int limit = 12,
+  }) {
+    return _api.get(
+      '/social/users',
+      SocialUserSearchResponse.fromJson,
+      query: {'query': query, 'limit': '$limit'},
+    );
+  }
+
+  Future<FriendshipListResponse> listFriends() {
+    return _api.get('/social/friends', FriendshipListResponse.fromJson);
+  }
+
+  Future<FriendshipListResponse> listIncomingRequests() {
+    return _api.get(
+      '/social/friends/requests',
+      FriendshipListResponse.fromJson,
+    );
+  }
+
+  Future<FriendshipListResponse> listSentRequests() {
+    return _api.get('/social/friends/sent', FriendshipListResponse.fromJson);
+  }
+
+  Future<Friendship> sendFriendRequest(String addresseeId) async {
+    final payload = await _api.post('/social/friends/requests', {
+      'addresseeId': addresseeId,
+    }, (json) => json);
+    return Friendship.fromJson(payload['friendship'] as Map<String, dynamic>);
+  }
+
+  Future<(Friendship, SocialConversation)> acceptFriendRequest(
+    String friendshipId,
+  ) async {
+    final payload = await _api.patch(
+      '/social/friends/$friendshipId/accept',
+      const {},
+      (json) => json,
+    );
+    return (
+      Friendship.fromJson(payload['friendship'] as Map<String, dynamic>),
+      SocialConversation.fromJson(
+        payload['conversation'] as Map<String, dynamic>,
+      ),
+    );
+  }
+
+  Future<Friendship> rejectFriendRequest(String friendshipId) async {
+    final payload = await _api.patch(
+      '/social/friends/$friendshipId/reject',
+      const {},
+      (json) => json,
+    );
+    return Friendship.fromJson(payload['friendship'] as Map<String, dynamic>);
+  }
+
+  Future<Friendship> blockFriendship(String friendshipId) async {
+    final payload = await _api.patch(
+      '/social/friends/$friendshipId/block',
+      const {},
+      (json) => json,
+    );
+    return Friendship.fromJson(payload['friendship'] as Map<String, dynamic>);
+  }
+
+  Future<Friendship> unfriend(String friendshipId) async {
+    final payload = await _api.delete(
+      '/social/friends/$friendshipId',
+      (json) => json,
+    );
+    return Friendship.fromJson(payload['friendship'] as Map<String, dynamic>);
+  }
+
+  Future<SocialConversationListResponse> listConversations({
+    int limit = 30,
+    String? cursor,
+  }) {
+    return _api.get(
+      '/social/conversations',
+      SocialConversationListResponse.fromJson,
+      query: {'limit': '$limit', 'cursor': cursor},
+    );
+  }
+
+  Future<SocialMessageListResponse> listMessages(
+    String conversationId, {
+    int limit = 50,
+    String? cursor,
+  }) {
+    return _api.get(
+      '/social/conversations/$conversationId/messages',
+      SocialMessageListResponse.fromJson,
+      query: {'limit': '$limit', 'cursor': cursor},
+    );
+  }
+
+  Future<SocialMessage> sendMessage({
+    required String conversationId,
+    required String clientMessageId,
+    required String content,
+  }) async {
+    final payload = await _api.post(
+      '/social/conversations/$conversationId/messages',
+      {'clientMessageId': clientMessageId, 'type': 'TEXT', 'content': content},
+      (json) => json,
+    );
+    return SocialMessage.fromJson(payload['message'] as Map<String, dynamic>);
+  }
+
+  Future<SocialMessage> deleteMessage(String messageId) async {
+    final payload = await _api.delete(
+      '/social/messages/$messageId',
+      (json) => json,
+    );
+    return SocialMessage.fromJson(payload['message'] as Map<String, dynamic>);
+  }
+
+  Future<void> markConversationRead(
+    String conversationId,
+    String lastMessageId,
+  ) async {
+    await _api.patch('/social/conversations/$conversationId/read', {
+      'lastMessageId': lastMessageId,
+    }, (json) => json);
+  }
+}
+
 class ChatRepository {
   ChatRepository(this._api);
 

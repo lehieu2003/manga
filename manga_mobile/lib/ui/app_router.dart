@@ -12,6 +12,7 @@ import 'features/auth/verify_email/verify_email_screen.dart';
 import 'features/detail/manga_detail_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/library/library_screen.dart';
+import 'features/messages/messages_screen.dart';
 import 'features/notifications/notification_center.dart';
 import 'features/reader/reader_screen.dart';
 import 'features/search/search_screen.dart';
@@ -24,6 +25,7 @@ GoRouter buildRouter(AppState appState) {
     redirect: (context, state) {
       final protected =
           state.matchedLocation == '/library' ||
+          state.matchedLocation == '/messages' ||
           state.matchedLocation == '/settings';
       final authRoute =
           state.matchedLocation == '/login' ||
@@ -70,6 +72,10 @@ GoRouter buildRouter(AppState appState) {
           GoRoute(
             path: '/library',
             builder: (context, state) => const LibraryScreen(),
+          ),
+          GoRoute(
+            path: '/messages',
+            builder: (context, state) => const MessagesScreen(),
           ),
           GoRoute(
             path: '/settings',
@@ -128,10 +134,12 @@ class AppShell extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final showSearchAction = MediaQuery.sizeOf(context).width >= 360;
     final routeContext = _routeContext(location);
+    final showChatAssistant = app.isSignedIn && location != '/messages';
     final index = switch (location) {
       '/search' => 1,
       '/library' => 2,
-      '/settings' => 3,
+      '/messages' => 3,
+      '/settings' => 4,
       _ => 0,
     };
     return Scaffold(
@@ -160,7 +168,7 @@ class AppShell extends StatelessWidget {
             app.setThemeMode(isDark ? ThemeMode.light : ThemeMode.dark),
       ),
       body: SafeArea(child: child),
-      floatingActionButton: app.isSignedIn
+      floatingActionButton: showChatAssistant
           ? ChatAssistantButton(
               mangaId: routeContext.mangaId,
               chapterId: routeContext.chapterId,
@@ -176,6 +184,8 @@ class AppShell extends StatelessWidget {
             case 2:
               context.go('/library');
             case 3:
+              context.go('/messages');
+            case 4:
               context.go('/settings');
             default:
               context.go('/');
@@ -196,6 +206,11 @@ class AppShell extends StatelessWidget {
             icon: Icon(Icons.library_books_outlined),
             activeIcon: Icon(Icons.library_books),
             label: 'Library',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat_bubble_outline),
+            activeIcon: Icon(Icons.chat_bubble),
+            label: 'Messages',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
@@ -293,6 +308,13 @@ class _AppDrawer extends StatelessWidget {
               label: 'Library',
               selected: location == '/library',
               onTap: () => _go(context, '/library'),
+            ),
+            _DrawerDestination(
+              icon: Icons.chat_bubble_outline,
+              selectedIcon: Icons.chat_bubble,
+              label: 'Messages',
+              selected: location == '/messages',
+              onTap: () => _go(context, '/messages'),
             ),
             _DrawerDestination(
               icon: Icons.person_outline,

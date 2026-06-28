@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:manga_mobile/data/repositories/repositories.dart';
 import 'package:manga_mobile/data/services/api_client.dart';
 import 'package:manga_mobile/data/services/reader_settings_store.dart';
+import 'package:manga_mobile/data/services/social_socket_service.dart';
 import 'package:manga_mobile/data/services/theme_store.dart';
 import 'package:manga_mobile/domain/models/models.dart';
 import 'package:manga_mobile/ui/app_state.dart';
@@ -16,6 +19,8 @@ TestAppState buildApp({bool signedIn = false}) {
     libraryRepository: FakeLibraryRepository(api),
     commentRepository: FakeCommentRepository(api),
     notificationRepository: FakeNotificationRepository(api),
+    socialRepository: FakeSocialRepository(api),
+    socialSocketService: FakeSocialSocketService(api),
     chatRepository: FakeChatRepository(api),
     readerSettingsStore: FakeReaderSettingsStore(),
     themeStore: FakeThemeStore(),
@@ -38,10 +43,96 @@ class TestAppState extends AppState {
     required super.libraryRepository,
     required super.commentRepository,
     required super.notificationRepository,
+    required super.socialRepository,
+    required super.socialSocketService,
     required super.chatRepository,
     super.readerSettingsStore,
     super.themeStore,
   });
+}
+
+class FakeSocialSocketService extends SocialSocketService {
+  FakeSocialSocketService(super.api);
+
+  final _messageNewController =
+      StreamController<SocialMessageNewEvent>.broadcast();
+  final _messageDeletedController =
+      StreamController<SocialMessageDeletedEvent>.broadcast();
+  final _readUpdatedController =
+      StreamController<SocialReadUpdatedEvent>.broadcast();
+  final _typingController = StreamController<SocialTypingEvent>.broadcast();
+  final List<String> readMessageIds = [];
+  final List<String> typingStarts = [];
+  final List<String> typingStops = [];
+
+  @override
+  Stream<SocialMessageNewEvent> get messageNew => _messageNewController.stream;
+
+  @override
+  Stream<SocialMessageDeletedEvent> get messageDeleted =>
+      _messageDeletedController.stream;
+
+  @override
+  Stream<SocialReadUpdatedEvent> get readUpdated =>
+      _readUpdatedController.stream;
+
+  @override
+  Stream<SocialTypingEvent> get typing => _typingController.stream;
+
+  @override
+  Future<void> connect() async {}
+
+  @override
+  Future<bool> markMessageRead({
+    required String conversationId,
+    required String lastMessageId,
+  }) async {
+    readMessageIds.add(lastMessageId);
+    return true;
+  }
+
+  void emitMessageNew(SocialMessage message) {
+    _messageNewController.add(
+      SocialMessageNewEvent(
+        conversationId: message.conversationId,
+        message: message,
+      ),
+    );
+  }
+
+  void emitTyping({
+    required String conversationId,
+    required SocialUser user,
+    required bool typing,
+  }) {
+    _typingController.add(
+      SocialTypingEvent(
+        conversationId: conversationId,
+        user: user,
+        typing: typing,
+      ),
+    );
+  }
+
+  @override
+  void emitTypingStart(String conversationId) {
+    typingStarts.add(conversationId);
+  }
+
+  @override
+  void emitTypingStop(String conversationId) {
+    typingStops.add(conversationId);
+  }
+
+  @override
+  Future<void> dispose() async {
+    await Future.wait([
+      _messageNewController.close(),
+      _messageDeletedController.close(),
+      _readUpdatedController.close(),
+      _typingController.close(),
+    ]);
+  }
 }
 
 class FakeThemeStore extends ThemeStore {
@@ -393,6 +484,8 @@ class FakeNotificationRepository extends NotificationRepository {
             role: 'USER',
           ),
           type: 'COMMENT_REPLY',
+          subjectType: 'COMMENT',
+          subjectId: 'comment-1',
           commentId: 'comment-1',
           targetType: 'MANGA',
           targetId: 'manga-1',
@@ -412,6 +505,236 @@ class FakeNotificationRepository extends NotificationRepository {
   Future<void> markAllRead() async {
     readIds.add('notification-1');
   }
+}
+
+class FakeSocialRepository extends SocialRepository {
+  FakeSocialRepository(super.api);
+
+  final users = const [
+    SocialUser(id: 'user-2', displayName: 'Mina'),
+    SocialUser(id: 'user-3', displayName: 'Nori'),
+    SocialUser(id: 'user-4', displayName: 'Kira'),
+  ];
+
+  final List<String> sentRequests = [];
+  final List<String> acceptedRequests = [];
+
+  late List<Friendship> friends = [
+    Friendship(
+      id: 'friendship-1',
+      userAId: 'user-1',
+      userBId: 'user-2',
+      requestedById: 'user-1',
+      status: 'ACCEPTED',
+      createdAt: testNow,
+      updatedAt: testNow,
+      friend: users[0],
+    ),
+  ];
+
+  late List<Friendship> incoming = [
+    Friendship(
+      id: 'friendship-2',
+      userAId: 'user-1',
+      userBId: 'user-3',
+      requestedById: 'user-3',
+      status: 'PENDING',
+      createdAt: testNow,
+      updatedAt: testNow,
+      friend: users[1],
+    ),
+  ];
+
+  late List<Friendship> sent = [];
+
+  late List<SocialConversation> conversations = [
+    SocialConversation(
+      id: 'conversation-1',
+      type: 'DM',
+      directKey: 'user-1:user-2',
+      createdAt: testNow,
+      updatedAt: testNow,
+      lastMessageAt: testNow,
+      members: [
+        SocialMember(
+          id: 'member-1',
+          userId: 'user-1',
+          role: 'MEMBER',
+          status: 'ACTIVE',
+          joinedAt: testNow,
+          user: const SocialUser(id: 'user-1', displayName: 'Reader'),
+        ),
+        SocialMember(
+          id: 'member-2',
+          userId: 'user-2',
+          role: 'MEMBER',
+          status: 'ACTIVE',
+          joinedAt: testNow,
+          user: users[0],
+        ),
+      ],
+      latestMessage: SocialMessage(
+        id: 'message-1',
+        conversationId: 'conversation-1',
+        senderId: 'user-2',
+        type: 'TEXT',
+        content: 'See you at chapter 12',
+        createdAt: testNow,
+        updatedAt: testNow,
+        sender: users[0],
+      ),
+    ),
+  ];
+
+  late List<SocialMessage> messages = [
+    SocialMessage(
+      id: 'message-2',
+      conversationId: 'conversation-1',
+      senderId: 'user-1',
+      type: 'TEXT',
+      content: 'I am caught up',
+      createdAt: testNow.add(const Duration(minutes: 1)),
+      updatedAt: testNow.add(const Duration(minutes: 1)),
+      sender: const SocialUser(id: 'user-1', displayName: 'Reader'),
+    ),
+    SocialMessage(
+      id: 'message-1',
+      conversationId: 'conversation-1',
+      senderId: 'user-2',
+      type: 'TEXT',
+      content: 'See you at chapter 12',
+      createdAt: testNow,
+      updatedAt: testNow,
+      sender: users[0],
+    ),
+  ];
+
+  SocialMessage pushPeerMessage(String content) {
+    final message = SocialMessage(
+      id: 'message-${messages.length + 1}',
+      conversationId: 'conversation-1',
+      senderId: 'user-2',
+      type: 'TEXT',
+      content: content,
+      createdAt: testNow.add(Duration(minutes: messages.length + 1)),
+      updatedAt: testNow.add(Duration(minutes: messages.length + 1)),
+      sender: users[0],
+    );
+    messages = [message, ...messages];
+    return message;
+  }
+
+  @override
+  Future<SocialUserSearchResponse> searchUsers({
+    String? query,
+    int limit = 12,
+  }) async {
+    final needle = query?.toLowerCase() ?? '';
+    return SocialUserSearchResponse(
+      data: users
+          .where((user) => user.displayName.toLowerCase().contains(needle))
+          .toList(),
+    );
+  }
+
+  @override
+  Future<FriendshipListResponse> listFriends() async =>
+      FriendshipListResponse(data: friends);
+
+  @override
+  Future<FriendshipListResponse> listIncomingRequests() async =>
+      FriendshipListResponse(data: incoming);
+
+  @override
+  Future<FriendshipListResponse> listSentRequests() async =>
+      FriendshipListResponse(data: sent);
+
+  @override
+  Future<Friendship> sendFriendRequest(String addresseeId) async {
+    sentRequests.add(addresseeId);
+    final user = users.firstWhere((item) => item.id == addresseeId);
+    final friendship = Friendship(
+      id: 'friendship-sent',
+      userAId: 'user-1',
+      userBId: addresseeId,
+      requestedById: 'user-1',
+      status: 'PENDING',
+      createdAt: testNow,
+      updatedAt: testNow,
+      friend: user,
+    );
+    sent = [friendship];
+    return friendship;
+  }
+
+  @override
+  Future<(Friendship, SocialConversation)> acceptFriendRequest(
+    String friendshipId,
+  ) async {
+    acceptedRequests.add(friendshipId);
+    final friendship = incoming.firstWhere((item) => item.id == friendshipId);
+    incoming = [];
+    friends = [...friends, friendship];
+    return (friendship, conversations.first);
+  }
+
+  @override
+  Future<Friendship> rejectFriendRequest(String friendshipId) async {
+    final friendship = incoming.firstWhere((item) => item.id == friendshipId);
+    incoming = incoming.where((item) => item.id != friendshipId).toList();
+    return friendship;
+  }
+
+  @override
+  Future<Friendship> blockFriendship(String friendshipId) async =>
+      friends.firstWhere((item) => item.id == friendshipId);
+
+  @override
+  Future<Friendship> unfriend(String friendshipId) async {
+    final friendship = friends.firstWhere((item) => item.id == friendshipId);
+    friends = friends.where((item) => item.id != friendshipId).toList();
+    return friendship;
+  }
+
+  @override
+  Future<SocialConversationListResponse> listConversations({
+    int limit = 30,
+    String? cursor,
+  }) async => SocialConversationListResponse(data: conversations);
+
+  @override
+  Future<SocialMessageListResponse> listMessages(
+    String conversationId, {
+    int limit = 50,
+    String? cursor,
+  }) async => SocialMessageListResponse(data: messages);
+
+  @override
+  Future<SocialMessage> sendMessage({
+    required String conversationId,
+    required String clientMessageId,
+    required String content,
+  }) async {
+    final message = SocialMessage(
+      id: 'message-${messages.length + 1}',
+      conversationId: conversationId,
+      senderId: 'user-1',
+      clientMessageId: clientMessageId,
+      type: 'TEXT',
+      content: content,
+      createdAt: testNow.add(Duration(minutes: messages.length + 1)),
+      updatedAt: testNow.add(Duration(minutes: messages.length + 1)),
+      sender: const SocialUser(id: 'user-1', displayName: 'Reader'),
+    );
+    messages = [message, ...messages];
+    return message;
+  }
+
+  @override
+  Future<void> markConversationRead(
+    String conversationId,
+    String lastMessageId,
+  ) async {}
 }
 
 class FakeChatRepository extends ChatRepository {
