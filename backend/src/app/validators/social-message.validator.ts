@@ -7,6 +7,10 @@ export const socialMessageListQuerySchema = z.object({
   cursor: z.string().trim().min(1).optional()
 });
 
+export const socialMessageParamsSchema = z.object({
+  id: z.string().trim().min(1)
+});
+
 export const sendSocialMessageSchema = z.object({
   clientMessageId: uuidSchema,
   type: z.literal(SocialMessageType.TEXT).default(SocialMessageType.TEXT),

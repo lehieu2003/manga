@@ -11,8 +11,10 @@ const prismaMocks = vi.hoisted(() => ({
   socialMessageFindUnique: vi.fn(),
   socialMessageFindFirst: vi.fn(),
   socialMessageCreate: vi.fn(),
+  socialMessageUpdate: vi.fn(),
   friendshipFindUnique: vi.fn(),
   emitMessageNew: vi.fn(),
+  emitMessageDeleted: vi.fn(),
   emitReadUpdated: vi.fn()
 }));
 
@@ -27,7 +29,8 @@ vi.mock("../../../infrastructure/database/client.js", () => ({
       findMany: prismaMocks.socialMessageFindMany,
       findUnique: prismaMocks.socialMessageFindUnique,
       findFirst: prismaMocks.socialMessageFindFirst,
-      create: prismaMocks.socialMessageCreate
+      create: prismaMocks.socialMessageCreate,
+      update: prismaMocks.socialMessageUpdate
     },
     socialConversationMember: {
       update: prismaMocks.socialConversationMemberUpdate
@@ -40,6 +43,7 @@ vi.mock("../../../infrastructure/database/client.js", () => ({
 
 vi.mock("../../../infrastructure/realtime/socket-server.js", () => ({
   emitMessageNew: prismaMocks.emitMessageNew,
+  emitMessageDeleted: prismaMocks.emitMessageDeleted,
   emitReadUpdated: prismaMocks.emitReadUpdated
 }));
 
@@ -225,6 +229,60 @@ describe("social message routes", () => {
     expect(prismaMocks.emitReadUpdated).not.toHaveBeenCalled();
     await app.close();
   });
+
+  it("soft deletes the sender's message and emits a delete event", async () => {
+    const app = await makeSocialMessageApp();
+    prismaMocks.socialMessageFindFirst.mockResolvedValue(makeMessage());
+    prismaMocks.socialMessageUpdate.mockResolvedValue(makeMessage({ deletedAt: new Date("2024-01-05T00:00:00.000Z"), updatedAt: new Date("2024-01-05T00:00:00.000Z") }));
+
+    const response = await app.inject({ method: "DELETE", url: "/api/social/messages/msg-1" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      message: { id: "msg-1", content: null, attachments: null, deletedAt: "2024-01-05T00:00:00.000Z" },
+      idempotent: false
+    });
+    expect(prismaMocks.socialMessageFindFirst).toHaveBeenCalledWith({
+      where: {
+        id: "msg-1",
+        conversation: { members: { some: { userId: "user-1", status: SocialMembershipStatus.ACTIVE } } }
+      },
+      include: { sender: { select: { id: true, displayName: true, avatarUrl: true } } }
+    });
+    expect(prismaMocks.socialMessageUpdate).toHaveBeenCalledWith({
+      where: { id: "msg-1" },
+      data: { deletedAt: expect.any(Date) },
+      include: { sender: { select: { id: true, displayName: true, avatarUrl: true } } }
+    });
+    expect(prismaMocks.emitMessageDeleted).toHaveBeenCalledWith("conv-1", "msg-1");
+    await app.close();
+  });
+
+  it("rejects deleting another sender's message", async () => {
+    const app = await makeSocialMessageApp();
+    prismaMocks.socialMessageFindFirst.mockResolvedValue(makeMessage({ senderId: "user-2" }));
+
+    const response = await app.inject({ method: "DELETE", url: "/api/social/messages/msg-1" });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({ code: "SOCIAL_MESSAGE_DELETE_FORBIDDEN" });
+    expect(prismaMocks.socialMessageUpdate).not.toHaveBeenCalled();
+    expect(prismaMocks.emitMessageDeleted).not.toHaveBeenCalled();
+    await app.close();
+  });
+
+  it("treats deleting an already deleted message as idempotent", async () => {
+    const app = await makeSocialMessageApp();
+    prismaMocks.socialMessageFindFirst.mockResolvedValue(makeMessage({ deletedAt: new Date("2024-01-05T00:00:00.000Z") }));
+
+    const response = await app.inject({ method: "DELETE", url: "/api/social/messages/msg-1" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ message: { id: "msg-1", content: null }, idempotent: true });
+    expect(prismaMocks.socialMessageUpdate).not.toHaveBeenCalled();
+    expect(prismaMocks.emitMessageDeleted).not.toHaveBeenCalled();
+    await app.close();
+  });
 });
 
 async function makeSocialMessageApp() {
@@ -277,7 +335,22 @@ function makeConversationBase(): ConversationFixture {
   };
 }
 
-function makeMessage() {
+type MessageFixture = {
+  id: string;
+  conversationId: string;
+  senderId: string | null;
+  clientMessageId: string | null;
+  type: SocialMessageType;
+  content: string | null;
+  attachments: unknown;
+  replyToId: string | null;
+  deletedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  sender: { id: string; displayName: string; avatarUrl: string | null } | null;
+};
+
+function makeMessage(input: Partial<MessageFixture> = {}): MessageFixture {
   return {
     id: "msg-1",
     conversationId: "conv-1",
@@ -290,6 +363,7 @@ function makeMessage() {
     deletedAt: null,
     createdAt: new Date("2024-01-04T00:00:00.000Z"),
     updatedAt: new Date("2024-01-04T00:00:00.000Z"),
-    sender: { id: "user-1", displayName: "Reader", avatarUrl: null }
+    sender: { id: "user-1", displayName: "Reader", avatarUrl: null },
+    ...input
   };
 }

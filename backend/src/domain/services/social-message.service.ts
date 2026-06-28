@@ -1,5 +1,5 @@
 import { FriendshipStatus, Prisma, SocialConversationType, SocialMembershipStatus, SocialMessageType } from "@prisma/client";
-import { emitMessageNew, emitReadUpdated } from "../../infrastructure/realtime/socket-server.js";
+import { emitMessageDeleted, emitMessageNew, emitReadUpdated } from "../../infrastructure/realtime/socket-server.js";
 import { prisma } from "../../infrastructure/database/client.js";
 import { HttpError } from "../../shared/errors/http-error.js";
 
@@ -162,6 +162,31 @@ export async function markSocialConversationRead(userId: string, conversationId:
   emitReadUpdated(payload);
 
   return serializeReadState(updated);
+}
+
+export async function deleteSocialMessage(userId: string, messageId: string) {
+  const message = await prisma.socialMessage.findFirst({
+    where: {
+      id: messageId,
+      conversation: {
+        members: { some: { userId, status: SocialMembershipStatus.ACTIVE } }
+      }
+    },
+    include: messageInclude
+  });
+
+  if (!message) throw new HttpError(404, "Message not found", "SOCIAL_MESSAGE_NOT_FOUND");
+  if (message.senderId !== userId) throw new HttpError(403, "Only the sender can delete this message", "SOCIAL_MESSAGE_DELETE_FORBIDDEN");
+  if (message.deletedAt) return { message: serializeMessage(message), idempotent: true };
+
+  const deleted = await prisma.socialMessage.update({
+    where: { id: message.id },
+    data: { deletedAt: new Date() },
+    include: messageInclude
+  });
+
+  emitMessageDeleted(deleted.conversationId, deleted.id);
+  return { message: serializeMessage(deleted), idempotent: false };
 }
 
 async function assertActiveConversationMember(userId: string, conversationId: string) {
