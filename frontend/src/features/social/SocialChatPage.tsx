@@ -3,17 +3,21 @@ import { Loader2, MessageCircle, Send, UsersRound } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/api';
 import { useAuth } from '@/features/auth/stores/auth.store';
+import { useToast } from '@/stores/toast.store';
+import type { Friendship } from '@/types';
 import { CONVERSATIONS_PAGE_SIZE } from './constants';
+import { useFriendships } from './hooks/useFriendships';
 import { useSocialMessages } from './hooks/useSocialMessages';
 import { useSocialSocket } from './hooks/useSocialSocket';
-import { Avatar } from './components/Avatar';
 import { ConversationButton } from './components/ConversationButton';
+import { FriendshipPanel } from './components/FriendshipPanel';
 import { MessageRow } from './components/MessageRow';
 import { ThreadHeader } from './components/ThreadHeader';
 import { EmptyPanel, LoadingRow } from './components/primitives';
 
 export function SocialChatPage() {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [selectedConversationId, setSelectedConversationId] = useState<
     string | null
   >(null);
@@ -31,6 +35,11 @@ export function SocialChatPage() {
     conversationItems.find((c) => c.id === selectedConversationId) ??
     conversationItems[0] ??
     null;
+
+  const friendships = useFriendships({
+    enabled: Boolean(user),
+    onAcceptedConversation: setSelectedConversationId,
+  });
 
   // Auto-select conversation đầu tiên khi load xong
   useEffect(() => {
@@ -83,6 +92,26 @@ export function SocialChatPage() {
     if (selectedConversation) emitTypingStart(selectedConversation.id);
   };
 
+  const findDirectConversationId = (friendUserId: string) =>
+    conversationItems.find(
+      (conversation) =>
+        conversation.type === 'DM' &&
+        conversation.members.some((member) => member.userId === friendUserId),
+    )?.id;
+
+  const openFriendConversation = (friendship: Friendship) => {
+    const conversationId = findDirectConversationId(friendship.friend.id);
+    if (!conversationId) {
+      showToast({
+        title: 'No direct message yet',
+        description: 'Accepting a friend request creates the DM thread.',
+        kind: 'error',
+      });
+      return;
+    }
+    setSelectedConversationId(conversationId);
+  };
+
   return (
     <section className='social-chat-page'>
       {/* Sidebar */}
@@ -114,6 +143,21 @@ export function SocialChatPage() {
             />
           ))}
         </div>
+        <FriendshipPanel
+          friends={friendships.friends}
+          incomingRequests={friendships.incomingRequests}
+          sentRequests={friendships.sentRequests}
+          loading={friendships.loading}
+          busy={friendships.busy}
+          currentUserId={user?.id ?? ''}
+          conversations={conversationItems}
+          onSendRequest={friendships.sendFriendRequest}
+          onOpenFriend={openFriendConversation}
+          onAccept={friendships.acceptFriendRequest}
+          onReject={friendships.rejectFriendRequest}
+          onBlock={friendships.blockFriend}
+          onUnfriend={friendships.unfriend}
+        />
       </aside>
 
       {/* Thread */}

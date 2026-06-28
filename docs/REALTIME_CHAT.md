@@ -22,21 +22,20 @@ Completed:
 - Phase 1 friendship and durable DM creation is implemented: friend requests, accept, reject, block, unblock, unfriend, friend lists, notifications, rate limits, canonical friendships, and atomic DM creation exist.
 - Phase 2 backend is mostly implemented for direct messages: inbox, conversation detail, message history, idempotent text sends, soft delete, read checkpoints, post-commit message events, read events, typing events, and presence events exist.
 - Phase 2 frontend direct-message slice is implemented and verified: inbox list, selected thread, message history, optimistic text sends, socket reconciliation, delete action, typing indicator handling, and automatic read marking are covered by focused tests.
+- User-facing friendship and DM entry UI is implemented and verified: users can send a request by user ID, review incoming and sent requests, accept or reject requests, block or remove friends, and open an existing direct-message thread from the friend list.
 
 In progress:
 
-- Prepare the next implementation slice. Phase 3 group chat can start after this checkpoint is committed.
+- Prepare the Phase 3 group chat foundation slice.
 
 Latest verification:
 
 - `npm run typecheck` in `frontend`
 - `npm run build` in `frontend`
 - `npm test` in `frontend`
-- `npm test -- src/tests/integration/routes/social-conversation.routes.test.ts src/tests/integration/routes/social-message.routes.test.ts src/tests/integration/realtime/socket-server.test.ts src/tests/unit/friendship.service.test.ts` in `backend`
 
 Not started:
 
-- User-facing friendship management UI.
 - Phase 3 group chat: group creation, invites, member roles, leave/kick, ownership transfer, disband, and system messages.
 - Phase 4 rich features: manga sharing, image uploads, reactions UI/API completion, mute controls, offline push delivery, and voice notes.
 

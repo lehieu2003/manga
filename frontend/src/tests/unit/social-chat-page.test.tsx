@@ -11,6 +11,14 @@ type SocketHandler = (payload?: unknown, ack?: (result: unknown) => void) => voi
 const mocks = vi.hoisted(() => ({
   listSocialConversations: vi.fn(),
   listSocialMessages: vi.fn(),
+  listFriends: vi.fn(),
+  listIncomingFriendRequests: vi.fn(),
+  listSentFriendRequests: vi.fn(),
+  sendFriendRequest: vi.fn(),
+  acceptFriendRequest: vi.fn(),
+  rejectFriendRequest: vi.fn(),
+  blockFriendship: vi.fn(),
+  unfriend: vi.fn(),
   sendSocialMessage: vi.fn(),
   deleteSocialMessage: vi.fn(),
   markSocialConversationRead: vi.fn(),
@@ -24,6 +32,14 @@ vi.mock("@/api", () => ({
   api: {
     listSocialConversations: mocks.listSocialConversations,
     listSocialMessages: mocks.listSocialMessages,
+    listFriends: mocks.listFriends,
+    listIncomingFriendRequests: mocks.listIncomingFriendRequests,
+    listSentFriendRequests: mocks.listSentFriendRequests,
+    sendFriendRequest: mocks.sendFriendRequest,
+    acceptFriendRequest: mocks.acceptFriendRequest,
+    rejectFriendRequest: mocks.rejectFriendRequest,
+    blockFriendship: mocks.blockFriendship,
+    unfriend: mocks.unfriend,
     sendSocialMessage: mocks.sendSocialMessage,
     deleteSocialMessage: mocks.deleteSocialMessage,
     markSocialConversationRead: mocks.markSocialConversationRead
@@ -60,6 +76,14 @@ describe("SocialChatPage", () => {
     mocks.markSocialConversationRead.mockResolvedValue({ readState: { conversationId: "conv-1", userId: currentUser.id, lastReadMessageId: "message-2", lastReadAt: now } });
     mocks.listSocialConversations.mockResolvedValue({ data: [conversation], nextCursor: null });
     mocks.listSocialMessages.mockResolvedValue({ data: [peerMessage, ownMessage], nextCursor: null });
+    mocks.listFriends.mockResolvedValue({ data: [friendship] });
+    mocks.listIncomingFriendRequests.mockResolvedValue({ data: [incomingFriendship] });
+    mocks.listSentFriendRequests.mockResolvedValue({ data: [sentFriendship] });
+    mocks.sendFriendRequest.mockResolvedValue({ friendship: sentFriendship });
+    mocks.acceptFriendRequest.mockResolvedValue({ friendship: acceptedFriendship, conversation });
+    mocks.rejectFriendRequest.mockResolvedValue({ friendship: incomingFriendship });
+    mocks.blockFriendship.mockResolvedValue({ friendship });
+    mocks.unfriend.mockResolvedValue({ friendship });
     mocks.sendSocialMessage.mockResolvedValue({ message: sentMessage, idempotent: false });
     mocks.deleteSocialMessage.mockResolvedValue({ message: deletedOwnMessage, idempotent: false });
   });
@@ -67,7 +91,7 @@ describe("SocialChatPage", () => {
   it("renders the inbox and marks the latest peer message as read with REST fallback", async () => {
     renderWithClient(<SocialChatPage />);
 
-    expect(await screen.findAllByText("Mina")).toHaveLength(2);
+    expect(await screen.findAllByText("Mina")).toHaveLength(3);
     expect(screen.getAllByText("See you at chapter 12")).toHaveLength(2);
     expect(screen.getByText("I am caught up")).toBeInTheDocument();
 
@@ -129,6 +153,25 @@ describe("SocialChatPage", () => {
     await waitFor(() => expect(mocks.deleteSocialMessage).toHaveBeenCalledWith("message-1"));
     expect(await screen.findByText("Deleted message")).toBeInTheDocument();
   });
+
+  it("manages friendship requests and opens a friend DM", async () => {
+    const user = userEvent.setup();
+    renderWithClient(<SocialChatPage />);
+
+    await screen.findAllByText("Mina");
+    expect(await screen.findByText("Incoming")).toBeInTheDocument();
+    expect(screen.getByText("Pending")).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Friend user ID"), "user-5");
+    await user.click(screen.getByRole("button", { name: "Send friend request" }));
+    expect(mocks.sendFriendRequest).toHaveBeenCalledWith("user-5");
+
+    await user.click(screen.getByRole("button", { name: "Accept request" }));
+    await waitFor(() => expect(mocks.acceptFriendRequest).toHaveBeenCalledWith("friendship-incoming"));
+
+    await user.click(screen.getByRole("button", { name: "Open direct message" }));
+    expect(await screen.findByRole("heading", { name: "Mina" })).toBeInTheDocument();
+  });
 });
 
 const now = "2026-06-28T09:00:00.000Z";
@@ -146,6 +189,18 @@ const currentUser: User = {
 const peer = {
   id: "user-2",
   displayName: "Mina",
+  avatarUrl: null
+};
+
+const requester = {
+  id: "user-3",
+  displayName: "Nori",
+  avatarUrl: null
+};
+
+const pendingPeer = {
+  id: "user-4",
+  displayName: "Aya",
   avatarUrl: null
 };
 
@@ -248,6 +303,48 @@ const conversation: SocialConversation = {
     createdAt: peerMessage.createdAt,
     sender: peerMessage.sender
   }
+};
+
+const friendship = {
+  id: "friendship-1",
+  userAId: currentUser.id,
+  userBId: peer.id,
+  requestedById: currentUser.id,
+  blockedById: null,
+  status: "ACCEPTED" as const,
+  createdAt: "2026-06-28T08:00:00.000Z",
+  updatedAt: "2026-06-28T08:00:00.000Z",
+  friend: peer
+};
+
+const incomingFriendship = {
+  id: "friendship-incoming",
+  userAId: currentUser.id,
+  userBId: requester.id,
+  requestedById: requester.id,
+  blockedById: null,
+  status: "PENDING" as const,
+  createdAt: "2026-06-28T08:10:00.000Z",
+  updatedAt: "2026-06-28T08:10:00.000Z",
+  friend: requester
+};
+
+const sentFriendship = {
+  id: "friendship-sent",
+  userAId: currentUser.id,
+  userBId: pendingPeer.id,
+  requestedById: currentUser.id,
+  blockedById: null,
+  status: "PENDING" as const,
+  createdAt: "2026-06-28T08:20:00.000Z",
+  updatedAt: "2026-06-28T08:20:00.000Z",
+  friend: pendingPeer
+};
+
+const acceptedFriendship = {
+  ...incomingFriendship,
+  status: "ACCEPTED" as const,
+  updatedAt: "2026-06-28T08:30:00.000Z"
 };
 
 function renderWithClient(ui: ReactElement) {

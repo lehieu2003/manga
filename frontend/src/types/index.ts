@@ -305,6 +305,24 @@ export type SocialMemberRole = "OWNER" | "ADMIN" | "MEMBER";
 export type SocialMembershipStatus = "ACTIVE" | "PENDING_INVITE" | "LEFT";
 export type SocialMessageType = "TEXT" | "MANGA_SHARE" | "IMAGE" | "SYSTEM" | "VOICE_NOTE";
 
+export type FriendshipStatus = "PENDING" | "ACCEPTED" | "REJECTED" | "BLOCKED";
+
+export type Friendship = {
+  id: string;
+  userAId: string;
+  userBId: string;
+  requestedById: string;
+  blockedById: string | null;
+  status: FriendshipStatus;
+  createdAt: string;
+  updatedAt: string;
+  friend: Pick<User, "id" | "displayName" | "avatarUrl">;
+};
+
+export type FriendshipListResponse = {
+  data: Friendship[];
+};
+
 export type SocialMember = {
   id: string;
   userId: string;

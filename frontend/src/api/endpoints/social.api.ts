@@ -1,7 +1,37 @@
-import type { SocialConversationListResponse, SocialMessage, SocialMessageListResponse, SocialMessageType } from "@/types";
+import type { Friendship, FriendshipListResponse, SocialConversationListResponse, SocialMessage, SocialMessageListResponse, SocialMessageType } from "@/types";
 import { request } from "../interceptors/auth.interceptor";
 
 export const socialApi = {
+  listFriends() {
+    return request<FriendshipListResponse>("/social/friends");
+  },
+  listIncomingFriendRequests() {
+    return request<FriendshipListResponse>("/social/friends/requests");
+  },
+  listSentFriendRequests() {
+    return request<FriendshipListResponse>("/social/friends/sent");
+  },
+  sendFriendRequest(addresseeId: string) {
+    return request<{ friendship: Friendship }>("/social/friends/requests", {
+      method: "POST",
+      body: JSON.stringify({ addresseeId })
+    });
+  },
+  acceptFriendRequest(id: string) {
+    return request<{ friendship: Friendship; conversation: SocialConversationListResponse["data"][number] }>(`/social/friends/${id}/accept`, { method: "PATCH" });
+  },
+  rejectFriendRequest(id: string) {
+    return request<{ friendship: Friendship }>(`/social/friends/${id}/reject`, { method: "PATCH" });
+  },
+  blockFriendship(id: string) {
+    return request<{ friendship: Friendship }>(`/social/friends/${id}/block`, { method: "PATCH" });
+  },
+  unblockFriendship(id: string) {
+    return request<{ friendship: Friendship }>(`/social/friends/${id}/unblock`, { method: "PATCH" });
+  },
+  unfriend(id: string) {
+    return request<{ friendship: Friendship }>(`/social/friends/${id}`, { method: "DELETE" });
+  },
   listSocialConversations(params: { limit?: number; cursor?: string } = {}) {
     const query = new URLSearchParams();
     query.set("limit", String(params.limit ?? 30));
