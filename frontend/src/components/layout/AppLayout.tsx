@@ -1,4 +1,4 @@
-import { BookOpen, Library, Moon, Search, Settings, ShieldCheck, Sun, UserRound } from "lucide-react";
+import { BookOpen, Library, MessageCircle, Moon, Search, Settings, ShieldCheck, Sun, UserRound } from "lucide-react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { getAdminToken } from "@/api";
 import { ScrollToTopButton } from "@/components/layout/ScrollToTopButton";
@@ -11,6 +11,7 @@ const navItems = [
   { to: "/", label: "Home", icon: BookOpen },
   { to: "/search", label: "Search", icon: Search },
   { to: "/library", label: "Library", icon: Library },
+  { to: "/messages", label: "Messages", icon: MessageCircle },
   { to: "/settings", label: "Settings", icon: Settings }
 ];
 

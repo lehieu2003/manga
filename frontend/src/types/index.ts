@@ -299,3 +299,66 @@ export type NotificationListResponse = {
   data: UserNotification[];
   unreadCount: number;
 };
+
+export type SocialConversationType = "DM" | "GROUP";
+export type SocialMemberRole = "OWNER" | "ADMIN" | "MEMBER";
+export type SocialMembershipStatus = "ACTIVE" | "PENDING_INVITE" | "LEFT";
+export type SocialMessageType = "TEXT" | "MANGA_SHARE" | "IMAGE" | "SYSTEM" | "VOICE_NOTE";
+
+export type SocialMember = {
+  id: string;
+  userId: string;
+  role: SocialMemberRole;
+  status: SocialMembershipStatus;
+  joinedAt: string;
+  user: Pick<User, "id" | "displayName" | "avatarUrl">;
+};
+
+export type SocialCurrentMember = {
+  id: string;
+  role: SocialMemberRole;
+  status: SocialMembershipStatus;
+  lastReadMessageId: string | null;
+  lastReadAt: string | null;
+  mutedUntil: string | null;
+  joinedAt: string;
+};
+
+export type SocialMessage = {
+  id: string;
+  conversationId: string;
+  senderId: string | null;
+  clientMessageId: string | null;
+  type: SocialMessageType;
+  content: string | null;
+  attachments: unknown;
+  replyToId: string | null;
+  deletedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  sender: Pick<User, "id" | "displayName" | "avatarUrl"> | null;
+};
+
+export type SocialConversation = {
+  id: string;
+  type: SocialConversationType;
+  title: string | null;
+  avatarUrl: string | null;
+  directKey: string | null;
+  lastMessageAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  currentMember: SocialCurrentMember | null;
+  members: SocialMember[];
+  latestMessage: Omit<SocialMessage, "clientMessageId" | "replyToId" | "updatedAt"> | null;
+};
+
+export type SocialConversationListResponse = {
+  data: SocialConversation[];
+  nextCursor: string | null;
+};
+
+export type SocialMessageListResponse = {
+  data: SocialMessage[];
+  nextCursor: string | null;
+};
