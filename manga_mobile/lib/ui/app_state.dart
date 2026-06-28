@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/repositories/repositories.dart';
 import '../data/services/reader_settings_store.dart';
+import '../data/services/social_socket_service.dart';
 import '../data/services/theme_store.dart';
 import '../domain/models/models.dart';
 
@@ -12,6 +13,8 @@ class AppState extends ChangeNotifier {
     required this.libraryRepository,
     required this.commentRepository,
     required this.notificationRepository,
+    required this.socialRepository,
+    required this.socialSocketService,
     required this.chatRepository,
     ReaderSettingsStore? readerSettingsStore,
     ThemeStore? themeStore,
@@ -23,6 +26,8 @@ class AppState extends ChangeNotifier {
   final LibraryRepository libraryRepository;
   final CommentRepository commentRepository;
   final NotificationRepository notificationRepository;
+  final SocialRepository socialRepository;
+  final SocialSocketService socialSocketService;
   final ChatRepository chatRepository;
   final ReaderSettingsStore readerSettingsStore;
   final ThemeStore themeStore;

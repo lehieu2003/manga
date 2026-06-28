@@ -40,4 +40,74 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Manga detail'), findsOneWidget);
   });
+
+  testWidgets('messages screen manages friendships and sends a DM', (
+    tester,
+  ) async {
+    final app = buildApp(signedIn: true);
+    await tester.pumpWidget(MyApp(appState: app));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Messages'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Chats'), findsOneWidget);
+    expect(find.text('Mina'), findsWidgets);
+    expect(find.text('Friend requests'), findsOneWidget);
+    expect(find.byTooltip('Open manga assistant'), findsNothing);
+
+    await tester.tap(find.byTooltip('Add friend'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.bySemanticsLabel('Search readers'), 'Kir');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Kira'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Send friend request'));
+    await tester.pumpAndSettle();
+
+    final social = app.socialRepository as FakeSocialRepository;
+    expect(social.sentRequests, ['user-4']);
+
+    await tester.tap(find.text('Friend requests'));
+    await tester.pumpAndSettle();
+    expect(find.text('Nori'), findsOneWidget);
+    await tester.tap(find.byTooltip('Accept request'));
+    await tester.pumpAndSettle();
+    expect(social.acceptedRequests, ['friendship-2']);
+
+    await tester.tap(find.text('Mina').first);
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Back to chats'), findsOneWidget);
+
+    final socket = app.socialSocketService as FakeSocialSocketService;
+    socket.emitTyping(
+      conversationId: 'conversation-1',
+      user: social.users.first,
+      typing: true,
+    );
+    await tester.pump();
+    expect(find.text('Mina is typing...'), findsWidgets);
+
+    expect(
+      tester.getTopLeft(find.text('See you at chapter 12')).dy,
+      lessThan(tester.getTopLeft(find.text('I am caught up')).dy),
+    );
+
+    await tester.enterText(find.bySemanticsLabel('Message'), 'Mobile hello');
+    expect(socket.typingStarts, ['conversation-1']);
+    await tester.tap(find.byTooltip('Send message'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mobile hello'), findsOneWidget);
+    expect(socket.typingStops, contains('conversation-1'));
+    expect(
+      tester.getTopLeft(find.text('I am caught up')).dy,
+      lessThan(tester.getTopLeft(find.text('Mobile hello')).dy),
+    );
+
+    socket.emitMessageNew(social.pushPeerMessage('Realtime ping'));
+    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(find.text('Realtime ping'), findsOneWidget);
+  });
 }

@@ -54,6 +54,49 @@ enum CommentReactionType {
 enum NotificationType {
   COMMENT_REPLY
   COMMENT_REACTION
+  FRIEND_REQUEST
+  FRIEND_ACCEPTED
+  CHAT_MESSAGE
+  GROUP_INVITE
+}
+
+enum NotificationSubjectType {
+  COMMENT
+  FRIENDSHIP
+  CONVERSATION
+  MESSAGE
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  BLOCKED
+}
+
+enum SocialConversationType {
+  DM
+  GROUP
+}
+
+enum SocialMemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum SocialMembershipStatus {
+  ACTIVE
+  PENDING_INVITE
+  LEFT
+}
+
+enum SocialMessageType {
+  TEXT
+  MANGA_SHARE
+  IMAGE
+  SYSTEM
+  VOICE_NOTE
 }
 
 model User {
@@ -78,6 +121,13 @@ model User {
   commentReactions CommentReaction[]
   notifications   Notification[]     @relation("NotificationRecipient")
   notificationActors Notification[]   @relation("NotificationActor")
+  friendshipsAs      Friendship[]     @relation("FriendshipUserA")
+  friendshipsBs      Friendship[]     @relation("FriendshipUserB")
+  friendshipRequests Friendship[]     @relation("FriendshipRequester")
+  friendshipBlocks   Friendship[]     @relation("FriendshipBlocker")
+  socialMemberships  SocialConversationMember[]
+  socialMessages     SocialMessage[]
+  messageReactions   MessageReaction[]
 
   @@index([role])
 }
@@ -282,6 +332,96 @@ model ChatMessage {
   @@index([conversationId, createdAt])
 }
 
+model Friendship {
+  id            String           @id @default(cuid())
+  userAId       String
+  userBId       String
+  requestedById String
+  blockedById   String?
+  status        FriendshipStatus @default(PENDING)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  userA         User             @relation("FriendshipUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB         User             @relation("FriendshipUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  requestedBy   User             @relation("FriendshipRequester", fields: [requestedById], references: [id], onDelete: Cascade)
+  blockedBy     User?            @relation("FriendshipBlocker", fields: [blockedById], references: [id], onDelete: SetNull)
+
+  @@unique([userAId, userBId])
+  @@index([userAId, status, updatedAt])
+  @@index([userBId, status, updatedAt])
+  @@index([requestedById, status])
+}
+
+model SocialConversation {
+  id            String                     @id @default(cuid())
+  type          SocialConversationType
+  title         String?
+  avatarUrl     String?
+  directKey     String?
+  lastMessageAt DateTime?
+  createdAt     DateTime                   @default(now())
+  updatedAt     DateTime                   @updatedAt
+  members       SocialConversationMember[]
+  messages      SocialMessage[]
+
+  @@index([type, lastMessageAt])
+  @@index([directKey])
+}
+
+model SocialConversationMember {
+  id                String                 @id @default(cuid())
+  conversationId    String
+  userId            String
+  role              SocialMemberRole       @default(MEMBER)
+  status            SocialMembershipStatus @default(ACTIVE)
+  lastReadMessageId String?
+  lastReadAt        DateTime?
+  mutedUntil        DateTime?
+  joinedAt          DateTime               @default(now())
+  conversation      SocialConversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user              User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId, status, joinedAt])
+  @@index([conversationId, role, status])
+}
+
+model SocialMessage {
+  id              String             @id @default(cuid())
+  conversationId  String
+  senderId        String?
+  clientMessageId String?
+  type            SocialMessageType  @default(TEXT)
+  content         String?
+  attachments     Json?
+  replyToId       String?
+  deletedAt       DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  conversation    SocialConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender          User?              @relation(fields: [senderId], references: [id], onDelete: SetNull)
+  replyTo         SocialMessage?     @relation("SocialMessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies         SocialMessage[]    @relation("SocialMessageReplies")
+  reactions       MessageReaction[]
+
+  @@unique([conversationId, senderId, clientMessageId])
+  @@index([conversationId, createdAt, id])
+  @@index([replyToId])
+}
+
+model MessageReaction {
+  id        String        @id @default(cuid())
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime      @default(now())
+  message   SocialMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
+}
+
 model Comment {
   id            String                @id @default(cuid())
   targetType    CommentTargetType
@@ -304,7 +444,6 @@ model Comment {
   root          Comment?              @relation("CommentRoot", fields: [rootId], references: [id], onDelete: Cascade)
   descendants   Comment[]             @relation("CommentRoot")
   reactions     CommentReaction[]
-  notifications Notification[]
 
   @@index([targetType, targetId, parentId, createdAt])
   @@index([targetType, targetId, rootId, path])
@@ -329,21 +468,19 @@ model CommentReaction {
 }
 
 model Notification {
-  id          String           @id @default(cuid())
+  id          String                  @id @default(cuid())
   userId      String
   actorId     String
   type        NotificationType
-  commentId   String
-  targetType  CommentTargetType
-  targetId    String
+  subjectType NotificationSubjectType
+  subjectId   String
+  payload     Json?
   readAt      DateTime?
-  createdAt   DateTime         @default(now())
-  user        User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
-  actor       User             @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
-  comment     Comment          @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  createdAt   DateTime                @default(now())
+  user        User                    @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor       User                    @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
 
   @@index([userId, readAt, createdAt])
   @@index([actorId, createdAt])
-  @@index([commentId])
-  @@index([targetType, targetId, createdAt])
+  @@index([subjectType, subjectId, createdAt])
 }

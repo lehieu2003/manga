@@ -7,9 +7,10 @@ import { commentsApi } from "./endpoints/comments.api";
 import { libraryApi } from "./endpoints/library.api";
 import { progressApi } from "./endpoints/progress.api";
 import { searchHistoryApi } from "./endpoints/search-history.api";
+import { socialApi } from "./endpoints/social.api";
 import { API_ORIGIN, clearTokens, getAccessToken, getAuthTokenSnapshot, getRefreshToken, setTokens, subscribeAuthTokens } from "./interceptors/auth.interceptor";
 
-export { clearTokens, getAccessToken, getAuthTokenSnapshot, getRefreshToken, setTokens, subscribeAuthTokens };
+export { API_ORIGIN, clearTokens, getAccessToken, getAuthTokenSnapshot, getRefreshToken, setTokens, subscribeAuthTokens };
 export { clearAdminToken, getAdminToken, setAdminToken };
 
 export const api = {
@@ -21,7 +22,8 @@ export const api = {
   ...commentsApi,
   ...libraryApi,
   ...progressApi,
-  ...searchHistoryApi
+  ...searchHistoryApi,
+  ...socialApi
 };
 
 export function assetUrl(url: string | undefined) {

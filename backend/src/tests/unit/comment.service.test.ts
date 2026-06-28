@@ -1,4 +1,4 @@
-import { CommentReactionType, CommentStatus, CommentTargetType, NotificationType } from "@prisma/client";
+import { CommentReactionType, CommentStatus, CommentTargetType, NotificationSubjectType, NotificationType } from "@prisma/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const prismaMocks = vi.hoisted(() => ({
@@ -73,9 +73,9 @@ describe("comment service", () => {
         userId: "author-1",
         actorId: "reader-1",
         type: NotificationType.COMMENT_REPLY,
-        commentId: "reply-1",
-        targetType: CommentTargetType.MANGA,
-        targetId: mangaId
+        subjectType: NotificationSubjectType.COMMENT,
+        subjectId: "reply-1",
+        payload: { commentId: "reply-1", targetType: CommentTargetType.MANGA, targetId: mangaId }
       }
     });
   });
@@ -99,9 +99,9 @@ describe("comment service", () => {
         userId: "author-1",
         actorId: "reader-1",
         type: NotificationType.COMMENT_REACTION,
-        commentId: "comment-1",
-        targetType: CommentTargetType.MANGA,
-        targetId: mangaId
+        subjectType: NotificationSubjectType.COMMENT,
+        subjectId: "comment-1",
+        payload: { commentId: "comment-1", targetType: CommentTargetType.MANGA, targetId: mangaId }
       }
     });
   });

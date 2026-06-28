@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'data/repositories/repositories.dart';
 import 'data/services/api_client.dart';
+import 'data/services/social_socket_service.dart';
 import 'ui/app_router.dart';
 import 'ui/app_state.dart';
 import 'ui/core/theme.dart';
@@ -18,6 +19,8 @@ Future<void> main() async {
     libraryRepository: LibraryRepository(apiClient),
     commentRepository: CommentRepository(apiClient),
     notificationRepository: NotificationRepository(apiClient),
+    socialRepository: SocialRepository(apiClient),
+    socialSocketService: SocialSocketService(apiClient),
     chatRepository: ChatRepository(apiClient),
   );
   runApp(MyApp(appState: appState));

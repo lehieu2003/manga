@@ -46,7 +46,7 @@ function AuthenticatedNotificationCenter({ user }: { user: User }) {
   const openNotification = async (item: UserNotification) => {
     if (!item.readAt) await markRead.mutateAsync(item.id);
     setOpen(false);
-    navigate(item.targetType === "MANGA" ? `/manga/${item.targetId}` : `/read/${item.targetId}`);
+    navigate(getNotificationHref(item));
   };
 
   return (
@@ -75,7 +75,7 @@ function AuthenticatedNotificationCenter({ user }: { user: User }) {
                 type="button"
               >
                 <span className="block font-bold text-[var(--text)]">
-                  {item.actor.displayName} {item.type === "COMMENT_REPLY" ? "replied to your comment" : "reacted to your comment"}
+                  {notificationLabel(item)}
                 </span>
                 <span className="mt-1 block text-xs text-[var(--muted)]">{new Date(item.createdAt).toLocaleString()}</span>
               </button>
@@ -85,4 +85,32 @@ function AuthenticatedNotificationCenter({ user }: { user: User }) {
       ) : null}
     </div>
   );
+}
+
+function notificationLabel(item: UserNotification) {
+  switch (item.type) {
+    case "COMMENT_REPLY":
+      return `${item.actor.displayName} replied to your comment`;
+    case "COMMENT_REACTION":
+      return `${item.actor.displayName} reacted to your comment`;
+    case "FRIEND_REQUEST":
+      return `${item.actor.displayName} sent you a friend request`;
+    case "FRIEND_ACCEPTED":
+      return `${item.actor.displayName} accepted your friend request`;
+    case "CHAT_MESSAGE":
+      return `${item.actor.displayName} sent you a message`;
+    case "GROUP_INVITE":
+      return `${item.actor.displayName} invited you to a group`;
+    default:
+      return `${item.actor.displayName} sent you a notification`;
+  }
+}
+
+function getNotificationHref(item: UserNotification) {
+  if (item.subjectType === "FRIENDSHIP" || item.subjectType === "CONVERSATION" || item.subjectType === "MESSAGE") {
+    return "/messages";
+  }
+  if (item.targetType === "MANGA" && item.targetId) return `/manga/${item.targetId}`;
+  if (item.targetType === "CHAPTER" && item.targetId) return `/read/${item.targetId}`;
+  return "/";
 }

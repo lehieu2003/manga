@@ -115,19 +115,29 @@ class UserNotification {
     required this.id,
     required this.actor,
     required this.type,
-    required this.commentId,
-    required this.targetType,
-    required this.targetId,
+    required this.subjectType,
+    required this.subjectId,
     required this.createdAt,
+    this.commentId,
+    this.targetType,
+    this.targetId,
+    this.friendshipId,
+    this.conversationId,
+    this.messageId,
     this.readAt,
   });
 
   final String id;
   final CommentAuthor actor;
   final String type;
-  final String commentId;
-  final String targetType;
-  final String targetId;
+  final String subjectType;
+  final String subjectId;
+  final String? commentId;
+  final String? targetType;
+  final String? targetId;
+  final String? friendshipId;
+  final String? conversationId;
+  final String? messageId;
   final DateTime? readAt;
   final DateTime createdAt;
 
@@ -136,9 +146,14 @@ class UserNotification {
         id: json['id'] as String,
         actor: CommentAuthor.fromJson(json['actor'] as Map<String, dynamic>),
         type: json['type']?.toString() ?? 'COMMENT_REPLY',
-        commentId: json['commentId']?.toString() ?? '',
-        targetType: json['targetType']?.toString() ?? 'MANGA',
-        targetId: json['targetId']?.toString() ?? '',
+        subjectType: json['subjectType']?.toString() ?? 'COMMENT',
+        subjectId: json['subjectId']?.toString() ?? '',
+        commentId: json['commentId'] as String?,
+        targetType: json['targetType'] as String?,
+        targetId: json['targetId'] as String?,
+        friendshipId: json['friendshipId'] as String?,
+        conversationId: json['conversationId'] as String?,
+        messageId: json['messageId'] as String?,
         readAt: DateTime.tryParse(json['readAt']?.toString() ?? ''),
         createdAt:
             DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
@@ -164,6 +179,306 @@ class NotificationListResponse {
         unreadCount: json['unreadCount'] is int
             ? json['unreadCount'] as int
             : int.tryParse('${json['unreadCount']}') ?? 0,
+      );
+}
+
+class SocialUser {
+  const SocialUser({
+    required this.id,
+    required this.displayName,
+    this.avatarUrl,
+  });
+
+  final String id;
+  final String displayName;
+  final String? avatarUrl;
+
+  factory SocialUser.fromJson(Map<String, dynamic> json) => SocialUser(
+    id: json['id']?.toString() ?? '',
+    displayName: json['displayName']?.toString() ?? 'Reader',
+    avatarUrl: json['avatarUrl'] as String?,
+  );
+}
+
+class SocialUserSearchResponse {
+  const SocialUserSearchResponse({required this.data});
+
+  final List<SocialUser> data;
+
+  factory SocialUserSearchResponse.fromJson(Map<String, dynamic> json) =>
+      SocialUserSearchResponse(
+        data: (json['data'] as List<dynamic>? ?? [])
+            .whereType<Map<String, dynamic>>()
+            .map(SocialUser.fromJson)
+            .toList(),
+      );
+}
+
+class Friendship {
+  const Friendship({
+    required this.id,
+    required this.userAId,
+    required this.userBId,
+    required this.requestedById,
+    required this.status,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.friend,
+    this.blockedById,
+  });
+
+  final String id;
+  final String userAId;
+  final String userBId;
+  final String requestedById;
+  final String? blockedById;
+  final String status;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final SocialUser friend;
+
+  factory Friendship.fromJson(Map<String, dynamic> json) => Friendship(
+    id: json['id']?.toString() ?? '',
+    userAId: json['userAId']?.toString() ?? '',
+    userBId: json['userBId']?.toString() ?? '',
+    requestedById: json['requestedById']?.toString() ?? '',
+    blockedById: json['blockedById'] as String?,
+    status: json['status']?.toString() ?? 'PENDING',
+    createdAt:
+        DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
+        DateTime.fromMillisecondsSinceEpoch(0),
+    updatedAt:
+        DateTime.tryParse(json['updatedAt']?.toString() ?? '') ??
+        DateTime.fromMillisecondsSinceEpoch(0),
+    friend: json['friend'] is Map<String, dynamic>
+        ? SocialUser.fromJson(json['friend'] as Map<String, dynamic>)
+        : const SocialUser(id: '', displayName: 'Reader'),
+  );
+}
+
+class FriendshipListResponse {
+  const FriendshipListResponse({required this.data});
+
+  final List<Friendship> data;
+
+  factory FriendshipListResponse.fromJson(Map<String, dynamic> json) =>
+      FriendshipListResponse(
+        data: (json['data'] as List<dynamic>? ?? [])
+            .whereType<Map<String, dynamic>>()
+            .map(Friendship.fromJson)
+            .toList(),
+      );
+}
+
+class SocialMember {
+  const SocialMember({
+    required this.id,
+    required this.userId,
+    required this.role,
+    required this.status,
+    required this.joinedAt,
+    required this.user,
+  });
+
+  final String id;
+  final String userId;
+  final String role;
+  final String status;
+  final DateTime joinedAt;
+  final SocialUser user;
+
+  factory SocialMember.fromJson(Map<String, dynamic> json) => SocialMember(
+    id: json['id']?.toString() ?? '',
+    userId: json['userId']?.toString() ?? '',
+    role: json['role']?.toString() ?? 'MEMBER',
+    status: json['status']?.toString() ?? 'ACTIVE',
+    joinedAt:
+        DateTime.tryParse(json['joinedAt']?.toString() ?? '') ??
+        DateTime.fromMillisecondsSinceEpoch(0),
+    user: json['user'] is Map<String, dynamic>
+        ? SocialUser.fromJson(json['user'] as Map<String, dynamic>)
+        : const SocialUser(id: '', displayName: 'Reader'),
+  );
+}
+
+class SocialCurrentMember {
+  const SocialCurrentMember({
+    required this.id,
+    required this.role,
+    required this.status,
+    required this.joinedAt,
+    this.lastReadMessageId,
+    this.lastReadAt,
+    this.mutedUntil,
+  });
+
+  final String id;
+  final String role;
+  final String status;
+  final String? lastReadMessageId;
+  final DateTime? lastReadAt;
+  final DateTime? mutedUntil;
+  final DateTime joinedAt;
+
+  factory SocialCurrentMember.fromJson(Map<String, dynamic> json) =>
+      SocialCurrentMember(
+        id: json['id']?.toString() ?? '',
+        role: json['role']?.toString() ?? 'MEMBER',
+        status: json['status']?.toString() ?? 'ACTIVE',
+        lastReadMessageId: json['lastReadMessageId'] as String?,
+        lastReadAt: DateTime.tryParse(json['lastReadAt']?.toString() ?? ''),
+        mutedUntil: DateTime.tryParse(json['mutedUntil']?.toString() ?? ''),
+        joinedAt:
+            DateTime.tryParse(json['joinedAt']?.toString() ?? '') ??
+            DateTime.fromMillisecondsSinceEpoch(0),
+      );
+}
+
+class SocialMessage {
+  const SocialMessage({
+    required this.id,
+    required this.conversationId,
+    required this.senderId,
+    required this.type,
+    required this.createdAt,
+    required this.updatedAt,
+    this.clientMessageId,
+    this.content,
+    this.attachments,
+    this.replyToId,
+    this.deletedAt,
+    this.sender,
+  });
+
+  final String id;
+  final String conversationId;
+  final String? senderId;
+  final String? clientMessageId;
+  final String type;
+  final String? content;
+  final Object? attachments;
+  final String? replyToId;
+  final DateTime? deletedAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final SocialUser? sender;
+
+  factory SocialMessage.fromJson(Map<String, dynamic> json) => SocialMessage(
+    id: json['id']?.toString() ?? '',
+    conversationId: json['conversationId']?.toString() ?? '',
+    senderId: json['senderId'] as String?,
+    clientMessageId: json['clientMessageId'] as String?,
+    type: json['type']?.toString() ?? 'TEXT',
+    content: json['content'] as String?,
+    attachments: json['attachments'],
+    replyToId: json['replyToId'] as String?,
+    deletedAt: DateTime.tryParse(json['deletedAt']?.toString() ?? ''),
+    createdAt:
+        DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
+        DateTime.fromMillisecondsSinceEpoch(0),
+    updatedAt:
+        DateTime.tryParse(json['updatedAt']?.toString() ?? '') ??
+        DateTime.fromMillisecondsSinceEpoch(0),
+    sender: json['sender'] is Map<String, dynamic>
+        ? SocialUser.fromJson(json['sender'] as Map<String, dynamic>)
+        : null,
+  );
+}
+
+class SocialConversation {
+  const SocialConversation({
+    required this.id,
+    required this.type,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.members,
+    this.title,
+    this.avatarUrl,
+    this.directKey,
+    this.lastMessageAt,
+    this.currentMember,
+    this.latestMessage,
+  });
+
+  final String id;
+  final String type;
+  final String? title;
+  final String? avatarUrl;
+  final String? directKey;
+  final DateTime? lastMessageAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final SocialCurrentMember? currentMember;
+  final List<SocialMember> members;
+  final SocialMessage? latestMessage;
+
+  String titleFor(String currentUserId) {
+    if (title != null && title!.trim().isNotEmpty) return title!;
+    for (final member in members) {
+      if (member.userId != currentUserId) return member.user.displayName;
+    }
+    return 'Conversation';
+  }
+
+  factory SocialConversation.fromJson(
+    Map<String, dynamic> json,
+  ) => SocialConversation(
+    id: json['id']?.toString() ?? '',
+    type: json['type']?.toString() ?? 'DM',
+    title: json['title'] as String?,
+    avatarUrl: json['avatarUrl'] as String?,
+    directKey: json['directKey'] as String?,
+    lastMessageAt: DateTime.tryParse(json['lastMessageAt']?.toString() ?? ''),
+    createdAt:
+        DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
+        DateTime.fromMillisecondsSinceEpoch(0),
+    updatedAt:
+        DateTime.tryParse(json['updatedAt']?.toString() ?? '') ??
+        DateTime.fromMillisecondsSinceEpoch(0),
+    currentMember: json['currentMember'] is Map<String, dynamic>
+        ? SocialCurrentMember.fromJson(
+            json['currentMember'] as Map<String, dynamic>,
+          )
+        : null,
+    members: (json['members'] as List<dynamic>? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map(SocialMember.fromJson)
+        .toList(),
+    latestMessage: json['latestMessage'] is Map<String, dynamic>
+        ? SocialMessage.fromJson(json['latestMessage'] as Map<String, dynamic>)
+        : null,
+  );
+}
+
+class SocialConversationListResponse {
+  const SocialConversationListResponse({required this.data, this.nextCursor});
+
+  final List<SocialConversation> data;
+  final String? nextCursor;
+
+  factory SocialConversationListResponse.fromJson(Map<String, dynamic> json) =>
+      SocialConversationListResponse(
+        data: (json['data'] as List<dynamic>? ?? [])
+            .whereType<Map<String, dynamic>>()
+            .map(SocialConversation.fromJson)
+            .toList(),
+        nextCursor: json['nextCursor'] as String?,
+      );
+}
+
+class SocialMessageListResponse {
+  const SocialMessageListResponse({required this.data, this.nextCursor});
+
+  final List<SocialMessage> data;
+  final String? nextCursor;
+
+  factory SocialMessageListResponse.fromJson(Map<String, dynamic> json) =>
+      SocialMessageListResponse(
+        data: (json['data'] as List<dynamic>? ?? [])
+            .whereType<Map<String, dynamic>>()
+            .map(SocialMessage.fromJson)
+            .toList(),
+        nextCursor: json['nextCursor'] as String?,
       );
 }
 

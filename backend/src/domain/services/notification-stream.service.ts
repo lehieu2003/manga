@@ -1,11 +1,13 @@
+import { emitNotification } from "../../infrastructure/realtime/socket-server.js";
+
 type NotificationPayload = {
   id: string;
   userId: string;
   actorId: string;
   type: string;
-  commentId: string;
-  targetType: string;
-  targetId: string;
+  subjectType: string;
+  subjectId: string;
+  payload: unknown;
   readAt: Date | null;
   createdAt: Date;
 };
@@ -26,6 +28,7 @@ export function subscribeToNotifications(userId: string, listener: Listener) {
 }
 
 export function publishNotification(payload: NotificationPayload) {
+  emitNotification(payload);
   const listeners = listenersByUser.get(payload.userId);
   if (!listeners) return;
   for (const listener of listeners) listener(payload);

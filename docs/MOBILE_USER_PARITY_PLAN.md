@@ -8,6 +8,27 @@ Post-read action: bring the Flutter app closer to web parity for user-facing flo
 
 The mobile app already covers core routes for home, search, library, settings, detail, reader, comments, notifications, and chat. The next work improves reliability and release readiness: gestures, persisted reader settings, offline/cache behavior, integration tests, and CI.
 
+## Current checkpoint
+
+Last updated: 2026-06-28
+
+Completed:
+
+- Mobile auth, catalog/search, library, settings, detail, reader, comments, notifications, and assistant chat exist.
+- Mobile social messaging foundation is implemented with REST-backed friendship and DM UI: reader search, send friend requests, incoming/sent/friend lists, accept/reject/block/remove actions, conversation list, selected DM thread, text send, and social notification routing to `/messages`.
+- Mobile DM threads normalize message order from backend responses so older messages render above newer messages, pin the newest messages near the composer, and subscribe to backend Socket.io `message:new` / `message:deleted` / `read:updated` / `typing:indicator` events.
+- Mobile message inputs emit Socket.io `typing:start` / `typing:stop` with debounce, and the inbox/thread render peer typing status.
+- Mobile Messages hides the manga assistant floating action button so the screen stays focused on social DMs and friendships.
+
+In progress:
+
+- Verify and harden the mobile Socket.io path, then add presence UI on top of the connected socket.
+
+Not started:
+
+- Mobile presence UI.
+- Mobile group chat, reactions, manga sharing, uploads, mute controls, and offline push delivery.
+
 ## User Goals
 
 - Navigate the mobile reader with natural gestures.

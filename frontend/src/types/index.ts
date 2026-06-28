@@ -255,7 +255,8 @@ export type SendChatMessageResponse = {
 export type CommentTargetType = "MANGA" | "CHAPTER";
 export type CommentStatus = "VISIBLE" | "DELETED" | "HIDDEN";
 export type CommentReactionType = "LIKE" | "HEART" | "SAD" | "LAUGH" | "ANGRY";
-export type NotificationType = "COMMENT_REPLY" | "COMMENT_REACTION";
+export type NotificationType = "COMMENT_REPLY" | "COMMENT_REACTION" | "FRIEND_REQUEST" | "FRIEND_ACCEPTED" | "CHAT_MESSAGE" | "GROUP_INVITE";
+export type NotificationSubjectType = "COMMENT" | "FRIENDSHIP" | "CONVERSATION" | "MESSAGE";
 
 export type CommentAuthor = Pick<User, "id" | "displayName" | "avatarUrl" | "role">;
 
@@ -288,9 +289,14 @@ export type UserNotification = {
   id: string;
   actor: Pick<User, "id" | "displayName" | "avatarUrl">;
   type: NotificationType;
-  commentId: string;
-  targetType: CommentTargetType;
-  targetId: string;
+  subjectType: NotificationSubjectType;
+  subjectId: string;
+  commentId?: string;
+  targetType?: CommentTargetType;
+  targetId?: string;
+  friendshipId?: string;
+  conversationId?: string;
+  messageId?: string;
   readAt: string | null;
   createdAt: string;
 };
@@ -298,4 +304,89 @@ export type UserNotification = {
 export type NotificationListResponse = {
   data: UserNotification[];
   unreadCount: number;
+};
+
+export type SocialConversationType = "DM" | "GROUP";
+export type SocialMemberRole = "OWNER" | "ADMIN" | "MEMBER";
+export type SocialMembershipStatus = "ACTIVE" | "PENDING_INVITE" | "LEFT";
+export type SocialMessageType = "TEXT" | "MANGA_SHARE" | "IMAGE" | "SYSTEM" | "VOICE_NOTE";
+
+export type FriendshipStatus = "PENDING" | "ACCEPTED" | "REJECTED" | "BLOCKED";
+
+export type Friendship = {
+  id: string;
+  userAId: string;
+  userBId: string;
+  requestedById: string;
+  blockedById: string | null;
+  status: FriendshipStatus;
+  createdAt: string;
+  updatedAt: string;
+  friend: Pick<User, "id" | "displayName" | "avatarUrl">;
+};
+
+export type FriendshipListResponse = {
+  data: Friendship[];
+};
+
+export type SocialUserSearchResponse = {
+  data: Array<Pick<User, "id" | "displayName" | "avatarUrl">>;
+};
+
+export type SocialMember = {
+  id: string;
+  userId: string;
+  role: SocialMemberRole;
+  status: SocialMembershipStatus;
+  joinedAt: string;
+  user: Pick<User, "id" | "displayName" | "avatarUrl">;
+};
+
+export type SocialCurrentMember = {
+  id: string;
+  role: SocialMemberRole;
+  status: SocialMembershipStatus;
+  lastReadMessageId: string | null;
+  lastReadAt: string | null;
+  mutedUntil: string | null;
+  joinedAt: string;
+};
+
+export type SocialMessage = {
+  id: string;
+  conversationId: string;
+  senderId: string | null;
+  clientMessageId: string | null;
+  type: SocialMessageType;
+  content: string | null;
+  attachments: unknown;
+  replyToId: string | null;
+  deletedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  sender: Pick<User, "id" | "displayName" | "avatarUrl"> | null;
+};
+
+export type SocialConversation = {
+  id: string;
+  type: SocialConversationType;
+  title: string | null;
+  avatarUrl: string | null;
+  directKey: string | null;
+  lastMessageAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  currentMember: SocialCurrentMember | null;
+  members: SocialMember[];
+  latestMessage: Omit<SocialMessage, "clientMessageId" | "replyToId" | "updatedAt"> | null;
+};
+
+export type SocialConversationListResponse = {
+  data: SocialConversation[];
+  nextCursor: string | null;
+};
+
+export type SocialMessageListResponse = {
+  data: SocialMessage[];
+  nextCursor: string | null;
 };

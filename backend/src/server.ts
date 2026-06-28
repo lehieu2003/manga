@@ -22,9 +22,11 @@ import { commentRoutes } from "./app/routes/v1/comment.routes.js";
 import { coverRoutes } from "./app/routes/v1/cover.routes.js";
 import { pageRoutes } from "./app/routes/v1/page.routes.js";
 import { healthRoutes } from "./app/routes/health.routes.js";
+import { friendshipRoutes } from "./app/routes/v1/friendship.routes.js";
 import { libraryRoutes } from "./app/routes/v1/library.routes.js";
 import { progressRoutes } from "./app/routes/v1/progress.routes.js";
 import { searchHistoryRoutes } from "./app/routes/v1/search-history.routes.js";
+import { socialConversationRoutes } from "./app/routes/v1/social-conversation.routes.js";
 import { syncMangaDexCatalog } from "./domain/services/catalog-sync.service.js";
 
 declare module "fastify" {
@@ -111,6 +113,8 @@ export async function buildApp() {
   await app.register(chatRoutes, { prefix: "/api" });
   await app.register(commentRoutes, { prefix: "/api" });
   await app.register(coverRoutes, { prefix: "/api" });
+  await app.register(friendshipRoutes, { prefix: "/api" });
+  await app.register(socialConversationRoutes, { prefix: "/api" });
   await app.register(pageRoutes, { prefix: "/api" });
   await app.register(libraryRoutes, { prefix: "/api" });
   await app.register(progressRoutes, { prefix: "/api" });
