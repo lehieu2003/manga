@@ -6,6 +6,48 @@ This document defines the implementation plan for authenticated friendship, dire
 
 After this plan is implemented, a signed-in user can manage friendships, exchange reliable direct messages with friends, participate in groups, see unread state and typing/presence indicators, and share a manga. AI assistant conversations remain a separate product feature with separate persistence and API contracts.
 
+## Current checkpoint
+
+Last updated: 2026-06-28
+
+Reader: an internal engineer continuing the realtime social chat work.
+
+Post-read action: identify the next unfinished slice, update this checkpoint after completing it, and continue without re-auditing the whole codebase.
+
+Current phase: Phase 2, direct-message inbox and real-time delivery.
+
+Completed:
+
+- Phase 0 foundation is implemented: social chat schema, notification subject generalization, migration, generated Prisma types, service boundaries, Socket.io setup, JWT handshake, Redis adapter fallback, and baseline tests exist.
+- Phase 1 friendship and durable DM creation is implemented: friend requests, accept, reject, block, unblock, unfriend, friend lists, notifications, rate limits, canonical friendships, and atomic DM creation exist.
+- Phase 2 backend is mostly implemented for direct messages: inbox, conversation detail, message history, idempotent text sends, soft delete, read checkpoints, post-commit message events, read events, typing events, and presence events exist.
+- Phase 2 frontend direct-message slice is implemented and verified: inbox list, selected thread, message history, optimistic text sends, socket reconciliation, delete action, typing indicator handling, and automatic read marking are covered by focused tests.
+
+In progress:
+
+- Prepare the next implementation slice. Phase 3 group chat can start after this checkpoint is committed.
+
+Latest verification:
+
+- `npm run typecheck` in `frontend`
+- `npm run build` in `frontend`
+- `npm test` in `frontend`
+- `npm test -- src/tests/integration/routes/social-conversation.routes.test.ts src/tests/integration/routes/social-message.routes.test.ts src/tests/integration/realtime/socket-server.test.ts src/tests/unit/friendship.service.test.ts` in `backend`
+
+Not started:
+
+- User-facing friendship management UI.
+- Phase 3 group chat: group creation, invites, member roles, leave/kick, ownership transfer, disband, and system messages.
+- Phase 4 rich features: manga sharing, image uploads, reactions UI/API completion, mute controls, offline push delivery, and voice notes.
+
+Checkpoint update rule:
+
+- Update this section whenever a slice changes implementation status, especially before stopping work or committing.
+- Move items between `In progress`, `Completed`, and `Not started` in the same change that finishes the slice.
+- Keep the checkpoint factual and brief. Do not duplicate the detailed design sections below.
+- Always update `Last updated` using an absolute date.
+- Record verification that matters for the phase, including exact test, typecheck, build, migration, or manual check commands.
+
 ## Architecture decision
 
 Use a separate social-chat domain rather than extending the existing AI chat tables.

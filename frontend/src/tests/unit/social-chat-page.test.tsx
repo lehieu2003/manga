@@ -1,0 +1,256 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactElement } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SocialChatPage } from "@/features/social/SocialChatPage";
+import type { SocialConversation, SocialMessage, User } from "@/types";
+
+type SocketHandler = (payload?: unknown, ack?: (result: unknown) => void) => void;
+
+const mocks = vi.hoisted(() => ({
+  listSocialConversations: vi.fn(),
+  listSocialMessages: vi.fn(),
+  sendSocialMessage: vi.fn(),
+  deleteSocialMessage: vi.fn(),
+  markSocialConversationRead: vi.fn(),
+  showToast: vi.fn(),
+  socketHandlers: new Map<string, SocketHandler>(),
+  socketEmit: vi.fn(),
+  socketDisconnect: vi.fn()
+}));
+
+vi.mock("@/api", () => ({
+  api: {
+    listSocialConversations: mocks.listSocialConversations,
+    listSocialMessages: mocks.listSocialMessages,
+    sendSocialMessage: mocks.sendSocialMessage,
+    deleteSocialMessage: mocks.deleteSocialMessage,
+    markSocialConversationRead: mocks.markSocialConversationRead
+  }
+}));
+
+vi.mock("@/features/auth/stores/auth.store", () => ({
+  useAuth: () => ({ user: currentUser })
+}));
+
+vi.mock("@/stores/toast.store", () => ({
+  useToast: () => ({ showToast: mocks.showToast })
+}));
+
+vi.mock("@/features/social/social-socket", () => ({
+  createSocialSocket: () => ({
+    on: (event: string, handler: SocketHandler) => {
+      mocks.socketHandlers.set(event, handler);
+    },
+    emit: mocks.socketEmit,
+    disconnect: mocks.socketDisconnect
+  })
+}));
+
+describe("SocialChatPage", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.socketHandlers.clear();
+    vi.spyOn(crypto, "randomUUID").mockReturnValue("00000000-0000-4000-8000-000000000001");
+
+    mocks.socketEmit.mockImplementation((event: string, _payload: unknown, ack?: (result: unknown) => void) => {
+      if (event === "message:read") ack?.({ ok: false, error: { code: "SOCKET_READ_FAILED", message: "read failed" } });
+    });
+    mocks.markSocialConversationRead.mockResolvedValue({ readState: { conversationId: "conv-1", userId: currentUser.id, lastReadMessageId: "message-2", lastReadAt: now } });
+    mocks.listSocialConversations.mockResolvedValue({ data: [conversation], nextCursor: null });
+    mocks.listSocialMessages.mockResolvedValue({ data: [peerMessage, ownMessage], nextCursor: null });
+    mocks.sendSocialMessage.mockResolvedValue({ message: sentMessage, idempotent: false });
+    mocks.deleteSocialMessage.mockResolvedValue({ message: deletedOwnMessage, idempotent: false });
+  });
+
+  it("renders the inbox and marks the latest peer message as read with REST fallback", async () => {
+    renderWithClient(<SocialChatPage />);
+
+    expect(await screen.findAllByText("Mina")).toHaveLength(2);
+    expect(screen.getAllByText("See you at chapter 12")).toHaveLength(2);
+    expect(screen.getByText("I am caught up")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(mocks.socketEmit).toHaveBeenCalledWith("message:read", { conversationId: "conv-1", lastMessageId: "message-2" }, expect.any(Function));
+      expect(mocks.markSocialConversationRead).toHaveBeenCalledWith("conv-1", "message-2");
+    });
+  });
+
+  it("sends an optimistic text message and reconciles the committed message", async () => {
+    const user = userEvent.setup();
+    let resolveSend: ((value: { message: SocialMessage; idempotent: boolean }) => void) | undefined;
+    mocks.sendSocialMessage.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSend = resolve;
+      })
+    );
+
+    renderWithClient(<SocialChatPage />);
+
+    await screen.findByText("See you at chapter 12");
+    await user.type(screen.getByLabelText("Message"), "New realtime note");
+    await user.click(screen.getByRole("button", { name: "Send message" }));
+
+    expect(screen.getByText("New realtime note")).toBeInTheDocument();
+    expect(screen.getByText("Sending")).toBeInTheDocument();
+    expect(mocks.sendSocialMessage).toHaveBeenCalledWith("conv-1", { clientMessageId: "00000000-0000-4000-8000-000000000001", content: "New realtime note" });
+    expect(mocks.socketEmit).toHaveBeenCalledWith("typing:stop", { conversationId: "conv-1" });
+
+    resolveSend?.({ message: sentMessage, idempotent: false });
+
+    expect(await screen.findByText("Committed realtime note")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText("Sending")).not.toBeInTheDocument());
+  });
+
+  it("removes pending messages when the socket delivers the committed message first", async () => {
+    const user = userEvent.setup();
+    mocks.sendSocialMessage.mockResolvedValue({ message: sentMessage, idempotent: false });
+
+    renderWithClient(<SocialChatPage />);
+
+    await screen.findByText("See you at chapter 12");
+    await user.type(screen.getByLabelText("Message"), "New realtime note");
+    await user.click(screen.getByRole("button", { name: "Send message" }));
+
+    mocks.socketHandlers.get("message:new")?.({ conversationId: "conv-1", message: sentMessage });
+
+    await waitFor(() => expect(screen.getAllByText("Committed realtime note")).toHaveLength(1));
+    expect(screen.queryByText("Sending")).not.toBeInTheDocument();
+  });
+
+  it("soft-deletes the current user's message", async () => {
+    const user = userEvent.setup();
+    renderWithClient(<SocialChatPage />);
+
+    await screen.findByText("I am caught up");
+    await user.click(screen.getByRole("button", { name: "Delete message" }));
+
+    await waitFor(() => expect(mocks.deleteSocialMessage).toHaveBeenCalledWith("message-1"));
+    expect(await screen.findByText("Deleted message")).toBeInTheDocument();
+  });
+});
+
+const now = "2026-06-28T09:00:00.000Z";
+
+const currentUser: User = {
+  id: "user-1",
+  email: "reader@example.com",
+  displayName: "Reader",
+  role: "USER",
+  avatarUrl: null,
+  emailVerifiedAt: "2026-06-28T00:00:00.000Z",
+  createdAt: "2026-06-28T00:00:00.000Z"
+};
+
+const peer = {
+  id: "user-2",
+  displayName: "Mina",
+  avatarUrl: null
+};
+
+const ownMessage: SocialMessage = {
+  id: "message-1",
+  conversationId: "conv-1",
+  senderId: currentUser.id,
+  clientMessageId: null,
+  type: "TEXT",
+  content: "I am caught up",
+  attachments: null,
+  replyToId: null,
+  deletedAt: null,
+  createdAt: "2026-06-28T08:59:00.000Z",
+  updatedAt: "2026-06-28T08:59:00.000Z",
+  sender: currentUser
+};
+
+const peerMessage: SocialMessage = {
+  id: "message-2",
+  conversationId: "conv-1",
+  senderId: peer.id,
+  clientMessageId: null,
+  type: "TEXT",
+  content: "See you at chapter 12",
+  attachments: null,
+  replyToId: null,
+  deletedAt: null,
+  createdAt: now,
+  updatedAt: now,
+  sender: peer
+};
+
+const sentMessage: SocialMessage = {
+  id: "message-3",
+  conversationId: "conv-1",
+  senderId: currentUser.id,
+  clientMessageId: "00000000-0000-4000-8000-000000000001",
+  type: "TEXT",
+  content: "Committed realtime note",
+  attachments: null,
+  replyToId: null,
+  deletedAt: null,
+  createdAt: "2026-06-28T09:01:00.000Z",
+  updatedAt: "2026-06-28T09:01:00.000Z",
+  sender: currentUser
+};
+
+const deletedOwnMessage: SocialMessage = {
+  ...ownMessage,
+  content: null,
+  deletedAt: "2026-06-28T09:02:00.000Z",
+  updatedAt: "2026-06-28T09:02:00.000Z"
+};
+
+const conversation: SocialConversation = {
+  id: "conv-1",
+  type: "DM",
+  title: null,
+  avatarUrl: null,
+  directKey: "user-1:user-2",
+  lastMessageAt: now,
+  createdAt: "2026-06-28T08:00:00.000Z",
+  updatedAt: now,
+  currentMember: {
+    id: "member-1",
+    role: "MEMBER",
+    status: "ACTIVE",
+    lastReadMessageId: "message-1",
+    lastReadAt: "2026-06-28T08:59:30.000Z",
+    mutedUntil: null,
+    joinedAt: "2026-06-28T08:00:00.000Z"
+  },
+  members: [
+    {
+      id: "member-1",
+      userId: currentUser.id,
+      role: "MEMBER",
+      status: "ACTIVE",
+      joinedAt: "2026-06-28T08:00:00.000Z",
+      user: currentUser
+    },
+    {
+      id: "member-2",
+      userId: peer.id,
+      role: "MEMBER",
+      status: "ACTIVE",
+      joinedAt: "2026-06-28T08:00:00.000Z",
+      user: peer
+    }
+  ],
+  latestMessage: {
+    id: peerMessage.id,
+    conversationId: peerMessage.conversationId,
+    senderId: peerMessage.senderId,
+    type: peerMessage.type,
+    content: peerMessage.content,
+    attachments: peerMessage.attachments,
+    deletedAt: peerMessage.deletedAt,
+    createdAt: peerMessage.createdAt,
+    sender: peerMessage.sender
+  }
+};
+
+function renderWithClient(ui: ReactElement) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+}
