@@ -21,8 +21,8 @@ type ListMessagesInput = {
 type SendMessageInput = {
   clientMessageId: string;
 } & (
-  | { type: SocialMessageType.TEXT; content: string }
-  | { type: SocialMessageType.MANGA_SHARE; mangaId: string; chapterId?: string }
+  | { type: 'TEXT'; content: string }
+  | { type: 'MANGA_SHARE'; mangaId: string; chapterId?: string }
 );
 
 type MarkReadInput = {
