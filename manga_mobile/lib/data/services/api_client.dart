@@ -39,8 +39,16 @@ class ApiClient {
 
   String assetUrl(String? url) {
     if (url == null || url.isEmpty) return '';
-    if (!url.startsWith('/')) return url;
     final origin = Uri.parse(baseUrl).origin;
+    final parsed = Uri.tryParse(url);
+    if (parsed != null && parsed.hasScheme) {
+      final shouldUseApiOrigin =
+          !kIsWeb &&
+          (parsed.host == 'localhost' || parsed.host == '127.0.0.1');
+      if (!shouldUseApiOrigin) return url;
+      return '$origin${parsed.path}${parsed.hasQuery ? '?${parsed.query}' : ''}';
+    }
+    if (!url.startsWith('/')) return url;
     return '$origin$url';
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../domain/models/models.dart';
+import 'social_avatar.dart';
 
 class ConversationTile extends StatelessWidget {
   const ConversationTile({
@@ -30,6 +31,7 @@ class ConversationTile extends StatelessWidget {
         : latest?.content ?? 'No messages yet';
 
     final scheme = Theme.of(context).colorScheme;
+    final avatarUrl = _conversationAvatarUrl(conversation, currentUserId);
 
     return InkWell(
       borderRadius: BorderRadius.circular(14),
@@ -45,11 +47,10 @@ class ConversationTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
           child: Row(
             children: [
-              CircleAvatar(
+              SocialAvatar(
                 radius: 28,
-                child: Text(
-                  conversation.titleFor(currentUserId).characters.first,
-                ),
+                label: conversation.titleFor(currentUserId),
+                avatarUrl: avatarUrl,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -95,6 +96,19 @@ class ConversationTile extends StatelessWidget {
       ),
     );
   }
+}
+
+String? _conversationAvatarUrl(
+  SocialConversation conversation,
+  String currentUserId,
+) {
+  if (conversation.avatarUrl != null && conversation.avatarUrl!.isNotEmpty) {
+    return conversation.avatarUrl;
+  }
+  for (final member in conversation.members) {
+    if (member.userId != currentUserId) return member.user.avatarUrl;
+  }
+  return null;
 }
 
 String _timeLabel(DateTime date) {

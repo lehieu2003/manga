@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../domain/models/models.dart';
 import '../cubit/messages_cubit.dart';
 import '../cubit/messages_state.dart';
+import 'social_avatar.dart';
 
 class FriendRequestsSheet extends StatelessWidget {
   const FriendRequestsSheet({super.key});
@@ -168,8 +169,9 @@ class _FriendshipActionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: CircleAvatar(
-        child: Text(friendship.friend.displayName.characters.first),
+      leading: SocialAvatar(
+        label: friendship.friend.displayName,
+        avatarUrl: friendship.friend.avatarUrl,
       ),
       title: Text(
         friendship.friend.displayName,

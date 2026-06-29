@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../domain/models/models.dart';
 import '../cubit/messages_state.dart';
 import 'conversation_tile.dart';
+import 'social_avatar.dart';
 
 class MessagesInbox extends StatefulWidget {
   const MessagesInbox({
@@ -146,7 +147,7 @@ class _FriendStoryRow extends StatelessWidget {
           final friend = friends[index - 1].friend;
           return _StoryAvatar(
             label: friend.displayName,
-            initial: friend.displayName.characters.first,
+            avatarUrl: friend.avatarUrl,
             onTap: onOpenRequests,
           );
         },
@@ -160,21 +161,23 @@ class _StoryAvatar extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.icon,
-    this.initial,
+    this.avatarUrl,
     this.badgeCount = 0,
   });
 
   final String label;
   final VoidCallback onTap;
   final IconData? icon;
-  final String? initial;
+  final String? avatarUrl;
   final int badgeCount;
 
   @override
   Widget build(BuildContext context) {
-    final avatar = CircleAvatar(
+    final avatar = SocialAvatar(
+      label: label,
+      avatarUrl: avatarUrl,
       radius: 24,
-      child: icon == null ? Text(initial ?? '?') : Icon(icon),
+      icon: icon,
     );
     return SizedBox(
       width: 70,

@@ -1,5 +1,5 @@
 import { Circle } from 'lucide-react';
-import type { SocialConversation } from '@/types';
+import type { MangaShareAttachment, SocialConversation } from '@/types';
 import { getConversationAvatar, getConversationTitle } from '../utils';
 import { Avatar } from './Avatar';
 
@@ -26,9 +26,11 @@ export function ConversationButton({
     latest.id !== conversation.currentMember?.lastReadMessageId,
   );
 
+  const mangaShare = getMangaShareAttachment(latest?.attachments);
   const previewText = typingLabel
     ? `${typingLabel} is typing`
     : (latest?.content ??
+      (mangaShare ? `Shared ${mangaShare.manga.title}` : null) ??
       (latest?.deletedAt ? 'Deleted message' : 'No messages'));
 
   return (
@@ -50,4 +52,16 @@ export function ConversationButton({
       </span>
     </button>
   );
+}
+
+function getMangaShareAttachment(
+  attachments: unknown,
+): MangaShareAttachment | null {
+  if (!attachments || typeof attachments !== 'object') return null;
+  const candidate = attachments as Partial<MangaShareAttachment>;
+  if (candidate.kind !== 'MANGA_SHARE') return null;
+  if (!candidate.manga || typeof candidate.manga.title !== 'string') {
+    return null;
+  }
+  return candidate as MangaShareAttachment;
 }

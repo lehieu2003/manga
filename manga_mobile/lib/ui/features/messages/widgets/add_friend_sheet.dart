@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../cubit/messages_cubit.dart';
 import '../cubit/messages_state.dart';
+import 'social_avatar.dart';
 
 class AddFriendSheet extends StatefulWidget {
   const AddFriendSheet({super.key});
@@ -86,8 +87,9 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
                               onChanged: (value) {
                                 setState(() => _selectedUserId = value);
                               },
-                              secondary: CircleAvatar(
-                                child: Text(user.displayName.characters.first),
+                              secondary: SocialAvatar(
+                                label: user.displayName,
+                                avatarUrl: user.avatarUrl,
                               ),
                               title: Text(
                                 user.displayName,

@@ -24,18 +24,18 @@ Completed:
 - Phase 2 frontend direct-message slice is implemented and verified: inbox list, selected thread, message history, optimistic text sends, socket reconciliation, delete action, typing indicator handling, and automatic read marking are covered by focused tests.
 - User-facing friendship and DM entry UI is implemented and verified: users can search readers by display name/email, send a friend request from a selected result, review incoming and sent requests, accept or reject requests, block or remove friends, and open an existing direct-message thread from the friend list.
 - Social notification rendering is fixed for friendship events: friend requests and accepted-request notifications label as social events and route to `/messages` instead of falling through to comment notification copy/routes.
-- Manga sharing is implemented for the social message path: backend accepts `MANGA_SHARE`, validates cached manga/chapter IDs, stores a server-built card payload, emits the normal message event, and mobile can search/share a manga from the DM composer and render the saved card.
+- Manga sharing is implemented for the social message path: backend accepts `MANGA_SHARE`, validates cached manga/chapter IDs, stores a server-built card payload, emits the normal message event, and mobile/web can search/share a manga from the DM composer and render the saved card.
 
 In progress:
 
-- Verify the manga sharing slice across backend and mobile, then add optional chapter picking to the mobile share sheet if needed.
+- Verify the manga sharing slice across backend, frontend, and mobile, then add optional chapter picking to the share sheet if needed.
 
 Latest verification:
 
+- Frontend manga sharing web update: `npm run test -- social-chat-page.test.tsx` in `frontend` passed with 6 tests.
+- Frontend manga sharing web update: `npm run typecheck` in `frontend` passed.
+- Frontend manga sharing web update: `npm run build` in `frontend` passed.
 - Pending after manga sharing changes: backend typecheck/tests and mobile analyze/widget tests.
-- `npm run typecheck` in `frontend`
-- `npm run build` in `frontend`
-- `npm test` in `frontend`
 - `npm run typecheck` in `backend`
 - `npm test -- src/tests/unit/friendship.service.test.ts` in `backend`
 
