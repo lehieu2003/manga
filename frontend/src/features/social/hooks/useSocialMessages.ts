@@ -3,6 +3,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { api } from '@/api';
 import { useToast } from '@/stores/toast.store';
 import type {
+  MangaShareAttachment,
+  MangaSummary,
   SocialConversation,
   SocialMessage,
   SocialMessageListResponse,
@@ -73,6 +75,43 @@ export function useSocialMessages(
     },
   });
 
+  const sendMangaShare = useMutation({
+    mutationFn: (input: {
+      conversationId: string;
+      clientMessageId: string;
+      mangaId: string;
+      chapterId?: string;
+    }) =>
+      api.sendSocialMessage(input.conversationId, {
+        clientMessageId: input.clientMessageId,
+        type: 'MANGA_SHARE',
+        mangaId: input.mangaId,
+        chapterId: input.chapterId,
+      }),
+    onSuccess: ({ message }, variables) => {
+      setPendingMessages((current) =>
+        current.filter(
+          (item) => item.clientMessageId !== variables.clientMessageId,
+        ),
+      );
+      queryClient.setQueryData<SocialMessageListResponse>(
+        ['social-messages', variables.conversationId],
+        (current) => addMessageToPage(current, message),
+      );
+      queryClient.invalidateQueries({ queryKey: ['social-conversations'] });
+    },
+    onError: (_error, variables) => {
+      setPendingMessages((current) =>
+        current.map((item) =>
+          item.clientMessageId === variables.clientMessageId
+            ? { ...item, pending: false, failed: true }
+            : item,
+        ),
+      );
+      showToast({ title: 'Manga share not sent', kind: 'error' });
+    },
+  });
+
   const deleteMessage = useMutation({
     mutationFn: (messageId: string) => api.deleteSocialMessage(messageId),
     onSuccess: ({ message }) => {
@@ -127,6 +166,62 @@ export function useSocialMessages(
     [currentUser],
   );
 
+  const addPendingMangaShare = useCallback(
+    (
+      conversationId: string,
+      clientMessageId: string,
+      manga: MangaSummary,
+      chapterId?: string,
+    ) => {
+      if (!currentUser) return;
+      const now = new Date().toISOString();
+      const attachment: MangaShareAttachment = {
+        kind: 'MANGA_SHARE',
+        manga: {
+          id: manga.id,
+          title: manga.title,
+          coverUrl: manga.coverUrl,
+          status: manga.status,
+          year: manga.year,
+          contentRating: manga.contentRating,
+          tags: manga.tags.slice(0, 6),
+        },
+        chapter: chapterId
+          ? {
+              id: chapterId,
+              title: '',
+              chapter: null,
+              translatedLanguage: '',
+              pages: 0,
+            }
+          : null,
+      };
+      setPendingMessages((current) => [
+        ...current,
+        {
+          id: `pending-${clientMessageId}`,
+          conversationId,
+          senderId: currentUser.id,
+          clientMessageId,
+          type: 'MANGA_SHARE',
+          content: null,
+          attachments: attachment,
+          replyToId: null,
+          deletedAt: null,
+          createdAt: now,
+          updatedAt: now,
+          sender: {
+            id: currentUser.id,
+            displayName: currentUser.displayName,
+            avatarUrl: currentUser.avatarUrl,
+          },
+          pending: true,
+        },
+      ]);
+    },
+    [currentUser],
+  );
+
   /** Messages đã commit + pending của conversation hiện tại, theo đúng thứ tự hiển thị */
   const visibleMessages = useMemo(() => {
     const committed = [...(messagesQuery.data?.data ?? [])].reverse();
@@ -140,8 +235,10 @@ export function useSocialMessages(
     messagesQuery,
     visibleMessages,
     sendMessage,
+    sendMangaShare,
     deleteMessage,
     addPendingMessage,
+    addPendingMangaShare,
     resolvePending,
   };
 }

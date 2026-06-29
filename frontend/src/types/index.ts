@@ -352,6 +352,12 @@ export type SocialCurrentMember = {
   joinedAt: string;
 };
 
+export type MangaShareAttachment = {
+  kind: "MANGA_SHARE";
+  manga: Pick<MangaSummary, "id" | "title" | "coverUrl" | "status" | "year" | "contentRating" | "tags">;
+  chapter: Pick<ChapterSummary, "id" | "title" | "chapter" | "translatedLanguage" | "pages"> | null;
+};
+
 export type SocialMessage = {
   id: string;
   conversationId: string;

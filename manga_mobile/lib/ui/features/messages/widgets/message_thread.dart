@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../../domain/models/models.dart';
 import '../cubit/messages_state.dart';
 import 'message_bubble.dart';
+import 'social_avatar.dart';
 
 class MessageThread extends StatelessWidget {
   const MessageThread({
@@ -36,6 +38,7 @@ class MessageThread extends StatelessWidget {
 
     final title = conversation.titleFor(currentUserId);
     final typingName = state.typingUsers[conversation.id];
+    final avatarUrl = _conversationAvatarUrl(conversation, currentUserId);
 
     return Column(
       children: [
@@ -48,7 +51,7 @@ class MessageThread extends StatelessWidget {
                     onPressed: onBack,
                     icon: const Icon(Icons.arrow_back),
                   )
-                : CircleAvatar(child: Text(title.characters.first)),
+                : SocialAvatar(label: title, avatarUrl: avatarUrl),
             title: Text(
               title,
               maxLines: 1,
@@ -154,6 +157,19 @@ class MessageThread extends StatelessWidget {
       ],
     );
   }
+}
+
+String? _conversationAvatarUrl(
+  SocialConversation conversation,
+  String currentUserId,
+) {
+  if (conversation.avatarUrl != null && conversation.avatarUrl!.isNotEmpty) {
+    return conversation.avatarUrl;
+  }
+  for (final member in conversation.members) {
+    if (member.userId != currentUserId) return member.user.avatarUrl;
+  }
+  return null;
 }
 
 class _TypingIndicator extends StatelessWidget {

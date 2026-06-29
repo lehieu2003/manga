@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../domain/models/models.dart';
 import '../../../app_state.dart';
+import 'social_avatar.dart';
 
 class MessageBubble extends StatelessWidget {
   const MessageBubble({super.key, required this.message, required this.own});
@@ -22,9 +23,10 @@ class MessageBubble extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         if (!own) ...[
-          CircleAvatar(
+          SocialAvatar(
             radius: 12,
-            child: Text(message.sender?.displayName.characters.first ?? '?'),
+            label: message.sender?.displayName ?? 'Reader',
+            avatarUrl: message.sender?.avatarUrl,
           ),
           const SizedBox(width: 6),
         ],

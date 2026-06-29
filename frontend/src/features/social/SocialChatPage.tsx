@@ -1,16 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, MessageCircle, Send, UsersRound } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { BookOpen, Loader2, MessageCircle, Send, UsersRound } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/api';
 import { useAuth } from '@/features/auth/stores/auth.store';
 import { useToast } from '@/stores/toast.store';
-import type { Friendship } from '@/types';
+import type { Friendship, MangaSummary } from '@/types';
 import { CONVERSATIONS_PAGE_SIZE } from './constants';
 import { useFriendships } from './hooks/useFriendships';
 import { useSocialMessages } from './hooks/useSocialMessages';
 import { useSocialSocket } from './hooks/useSocialSocket';
 import { ConversationButton } from './components/ConversationButton';
 import { FriendshipPanel } from './components/FriendshipPanel';
+import { MangaSharePicker } from './components/MangaSharePicker';
 import { MessageRow } from './components/MessageRow';
 import { ThreadHeader } from './components/ThreadHeader';
 import { EmptyPanel, LoadingRow } from './components/primitives';
@@ -23,6 +24,9 @@ export function SocialChatPage() {
   >(null);
   const [draft, setDraft] = useState('');
   const [friendSearchQuery, setFriendSearchQuery] = useState('');
+  const [mangaShareOpen, setMangaShareOpen] = useState(false);
+  const [mangaShareQuery, setMangaShareQuery] = useState('');
+  const messageListRef = useRef<HTMLDivElement | null>(null);
 
   // --- Conversations ---
   const conversations = useQuery({
@@ -43,6 +47,17 @@ export function SocialChatPage() {
     onAcceptedConversation: setSelectedConversationId,
   });
 
+  const mangaShareResults = useQuery({
+    queryKey: ['social-manga-share-search', mangaShareQuery],
+    queryFn: () =>
+      api.searchManga({
+        q: mangaShareQuery.trim() || undefined,
+        limit: 8,
+        sort: mangaShareQuery.trim() ? 'relevance' : 'latest',
+      }),
+    enabled: Boolean(user && selectedConversation && mangaShareOpen),
+  });
+
   // Auto-select conversation đầu tiên khi load xong
   useEffect(() => {
     if (!selectedConversationId && conversationItems[0]) {
@@ -55,8 +70,10 @@ export function SocialChatPage() {
     messagesQuery,
     visibleMessages,
     sendMessage,
+    sendMangaShare,
     deleteMessage,
     addPendingMessage,
+    addPendingMangaShare,
     resolvePending,
   } = useSocialMessages(user, selectedConversation);
 
@@ -72,6 +89,31 @@ export function SocialChatPage() {
     latestMessage,
     onPendingResolved: stableResolvePending,
   });
+  const selectedTypingLabel = selectedConversation
+    ? typingUsers[selectedConversation.id]
+    : undefined;
+
+  const scrollMessagesToEnd = useCallback((behavior: ScrollBehavior = 'auto') => {
+    const list = messageListRef.current;
+    if (!list) return;
+    if (typeof list.scrollTo === 'function') {
+      list.scrollTo({ top: list.scrollHeight, behavior });
+      return;
+    }
+    list.scrollTop = list.scrollHeight;
+  }, []);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      scrollMessagesToEnd();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [
+    selectedConversation?.id,
+    visibleMessages.length,
+    selectedTypingLabel,
+    scrollMessagesToEnd,
+  ]);
 
   // --- Handlers ---
   const submitMessage = () => {
@@ -86,6 +128,19 @@ export function SocialChatPage() {
       clientMessageId,
       content,
     });
+    emitTypingStop(selectedConversation.id);
+  };
+
+  const shareManga = (manga: MangaSummary) => {
+    if (!selectedConversation || !user) return;
+    const clientMessageId = crypto.randomUUID();
+    addPendingMangaShare(selectedConversation.id, clientMessageId, manga);
+    sendMangaShare.mutate({
+      conversationId: selectedConversation.id,
+      clientMessageId,
+      mangaId: manga.id,
+    });
+    setMangaShareOpen(false);
     emitTypingStop(selectedConversation.id);
   };
 
@@ -174,7 +229,7 @@ export function SocialChatPage() {
               conversation={selectedConversation}
               currentUserId={user?.id ?? ''}
             />
-            <div className='social-message-list'>
+            <div className='social-message-list' ref={messageListRef}>
               {messagesQuery.isLoading ? (
                 <LoadingRow label='Loading messages' />
               ) : null}
@@ -190,9 +245,9 @@ export function SocialChatPage() {
                 />
               ))}
             </div>
-            {typingUsers[selectedConversation.id] ? (
+            {selectedTypingLabel ? (
               <div className='social-typing-line'>
-                {typingUsers[selectedConversation.id]} is typing
+                {selectedTypingLabel} is typing
               </div>
             ) : null}
             <form
@@ -202,6 +257,19 @@ export function SocialChatPage() {
                 submitMessage();
               }}
             >
+              <button
+                className='btn reader-icon-button'
+                type='button'
+                disabled={sendMangaShare.isPending}
+                aria-label='Share manga'
+                onClick={() => setMangaShareOpen(true)}
+              >
+                {sendMangaShare.isPending ? (
+                  <Loader2 className='reader-spin' size={17} />
+                ) : (
+                  <BookOpen size={17} />
+                )}
+              </button>
               <input
                 className='control'
                 value={draft}
@@ -223,6 +291,15 @@ export function SocialChatPage() {
                 )}
               </button>
             </form>
+            <MangaSharePicker
+              open={mangaShareOpen}
+              query={mangaShareQuery}
+              results={mangaShareResults.data?.data ?? []}
+              loading={mangaShareResults.isFetching}
+              onQueryChange={setMangaShareQuery}
+              onPick={shareManga}
+              onClose={() => setMangaShareOpen(false)}
+            />
           </>
         ) : (
           <div className='social-thread-empty'>

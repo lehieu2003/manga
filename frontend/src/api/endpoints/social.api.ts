@@ -1,6 +1,10 @@
 import type { Friendship, FriendshipListResponse, SocialConversationListResponse, SocialMessage, SocialMessageListResponse, SocialMessageType, SocialUserSearchResponse } from "@/types";
 import { request } from "../interceptors/auth.interceptor";
 
+type SendSocialMessageInput =
+  | { clientMessageId: string; type?: Extract<SocialMessageType, "TEXT">; content: string }
+  | { clientMessageId: string; type: Extract<SocialMessageType, "MANGA_SHARE">; mangaId: string; chapterId?: string };
+
 export const socialApi = {
   searchSocialUsers(params: { query?: string; limit?: number } = {}) {
     const query = new URLSearchParams();
@@ -53,10 +57,11 @@ export const socialApi = {
     if (params.cursor) query.set("cursor", params.cursor);
     return request<SocialMessageListResponse>(`/social/conversations/${conversationId}/messages?${query}`);
   },
-  sendSocialMessage(conversationId: string, input: { clientMessageId: string; type?: Extract<SocialMessageType, "TEXT">; content: string }) {
+  sendSocialMessage(conversationId: string, input: SendSocialMessageInput) {
+    const body = input.type === "MANGA_SHARE" ? input : { type: "TEXT", ...input };
     return request<{ message: SocialMessage; idempotent: boolean }>(`/social/conversations/${conversationId}/messages`, {
       method: "POST",
-      body: JSON.stringify({ type: "TEXT", ...input })
+      body: JSON.stringify(body)
     });
   },
   markSocialConversationRead(conversationId: string, lastMessageId: string) {

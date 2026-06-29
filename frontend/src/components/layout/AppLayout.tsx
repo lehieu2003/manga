@@ -21,6 +21,7 @@ export function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const isReaderRoute = location.pathname.startsWith("/read/");
+  const isMessagesRoute = location.pathname.startsWith("/messages");
   const routeContext = getRouteContext(location.pathname);
   const visibleNavItems = user?.role === "ADMIN" || getAdminToken() ? [...navItems, { to: "/admin", label: "Admin", icon: ShieldCheck }] : navItems;
   const ThemeIcon = theme === "dark" ? Sun : Moon;
@@ -75,7 +76,7 @@ export function AppLayout() {
         </div>
       </header>
       ) : null}
-      <main className={isReaderRoute ? "reader-main" : "container-x py-6"}>
+      <main className={isReaderRoute ? "reader-main" : isMessagesRoute ? "container-x messages-main" : "container-x py-6"}>
         <Outlet />
       </main>
       {user ? <FloatingChatWidget routeContext={routeContext} /> : null}

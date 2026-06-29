@@ -2,9 +2,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SocialChatPage } from "@/features/social/SocialChatPage";
-import type { SocialConversation, SocialMessage, User } from "@/types";
+import type { MangaSummary, SocialConversation, SocialMessage, User } from "@/types";
 
 type SocketHandler = (payload?: unknown, ack?: (result: unknown) => void) => void;
 
@@ -15,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   listIncomingFriendRequests: vi.fn(),
   listSentFriendRequests: vi.fn(),
   searchSocialUsers: vi.fn(),
+  searchManga: vi.fn(),
   sendFriendRequest: vi.fn(),
   acceptFriendRequest: vi.fn(),
   rejectFriendRequest: vi.fn(),
@@ -30,6 +32,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/api", () => ({
+  assetUrl: (url: string | undefined) => url,
   api: {
     listSocialConversations: mocks.listSocialConversations,
     listSocialMessages: mocks.listSocialMessages,
@@ -37,6 +40,7 @@ vi.mock("@/api", () => ({
     listIncomingFriendRequests: mocks.listIncomingFriendRequests,
     listSentFriendRequests: mocks.listSentFriendRequests,
     searchSocialUsers: mocks.searchSocialUsers,
+    searchManga: mocks.searchManga,
     sendFriendRequest: mocks.sendFriendRequest,
     acceptFriendRequest: mocks.acceptFriendRequest,
     rejectFriendRequest: mocks.rejectFriendRequest,
@@ -82,6 +86,7 @@ describe("SocialChatPage", () => {
     mocks.listIncomingFriendRequests.mockResolvedValue({ data: [incomingFriendship] });
     mocks.listSentFriendRequests.mockResolvedValue({ data: [sentFriendship] });
     mocks.searchSocialUsers.mockResolvedValue({ data: [searchResult] });
+    mocks.searchManga.mockResolvedValue({ data: [mangaResult], limit: 8, offset: 0, total: 1 });
     mocks.sendFriendRequest.mockResolvedValue({ friendship: sentFriendship });
     mocks.acceptFriendRequest.mockResolvedValue({ friendship: acceptedFriendship, conversation });
     mocks.rejectFriendRequest.mockResolvedValue({ friendship: incomingFriendship });
@@ -144,6 +149,26 @@ describe("SocialChatPage", () => {
 
     await waitFor(() => expect(screen.getAllByText("Committed realtime note")).toHaveLength(1));
     expect(screen.queryByText("Sending")).not.toBeInTheDocument();
+  });
+
+  it("shares a manga into the selected conversation", async () => {
+    const user = userEvent.setup();
+    mocks.sendSocialMessage.mockResolvedValue({ message: sharedMangaMessage, idempotent: false });
+
+    renderWithClient(<SocialChatPage />);
+
+    await screen.findByText("See you at chapter 12");
+    await user.click(screen.getByRole("button", { name: "Share manga" }));
+    await user.click(await screen.findByRole("button", { name: "Share Chainsaw Man" }));
+
+    expect(mocks.searchManga).toHaveBeenCalledWith(expect.objectContaining({ limit: 8 }));
+    expect(mocks.sendSocialMessage).toHaveBeenCalledWith("conv-1", {
+      clientMessageId: "00000000-0000-4000-8000-000000000001",
+      type: "MANGA_SHARE",
+      mangaId: "manga-1"
+    });
+    expect(await screen.findByText("Chainsaw Man")).toBeInTheDocument();
+    expect(screen.getByText("Manga share")).toBeInTheDocument();
   });
 
   it("soft-deletes the current user's message", async () => {
@@ -215,6 +240,18 @@ const searchResult = {
   avatarUrl: null
 };
 
+const mangaResult: MangaSummary = {
+  id: "manga-1",
+  title: "Chainsaw Man",
+  altTitles: [],
+  description: "Devils and contracts.",
+  status: "ongoing",
+  year: 2024,
+  contentRating: "safe",
+  tags: ["Action", "Drama"],
+  coverUrl: "/api/covers/manga-1/cover.jpg"
+};
+
 const ownMessage: SocialMessage = {
   id: "message-1",
   conversationId: "conv-1",
@@ -257,6 +294,33 @@ const sentMessage: SocialMessage = {
   deletedAt: null,
   createdAt: "2026-06-28T09:01:00.000Z",
   updatedAt: "2026-06-28T09:01:00.000Z",
+  sender: currentUser
+};
+
+const sharedMangaMessage: SocialMessage = {
+  id: "message-4",
+  conversationId: "conv-1",
+  senderId: currentUser.id,
+  clientMessageId: "00000000-0000-4000-8000-000000000001",
+  type: "MANGA_SHARE",
+  content: null,
+  attachments: {
+    kind: "MANGA_SHARE",
+    manga: {
+      id: mangaResult.id,
+      title: mangaResult.title,
+      coverUrl: mangaResult.coverUrl,
+      status: mangaResult.status,
+      year: mangaResult.year,
+      contentRating: mangaResult.contentRating,
+      tags: mangaResult.tags
+    },
+    chapter: null
+  },
+  replyToId: null,
+  deletedAt: null,
+  createdAt: "2026-06-28T09:03:00.000Z",
+  updatedAt: "2026-06-28T09:03:00.000Z",
   sender: currentUser
 };
 
@@ -360,5 +424,9 @@ const acceptedFriendship = {
 
 function renderWithClient(ui: ReactElement) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+  return render(
+    <MemoryRouter>
+      <QueryClientProvider client={client}>{ui}</QueryClientProvider>
+    </MemoryRouter>
+  );
 }
