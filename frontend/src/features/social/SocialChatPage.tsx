@@ -1,15 +1,16 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BookOpen, Loader2, MessageCircle, Send, UsersRound } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/api';
 import { useAuth } from '@/features/auth/stores/auth.store';
 import { useToast } from '@/stores/toast.store';
-import type { Friendship, MangaSummary } from '@/types';
+import type { Friendship, MangaSummary, SocialConversationListResponse } from '@/types';
 import { CONVERSATIONS_PAGE_SIZE } from './constants';
 import { useFriendships } from './hooks/useFriendships';
 import { useSocialMessages } from './hooks/useSocialMessages';
 import { useSocialSocket } from './hooks/useSocialSocket';
 import { ConversationButton } from './components/ConversationButton';
+import { CreateGroupDialog } from './components/CreateGroupDialog';
 import { FriendshipPanel } from './components/FriendshipPanel';
 import { MangaSharePicker } from './components/MangaSharePicker';
 import { MessageRow } from './components/MessageRow';
@@ -19,11 +20,13 @@ import { EmptyPanel, LoadingRow } from './components/primitives';
 export function SocialChatPage() {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const queryClient = useQueryClient();
   const [selectedConversationId, setSelectedConversationId] = useState<
     string | null
   >(null);
   const [draft, setDraft] = useState('');
   const [friendSearchQuery, setFriendSearchQuery] = useState('');
+  const [groupDialogOpen, setGroupDialogOpen] = useState(false);
   const [mangaShareOpen, setMangaShareOpen] = useState(false);
   const [mangaShareQuery, setMangaShareQuery] = useState('');
   const messageListRef = useRef<HTMLDivElement | null>(null);
@@ -45,6 +48,28 @@ export function SocialChatPage() {
     enabled: Boolean(user),
     userSearchQuery: friendSearchQuery,
     onAcceptedConversation: setSelectedConversationId,
+  });
+
+  const createGroup = useMutation({
+    mutationFn: (input: { title: string; memberIds: string[] }) =>
+      api.createSocialGroupConversation(input),
+    onSuccess: ({ conversation }) => {
+      queryClient.setQueryData<SocialConversationListResponse>(
+        ['social-conversations'],
+        (current) => ({
+          data: [
+            conversation,
+            ...(current?.data.filter((item) => item.id !== conversation.id) ?? []),
+          ],
+          nextCursor: current?.nextCursor ?? null,
+        }),
+      );
+      setSelectedConversationId(conversation.id);
+      setGroupDialogOpen(false);
+    },
+    onError: () => {
+      showToast({ title: 'Could not create group', kind: 'error' });
+    },
   });
 
   const mangaShareResults = useQuery({
@@ -181,6 +206,20 @@ export function SocialChatPage() {
             <h1>Messages</h1>
             <p>{conversationItems.length} active</p>
           </div>
+          <button
+            className='btn reader-icon-button social-sidebar-action'
+            type='button'
+            aria-label='Create group'
+            title='Create group'
+            disabled={friendships.friends.length < 2 || createGroup.isPending}
+            onClick={() => setGroupDialogOpen(true)}
+          >
+            {createGroup.isPending ? (
+              <Loader2 className='reader-spin' size={16} />
+            ) : (
+              <UsersRound size={16} />
+            )}
+          </button>
         </div>
         <div className='social-conversation-list'>
           {conversations.isLoading ? (
@@ -247,7 +286,7 @@ export function SocialChatPage() {
             </div>
             {selectedTypingLabel ? (
               <div className='social-typing-line'>
-                {selectedTypingLabel} is typing
+                {formatTypingStatus(selectedTypingLabel)}
               </div>
             ) : null}
             <form
@@ -308,6 +347,18 @@ export function SocialChatPage() {
           </div>
         )}
       </section>
+      <CreateGroupDialog
+        open={groupDialogOpen}
+        friends={friendships.friends}
+        busy={createGroup.isPending}
+        onCreate={(input) => createGroup.mutate(input)}
+        onClose={() => setGroupDialogOpen(false)}
+      />
     </section>
   );
+}
+
+function formatTypingStatus(label: string) {
+  const verb = label.includes(' and ') || label.includes(' others') ? 'are' : 'is';
+  return `${label} ${verb} typing`;
 }

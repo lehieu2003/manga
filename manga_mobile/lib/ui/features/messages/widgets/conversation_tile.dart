@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../domain/models/models.dart';
+import '../cubit/messages_state.dart';
 import 'social_avatar.dart';
 
 class ConversationTile extends StatelessWidget {
@@ -23,7 +24,7 @@ class ConversationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final latest = conversation.latestMessage;
     final preview = typingLabel != null
-        ? '$typingLabel is typing...'
+        ? typingSentenceFor(typingLabel!)
         : latest?.deletedAt != null
         ? 'Deleted message'
         : latest?.mangaShare != null

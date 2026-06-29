@@ -59,7 +59,7 @@ void main() {
 
     await tester.tap(find.byTooltip('Add friend'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.bySemanticsLabel('Search readers'), 'Kir');
+    await tester.enterText(find.byType(EditableText).last, 'Kir');
     await tester.pumpAndSettle();
     await tester.tap(find.text('Kira'));
     await tester.pumpAndSettle();
@@ -88,6 +88,20 @@ void main() {
     );
     await tester.pump();
     expect(find.text('Mina is typing...'), findsWidgets);
+    socket.emitTyping(
+      conversationId: 'conversation-1',
+      user: social.users[1],
+      typing: true,
+    );
+    await tester.pump();
+    expect(find.text('Mina and Nori are typing...'), findsWidgets);
+    socket.emitTyping(
+      conversationId: 'conversation-1',
+      user: social.users.first,
+      typing: false,
+    );
+    await tester.pump();
+    expect(find.text('Nori is typing...'), findsWidgets);
     expect(
       find.byKey(const ValueKey('message-thread-typing-indicator')),
       findsOneWidget,
@@ -122,5 +136,22 @@ void main() {
     await tester.pump();
     await tester.pumpAndSettle();
     expect(find.text('Realtime ping'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Back to chats'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Create group'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(EditableText).last, 'Manga Club');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mina').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Nori').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Create group'));
+    await tester.pumpAndSettle();
+
+    expect(social.createdGroups.single.$1, 'Manga Club');
+    expect(social.createdGroups.single.$2, ['user-2', 'user-3']);
+    expect(find.text('Manga Club'), findsWidgets);
   });
 }

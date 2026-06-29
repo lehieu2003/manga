@@ -182,6 +182,19 @@ class SocialRepository {
     );
   }
 
+  Future<SocialConversation> createGroupConversation({
+    required String title,
+    required List<String> memberIds,
+  }) async {
+    final payload = await _api.post('/social/conversations', {
+      'title': title,
+      'memberIds': memberIds,
+    }, (json) => json);
+    return SocialConversation.fromJson(
+      payload['conversation'] as Map<String, dynamic>,
+    );
+  }
+
   Future<SocialMessageListResponse> listMessages(
     String conversationId, {
     int limit = 50,

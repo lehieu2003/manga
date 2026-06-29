@@ -1,17 +1,25 @@
-import { SocialConversationType, SocialMemberRole, SocialMembershipStatus } from "@prisma/client";
+import { FriendshipStatus, SocialConversationType, SocialMemberRole, SocialMembershipStatus } from "@prisma/client";
 import Fastify from "fastify";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const prismaMocks = vi.hoisted(() => ({
   socialConversationFindMany: vi.fn(),
-  socialConversationFindFirst: vi.fn()
+  socialConversationFindFirst: vi.fn(),
+  socialConversationCreate: vi.fn(),
+  friendshipFindMany: vi.fn(),
+  transaction: vi.fn()
 }));
 
 vi.mock("../../../infrastructure/database/client.js", () => ({
   prisma: {
+    $transaction: prismaMocks.transaction,
     socialConversation: {
       findMany: prismaMocks.socialConversationFindMany,
-      findFirst: prismaMocks.socialConversationFindFirst
+      findFirst: prismaMocks.socialConversationFindFirst,
+      create: prismaMocks.socialConversationCreate
+    },
+    friendship: {
+      findMany: prismaMocks.friendshipFindMany
     }
   }
 }));
@@ -19,6 +27,104 @@ vi.mock("../../../infrastructure/database/client.js", () => ({
 describe("socialConversationRoutes", () => {
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("creates a group conversation with accepted friends as active members", async () => {
+    const app = await makeSocialConversationApp();
+    prismaMocks.transaction.mockImplementation((callback) =>
+      callback({
+        socialConversation: { create: prismaMocks.socialConversationCreate },
+        friendship: { findMany: prismaMocks.friendshipFindMany }
+      })
+    );
+    prismaMocks.friendshipFindMany.mockResolvedValue([
+      { userAId: "user-1", userBId: "user-2" },
+      { userAId: "user-1", userBId: "user-3" }
+    ]);
+    prismaMocks.socialConversationCreate.mockResolvedValue(
+      makeConversation({
+        id: "group-1",
+        type: SocialConversationType.GROUP,
+        title: "Manga Club",
+        directKey: null,
+        members: [
+          makeMember({ id: "owner-member", userId: "user-1", role: SocialMemberRole.OWNER, displayName: "Reader" }),
+          makeMember({ id: "member-2", userId: "user-2", role: SocialMemberRole.MEMBER, displayName: "Friend" }),
+          makeMember({ id: "member-3", userId: "user-3", role: SocialMemberRole.MEMBER, displayName: "Mina" })
+        ],
+        messages: []
+      })
+    );
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/social/conversations",
+      payload: { title: "  Manga Club  ", memberIds: ["user-2", "user-3", "user-2"] }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      conversation: {
+        id: "group-1",
+        type: "GROUP",
+        title: "Manga Club",
+        directKey: null,
+        currentMember: { role: "OWNER", status: "ACTIVE" },
+        members: [
+          { userId: "user-1", role: "OWNER" },
+          { userId: "user-2", role: "MEMBER" },
+          { userId: "user-3", role: "MEMBER" }
+        ]
+      }
+    });
+    expect(prismaMocks.friendshipFindMany).toHaveBeenCalledWith({
+      where: {
+        status: FriendshipStatus.ACCEPTED,
+        OR: [
+          { userAId: "user-1", userBId: "user-2" },
+          { userAId: "user-1", userBId: "user-3" }
+        ]
+      },
+      select: { userAId: true, userBId: true }
+    });
+    expect(prismaMocks.socialConversationCreate).toHaveBeenCalledWith({
+      data: {
+        type: SocialConversationType.GROUP,
+        title: "Manga Club",
+        directKey: null,
+        members: {
+          create: [
+            { userId: "user-1", role: SocialMemberRole.OWNER, status: SocialMembershipStatus.ACTIVE },
+            { userId: "user-2", role: SocialMemberRole.MEMBER, status: SocialMembershipStatus.ACTIVE },
+            { userId: "user-3", role: SocialMemberRole.MEMBER, status: SocialMembershipStatus.ACTIVE }
+          ]
+        }
+      },
+      include: expect.any(Object)
+    });
+    await app.close();
+  });
+
+  it("rejects group creation when any selected member is not an accepted friend", async () => {
+    const app = await makeSocialConversationApp();
+    prismaMocks.transaction.mockImplementation((callback) =>
+      callback({
+        socialConversation: { create: prismaMocks.socialConversationCreate },
+        friendship: { findMany: prismaMocks.friendshipFindMany }
+      })
+    );
+    prismaMocks.friendshipFindMany.mockResolvedValue([{ userAId: "user-1", userBId: "user-2" }]);
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/social/conversations",
+      payload: { title: "Manga Club", memberIds: ["user-2", "user-3"] }
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({ code: "SOCIAL_GROUP_MEMBERS_NOT_FRIENDS" });
+    expect(prismaMocks.socialConversationCreate).not.toHaveBeenCalled();
+    await app.close();
   });
 
   it("lists active conversations for the authenticated member", async () => {
@@ -115,7 +221,13 @@ async function makeSocialConversationApp() {
   return app;
 }
 
-function makeConversation(input: Partial<ReturnType<typeof makeConversationBase>> = {}) {
+type ConversationFixture = Omit<ReturnType<typeof makeConversationBase>, "type" | "title" | "directKey"> & {
+  type: SocialConversationType;
+  title: string | null;
+  directKey: string | null;
+};
+
+function makeConversation(input: Partial<ConversationFixture> = {}): ConversationFixture {
   return { ...makeConversationBase(), ...input };
 }
 
@@ -129,32 +241,7 @@ function makeConversationBase() {
     lastMessageAt: new Date("2024-01-04T00:00:00.000Z"),
     createdAt: new Date("2024-01-01T00:00:00.000Z"),
     updatedAt: new Date("2024-01-04T00:00:00.000Z"),
-    members: [
-      {
-        id: "member-1",
-        conversationId: "conv-1",
-        userId: "user-1",
-        role: SocialMemberRole.MEMBER,
-        status: SocialMembershipStatus.ACTIVE,
-        lastReadMessageId: null,
-        lastReadAt: null,
-        mutedUntil: null,
-        joinedAt: new Date("2024-01-01T00:00:00.000Z"),
-        user: { id: "user-1", displayName: "Reader", avatarUrl: null }
-      },
-      {
-        id: "member-2",
-        conversationId: "conv-1",
-        userId: "user-2",
-        role: SocialMemberRole.MEMBER,
-        status: SocialMembershipStatus.ACTIVE,
-        lastReadMessageId: null,
-        lastReadAt: null,
-        mutedUntil: null,
-        joinedAt: new Date("2024-01-01T00:01:00.000Z"),
-        user: { id: "user-2", displayName: "Friend", avatarUrl: null }
-      }
-    ],
+    members: [makeMember({ id: "member-1", userId: "user-1", displayName: "Reader" }), makeMember({ id: "member-2", userId: "user-2", displayName: "Friend" })],
     messages: [
       {
         id: "msg-1",
@@ -171,5 +258,20 @@ function makeConversationBase() {
         sender: { id: "user-2", displayName: "Friend", avatarUrl: null }
       }
     ]
+  };
+}
+
+function makeMember(input: { id: string; userId: string; displayName: string; role?: SocialMemberRole }) {
+  return {
+    id: input.id,
+    conversationId: "conv-1",
+    userId: input.userId,
+    role: input.role ?? SocialMemberRole.MEMBER,
+    status: SocialMembershipStatus.ACTIVE,
+    lastReadMessageId: null,
+    lastReadAt: null,
+    mutedUntil: null,
+    joinedAt: new Date("2024-01-01T00:00:00.000Z"),
+    user: { id: input.userId, displayName: input.displayName, avatarUrl: null }
   };
 }

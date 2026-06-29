@@ -43,7 +43,7 @@ class MessagesState {
   final List<Friendship> incomingRequests;
   final List<Friendship> sentRequests;
   final List<SocialConversation> conversations;
-  final Map<String, String> typingUsers;
+  final Map<String, Map<String, String>> typingUsers;
   final String? selectedConversationId;
   final List<SocialMessage> messages;
   final String? error;
@@ -68,7 +68,7 @@ class MessagesState {
     List<Friendship>? incomingRequests,
     List<Friendship>? sentRequests,
     List<SocialConversation>? conversations,
-    Map<String, String>? typingUsers,
+    Map<String, Map<String, String>>? typingUsers,
     Object? selectedConversationId = _unset,
     List<SocialMessage>? messages,
     Object? error = _unset,
@@ -93,4 +93,18 @@ class MessagesState {
       notice: notice == _unset ? this.notice : notice as String?,
     );
   }
+}
+
+String typingLabelFor(Map<String, Map<String, String>> typingUsers, String conversationId) {
+  final names = typingUsers[conversationId]?.values.where((name) => name.isNotEmpty).toList() ?? const <String>[];
+  if (names.isEmpty) return '';
+  if (names.length == 1) return names.first;
+  if (names.length == 2) return '${names[0]} and ${names[1]}';
+  return '${names.first} and ${names.length - 1} others';
+}
+
+String typingSentenceFor(String typingLabel) {
+  if (typingLabel.isEmpty) return '';
+  final verb = typingLabel.contains(' and ') || typingLabel.contains(' others') ? 'are' : 'is';
+  return '$typingLabel $verb typing...';
 }

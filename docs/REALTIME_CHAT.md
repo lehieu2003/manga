@@ -14,7 +14,7 @@ Reader: an internal engineer continuing the realtime social chat work.
 
 Post-read action: identify the next unfinished slice, update this checkpoint after completing it, and continue without re-auditing the whole codebase.
 
-Current phase: Phase 4, manga sharing slice.
+Current phase: Phase 3, group chat creation slice.
 
 Completed:
 
@@ -25,23 +25,30 @@ Completed:
 - User-facing friendship and DM entry UI is implemented and verified: users can search readers by display name/email, send a friend request from a selected result, review incoming and sent requests, accept or reject requests, block or remove friends, and open an existing direct-message thread from the friend list.
 - Social notification rendering is fixed for friendship events: friend requests and accepted-request notifications label as social events and route to `/messages` instead of falling through to comment notification copy/routes.
 - Manga sharing is implemented for the social message path: backend accepts `MANGA_SHARE`, validates cached manga/chapter IDs, stores a server-built card payload, emits the normal message event, and mobile/web can search/share a manga from the DM composer and render the saved card.
+- Phase 3 group creation backend slice is implemented: authenticated users can create a `GROUP` conversation with accepted friends as active members; the creator is `OWNER`, selected friends are `MEMBER`, and the response uses the standard conversation payload.
+- Phase 3 web group creation UI is implemented: users can open the group creator from the Messages sidebar, select at least two accepted friends, create the group, and switch directly into the new group thread.
 
 In progress:
 
-- Verify the manga sharing slice across backend, frontend, and mobile, then add optional chapter picking to the share sheet if needed.
+- Phase 3 group chat continuation: add mobile controls to create group conversations, then implement pending invites and member management.
+- Verify the manga sharing slice across backend and mobile, then add optional chapter picking to the share sheet if needed.
 
 Latest verification:
 
 - Frontend manga sharing web update: `npm run test -- social-chat-page.test.tsx` in `frontend` passed with 6 tests.
 - Frontend manga sharing web update: `npm run typecheck` in `frontend` passed.
 - Frontend manga sharing web update: `npm run build` in `frontend` passed.
+- Phase 3 group creation backend: `npm run test -- social-conversation.routes.test.ts` in `backend` passed with 6 tests.
+- Phase 3 group creation backend: `npm run typecheck` in `backend` passed.
+- Phase 3 web group creation UI: `npm run test -- social-chat-page.test.tsx` in `frontend` passed with 7 tests.
+- Phase 3 web group creation UI: `npm run typecheck` in `frontend` passed.
 - Pending after manga sharing changes: backend typecheck/tests and mobile analyze/widget tests.
 - `npm run typecheck` in `backend`
 - `npm test -- src/tests/unit/friendship.service.test.ts` in `backend`
 
 Not started:
 
-- Phase 3 group chat: group creation, invites, member roles, leave/kick, ownership transfer, disband, and system messages.
+- Phase 3 group chat after creation: pending invites, accept/decline/cancel flows, member roles, leave/kick, ownership transfer, disband, and system messages.
 - Phase 4 rich features after manga sharing: image uploads, reactions UI/API completion, mute controls, offline push delivery, and voice notes.
 
 Checkpoint update rule:

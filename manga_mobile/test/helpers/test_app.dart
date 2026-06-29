@@ -518,6 +518,7 @@ class FakeSocialRepository extends SocialRepository {
 
   final List<String> sentRequests = [];
   final List<String> acceptedRequests = [];
+  final List<(String, List<String>)> createdGroups = [];
 
   late List<Friendship> friends = [
     Friendship(
@@ -703,11 +704,53 @@ class FakeSocialRepository extends SocialRepository {
   }) async => SocialConversationListResponse(data: conversations);
 
   @override
+  Future<SocialConversation> createGroupConversation({
+    required String title,
+    required List<String> memberIds,
+  }) async {
+    createdGroups.add((title, memberIds));
+    final selectedUsers = memberIds
+        .map((id) => users.firstWhere((user) => user.id == id))
+        .toList();
+    final conversation = SocialConversation(
+      id: 'group-${conversations.length + 1}',
+      type: 'GROUP',
+      title: title,
+      createdAt: testNow,
+      updatedAt: testNow,
+      members: [
+        SocialMember(
+          id: 'group-member-1',
+          userId: 'user-1',
+          role: 'OWNER',
+          status: 'ACTIVE',
+          joinedAt: testNow,
+          user: const SocialUser(id: 'user-1', displayName: 'Reader'),
+        ),
+        ...selectedUsers.indexed.map(
+          (entry) => SocialMember(
+            id: 'group-member-${entry.$1 + 2}',
+            userId: entry.$2.id,
+            role: 'MEMBER',
+            status: 'ACTIVE',
+            joinedAt: testNow,
+            user: entry.$2,
+          ),
+        ),
+      ],
+    );
+    conversations = [conversation, ...conversations];
+    return conversation;
+  }
+
+  @override
   Future<SocialMessageListResponse> listMessages(
     String conversationId, {
     int limit = 50,
     String? cursor,
-  }) async => SocialMessageListResponse(data: messages);
+  }) async => SocialMessageListResponse(
+    data: conversationId == 'conversation-1' ? messages : const [],
+  );
 
   @override
   Future<SocialMessage> sendMessage({

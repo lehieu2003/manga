@@ -6,6 +6,7 @@ import '../../core/widgets.dart';
 import 'cubit/messages_cubit.dart';
 import 'cubit/messages_state.dart';
 import 'widgets/add_friend_sheet.dart';
+import 'widgets/create_group_sheet.dart';
 import 'widgets/friend_requests_sheet.dart';
 import 'widgets/manga_share_sheet.dart';
 import 'widgets/message_thread.dart';
@@ -103,6 +104,17 @@ class _MessagesViewState extends State<_MessagesView> {
     );
   }
 
+  Future<void> _openCreateGroupSheet(BuildContext context) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => BlocProvider.value(
+        value: context.read<MessagesCubit>(),
+        child: const CreateGroupSheet(),
+      ),
+    );
+  }
+
   Future<void> _openMangaShareSheet(BuildContext context) {
     return showModalBottomSheet<void>(
       context: context,
@@ -150,6 +162,7 @@ class _MessagesViewState extends State<_MessagesView> {
                       state: state,
                       currentUserId: widget.currentUserId,
                       onAddFriend: () => _openAddFriendSheet(context),
+                      onCreateGroup: () => _openCreateGroupSheet(context),
                       onOpenRequests: () => _openFriendRequestsSheet(context),
                       onSelectConversation: (conversation) {
                         messagesCubit.selectConversation(conversation.id);
@@ -192,6 +205,7 @@ class _MessagesViewState extends State<_MessagesView> {
               state: state,
               currentUserId: widget.currentUserId,
               onAddFriend: () => _openAddFriendSheet(context),
+              onCreateGroup: () => _openCreateGroupSheet(context),
               onOpenRequests: () => _openFriendRequestsSheet(context),
               onSelectConversation: (conversation) {
                 messagesCubit.selectConversation(conversation.id);

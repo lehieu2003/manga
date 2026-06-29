@@ -11,6 +11,7 @@ class MessagesInbox extends StatefulWidget {
     required this.state,
     required this.currentUserId,
     required this.onAddFriend,
+    required this.onCreateGroup,
     required this.onOpenRequests,
     required this.onSelectConversation,
   });
@@ -18,6 +19,7 @@ class MessagesInbox extends StatefulWidget {
   final MessagesState state;
   final String currentUserId;
   final VoidCallback onAddFriend;
+  final VoidCallback onCreateGroup;
   final VoidCallback onOpenRequests;
   final ValueChanged<SocialConversation> onSelectConversation;
 
@@ -58,6 +60,14 @@ class _MessagesInboxState extends State<MessagesInbox> {
                 ),
               ),
             ),
+            IconButton.filledTonal(
+              tooltip: 'Create group',
+              onPressed: widget.state.friends.length >= 2
+                  ? widget.onCreateGroup
+                  : null,
+              icon: const Icon(Icons.groups_outlined),
+            ),
+            const SizedBox(width: 8),
             IconButton.filledTonal(
               tooltip: 'Add friend',
               onPressed: widget.onAddFriend,
@@ -107,7 +117,7 @@ class _MessagesInboxState extends State<MessagesInbox> {
               currentUserId: widget.currentUserId,
               selected:
                   conversation.id == widget.state.selectedConversation?.id,
-              typingLabel: widget.state.typingUsers[conversation.id],
+              typingLabel: typingLabelFor(widget.state.typingUsers, conversation.id),
               onTap: () => widget.onSelectConversation(conversation),
             ),
           ),

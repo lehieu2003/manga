@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { MemoryRouter } from "react-router-dom";
@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   listSentFriendRequests: vi.fn(),
   searchSocialUsers: vi.fn(),
   searchManga: vi.fn(),
+  createSocialGroupConversation: vi.fn(),
   sendFriendRequest: vi.fn(),
   acceptFriendRequest: vi.fn(),
   rejectFriendRequest: vi.fn(),
@@ -41,6 +42,7 @@ vi.mock("@/api", () => ({
     listSentFriendRequests: mocks.listSentFriendRequests,
     searchSocialUsers: mocks.searchSocialUsers,
     searchManga: mocks.searchManga,
+    createSocialGroupConversation: mocks.createSocialGroupConversation,
     sendFriendRequest: mocks.sendFriendRequest,
     acceptFriendRequest: mocks.acceptFriendRequest,
     rejectFriendRequest: mocks.rejectFriendRequest,
@@ -87,6 +89,7 @@ describe("SocialChatPage", () => {
     mocks.listSentFriendRequests.mockResolvedValue({ data: [sentFriendship] });
     mocks.searchSocialUsers.mockResolvedValue({ data: [searchResult] });
     mocks.searchManga.mockResolvedValue({ data: [mangaResult], limit: 8, offset: 0, total: 1 });
+    mocks.createSocialGroupConversation.mockResolvedValue({ conversation: groupConversation });
     mocks.sendFriendRequest.mockResolvedValue({ friendship: sentFriendship });
     mocks.acceptFriendRequest.mockResolvedValue({ friendship: acceptedFriendship, conversation });
     mocks.rejectFriendRequest.mockResolvedValue({ friendship: incomingFriendship });
@@ -151,6 +154,27 @@ describe("SocialChatPage", () => {
     expect(screen.queryByText("Sending")).not.toBeInTheDocument();
   });
 
+  it("keeps multiple group typing indicators visible independently", async () => {
+    renderWithClient(<SocialChatPage />);
+
+    await screen.findByText("See you at chapter 12");
+    const typingHandler = mocks.socketHandlers.get("typing:indicator");
+
+    act(() => {
+      typingHandler?.({ conversationId: "conv-1", user: peer, typing: true });
+      typingHandler?.({ conversationId: "conv-1", user: groupPeer, typing: true });
+    });
+
+    expect(await screen.findAllByText("Mina and Yui are typing")).toHaveLength(2);
+
+    act(() => {
+      typingHandler?.({ conversationId: "conv-1", user: peer, typing: false });
+    });
+
+    expect(await screen.findAllByText("Yui is typing")).toHaveLength(2);
+    expect(screen.queryByText("Mina and Yui are typing")).not.toBeInTheDocument();
+  });
+
   it("shares a manga into the selected conversation", async () => {
     const user = userEvent.setup();
     mocks.sendSocialMessage.mockResolvedValue({ message: sharedMangaMessage, idempotent: false });
@@ -202,6 +226,30 @@ describe("SocialChatPage", () => {
     await user.click(screen.getByRole("button", { name: "Open direct message" }));
     expect(await screen.findByRole("heading", { name: "Mina" })).toBeInTheDocument();
   });
+
+  it("creates a group conversation from accepted friends", async () => {
+    const user = userEvent.setup();
+    mocks.listFriends.mockResolvedValue({ data: [friendship, groupFriendship] });
+
+    renderWithClient(<SocialChatPage />);
+
+    await screen.findByText("See you at chapter 12");
+    await user.click(screen.getByRole("button", { name: "Create group" }));
+    const dialog = screen.getByRole("dialog", { name: "Create group chat" });
+    await user.type(within(dialog).getByLabelText("Group name"), "Manga Club");
+    await user.click(within(dialog).getByRole("button", { name: "Select Mina" }));
+    await user.click(within(dialog).getByRole("button", { name: "Select Yui" }));
+    await user.click(within(dialog).getByRole("button", { name: "Create group" }));
+
+    await waitFor(() =>
+      expect(mocks.createSocialGroupConversation).toHaveBeenCalledWith({
+        title: "Manga Club",
+        memberIds: ["user-2", "user-6"]
+      })
+    );
+    expect(await screen.findByRole("heading", { name: "Manga Club" })).toBeInTheDocument();
+    expect(screen.getByText("3 members")).toBeInTheDocument();
+  });
 });
 
 const now = "2026-06-28T09:00:00.000Z";
@@ -237,6 +285,12 @@ const pendingPeer = {
 const searchResult = {
   id: "user-5",
   displayName: "Kira",
+  avatarUrl: null
+};
+
+const groupPeer = {
+  id: "user-6",
+  displayName: "Yui",
   avatarUrl: null
 };
 
@@ -380,6 +434,53 @@ const conversation: SocialConversation = {
   }
 };
 
+const groupConversation: SocialConversation = {
+  id: "group-1",
+  type: "GROUP",
+  title: "Manga Club",
+  avatarUrl: null,
+  directKey: null,
+  lastMessageAt: null,
+  createdAt: "2026-06-28T09:10:00.000Z",
+  updatedAt: "2026-06-28T09:10:00.000Z",
+  currentMember: {
+    id: "group-member-1",
+    role: "OWNER",
+    status: "ACTIVE",
+    lastReadMessageId: null,
+    lastReadAt: null,
+    mutedUntil: null,
+    joinedAt: "2026-06-28T09:10:00.000Z"
+  },
+  members: [
+    {
+      id: "group-member-1",
+      userId: currentUser.id,
+      role: "OWNER",
+      status: "ACTIVE",
+      joinedAt: "2026-06-28T09:10:00.000Z",
+      user: currentUser
+    },
+    {
+      id: "group-member-2",
+      userId: peer.id,
+      role: "MEMBER",
+      status: "ACTIVE",
+      joinedAt: "2026-06-28T09:10:00.000Z",
+      user: peer
+    },
+    {
+      id: "group-member-3",
+      userId: groupPeer.id,
+      role: "MEMBER",
+      status: "ACTIVE",
+      joinedAt: "2026-06-28T09:10:00.000Z",
+      user: groupPeer
+    }
+  ],
+  latestMessage: null
+};
+
 const friendship = {
   id: "friendship-1",
   userAId: currentUser.id,
@@ -414,6 +515,18 @@ const sentFriendship = {
   createdAt: "2026-06-28T08:20:00.000Z",
   updatedAt: "2026-06-28T08:20:00.000Z",
   friend: pendingPeer
+};
+
+const groupFriendship = {
+  id: "friendship-group",
+  userAId: currentUser.id,
+  userBId: groupPeer.id,
+  requestedById: currentUser.id,
+  blockedById: null,
+  status: "ACCEPTED" as const,
+  createdAt: "2026-06-28T08:25:00.000Z",
+  updatedAt: "2026-06-28T08:25:00.000Z",
+  friend: groupPeer
 };
 
 const acceptedFriendship = {
