@@ -166,6 +166,39 @@ class MessagesCubit extends Cubit<MessagesState> {
     }
   }
 
+  Future<void> createGroupConversation({
+    required String title,
+    required List<String> memberIds,
+  }) async {
+    final trimmedTitle = title.trim();
+    final uniqueMemberIds = memberIds.toSet().toList();
+    if (trimmedTitle.isEmpty || uniqueMemberIds.length < 2) return;
+
+    emit(state.copyWith(sending: true, notice: null));
+    try {
+      final conversation = await socialRepository.createGroupConversation(
+        title: trimmedTitle,
+        memberIds: uniqueMemberIds,
+      );
+      final conversations = [
+        conversation,
+        ...state.conversations.where((item) => item.id != conversation.id),
+      ];
+      emit(
+        state.copyWith(
+          conversations: conversations,
+          selectedConversationId: conversation.id,
+          messages: const [],
+          sending: false,
+          notice: 'Group created.',
+        ),
+      );
+      await selectConversation(conversation.id);
+    } catch (error) {
+      emit(state.copyWith(sending: false, notice: error.toString()));
+    }
+  }
+
   Future<void> refreshConversations({
     String? selectedConversationId,
     bool reloadSelected = true,
@@ -335,23 +368,40 @@ class MessagesCubit extends Cubit<MessagesState> {
   void _handleTypingIndicator(SocialTypingEvent event) {
     if (isClosed || event.user.id == currentUserId) return;
 
-    _typingClearTimers[event.conversationId]?.cancel();
+    final typingKey = '${event.conversationId}:${event.user.id}';
+    _typingClearTimers[typingKey]?.cancel();
     final next = {...state.typingUsers};
+    final users = {...(next[event.conversationId] ?? const <String, String>{})};
     if (event.typing) {
-      next[event.conversationId] = event.user.displayName;
-      _typingClearTimers[event.conversationId] = Timer(
+      users[event.user.id] = event.user.displayName;
+      next[event.conversationId] = users;
+      _typingClearTimers[typingKey] = Timer(
         const Duration(seconds: 4),
-        () => _clearTyping(event.conversationId),
+        () => _clearTyping(event.conversationId, event.user.id),
       );
     } else {
-      next.remove(event.conversationId);
+      users.remove(event.user.id);
+      if (users.isEmpty) {
+        next.remove(event.conversationId);
+      } else {
+        next[event.conversationId] = users;
+      }
     }
     emit(state.copyWith(typingUsers: next));
   }
 
-  void _clearTyping(String conversationId) {
+  void _clearTyping(String conversationId, String userId) {
     if (isClosed) return;
-    final next = {...state.typingUsers}..remove(conversationId);
+    final typingKey = '$conversationId:$userId';
+    final next = {...state.typingUsers};
+    final users = {...(next[conversationId] ?? const <String, String>{})}
+      ..remove(userId);
+    if (users.isEmpty) {
+      next.remove(conversationId);
+    } else {
+      next[conversationId] = users;
+    }
+    _typingClearTimers.remove(typingKey);
     emit(state.copyWith(typingUsers: next));
   }
 

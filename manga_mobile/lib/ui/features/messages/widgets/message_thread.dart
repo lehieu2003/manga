@@ -37,7 +37,8 @@ class MessageThread extends StatelessWidget {
     }
 
     final title = conversation.titleFor(currentUserId);
-    final typingName = state.typingUsers[conversation.id];
+    final typingName = typingLabelFor(state.typingUsers, conversation.id);
+    final typingSentence = typingSentenceFor(typingName);
     final avatarUrl = _conversationAvatarUrl(conversation, currentUserId);
 
     return Column(
@@ -59,7 +60,7 @@ class MessageThread extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.w900),
             ),
             subtitle: Text(
-              typingName == null ? 'Active now' : '$typingName is typing...',
+              typingSentence.isEmpty ? 'Active now' : typingSentence,
             ),
             trailing: IconButton(
               tooltip: 'Conversation options',
@@ -70,26 +71,26 @@ class MessageThread extends StatelessWidget {
         ),
         const Divider(height: 1),
         Expanded(
-          child: state.messages.isEmpty && typingName == null
+          child: state.messages.isEmpty && typingName.isEmpty
               ? const Center(child: Text('No messages yet.'))
               : ListView.builder(
                   reverse: true,
                   padding: const EdgeInsets.fromLTRB(14, 14, 14, 18),
                   itemCount:
-                      state.messages.length + (typingName == null ? 0 : 1),
+                      state.messages.length + (typingName.isEmpty ? 0 : 1),
                   itemBuilder: (context, index) {
-                    if (typingName != null && index == 0) {
+                    if (typingName.isNotEmpty && index == 0) {
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 3),
                         child: _TypingIndicator(
-                          label: '$typingName is typing...',
+                          label: typingSentence,
                         ),
                       );
                     }
                     final messageIndex =
                         state.messages.length -
                         1 -
-                        (typingName == null ? index : index - 1);
+                        (typingName.isEmpty ? index : index - 1);
                     final message = state.messages[messageIndex];
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 3),

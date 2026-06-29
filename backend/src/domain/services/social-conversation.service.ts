@@ -1,4 +1,4 @@
-import { SocialMembershipStatus } from "@prisma/client";
+import { FriendshipStatus, SocialConversationType, SocialMemberRole, SocialMembershipStatus } from "@prisma/client";
 import { prisma } from "../../infrastructure/database/client.js";
 import { HttpError } from "../../shared/errors/http-error.js";
 
@@ -9,6 +9,11 @@ type ConversationCursor = {
 type ListConversationsInput = {
   limit: number;
   cursor?: string;
+};
+
+type CreateGroupConversationInput = {
+  title: string;
+  memberIds: string[];
 };
 
 const conversationInclude = {
@@ -68,6 +73,53 @@ export async function getSocialConversation(userId: string, conversationId: stri
   });
 
   if (!conversation) throw new HttpError(404, "Conversation not found", "SOCIAL_CONVERSATION_NOT_FOUND");
+
+  return { conversation: serializeConversation(conversation, userId) };
+}
+
+export async function createSocialGroupConversation(userId: string, input: CreateGroupConversationInput) {
+  const title = input.title.trim();
+  const memberIds = [...new Set(input.memberIds.map((id) => id.trim()).filter(Boolean))].filter((id) => id !== userId);
+
+  if (memberIds.length < 2) {
+    throw new HttpError(400, "A group conversation requires at least two other members", "SOCIAL_GROUP_MIN_MEMBERS");
+  }
+
+  const conversation = await prisma.$transaction(async (tx) => {
+    const pairs = memberIds.map((memberId) => canonicalPair(userId, memberId));
+    const friendships = await tx.friendship.findMany({
+      where: {
+        status: FriendshipStatus.ACCEPTED,
+        OR: pairs.map(([userAId, userBId]) => ({ userAId, userBId }))
+      },
+      select: { userAId: true, userBId: true }
+    });
+    const acceptedFriendIds = new Set(friendships.map((row) => (row.userAId === userId ? row.userBId : row.userAId)));
+    const missingFriendIds = memberIds.filter((memberId) => !acceptedFriendIds.has(memberId));
+
+    if (missingFriendIds.length) {
+      throw new HttpError(403, "Group members must be accepted friends", "SOCIAL_GROUP_MEMBERS_NOT_FRIENDS");
+    }
+
+    return tx.socialConversation.create({
+      data: {
+        type: SocialConversationType.GROUP,
+        title,
+        directKey: null,
+        members: {
+          create: [
+            { userId, role: SocialMemberRole.OWNER, status: SocialMembershipStatus.ACTIVE },
+            ...memberIds.map((memberId) => ({
+              userId: memberId,
+              role: SocialMemberRole.MEMBER,
+              status: SocialMembershipStatus.ACTIVE
+            }))
+          ]
+        }
+      },
+      include: conversationInclude
+    });
+  });
 
   return { conversation: serializeConversation(conversation, userId) };
 }
@@ -158,4 +210,8 @@ function decodeConversationCursor(cursor: string): ConversationCursor {
   } catch {
     throw new HttpError(400, "Invalid conversation cursor", "SOCIAL_CONVERSATION_CURSOR_INVALID");
   }
+}
+
+function canonicalPair(firstUserId: string, secondUserId: string): [string, string] {
+  return firstUserId < secondUserId ? [firstUserId, secondUserId] : [secondUserId, firstUserId];
 }

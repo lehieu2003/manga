@@ -13,9 +13,11 @@ export function useTypingIndicator(
   socketRef: React.RefObject<SocialSocket | null>,
   currentUserId: string | undefined,
 ) {
-  const [typingUsers, setTypingUsers] = useState<Record<string, string>>({});
+  const [typingUsersByConversation, setTypingUsersByConversation] = useState<
+    Record<string, Record<string, string>>
+  >({});
 
-  // Map lưu autoClear timer theo conversationId để có thể clear đúng timer
+  // Map lưu autoClear timer theo conversationId:userId để nhiều người typing cùng lúc không ghi đè nhau.
   const autoClearTimers = useRef<Map<string, number>>(new Map());
   const debounceTimer = useRef<number | null>(null);
 
@@ -43,35 +45,37 @@ export function useTypingIndicator(
     }) => {
       if (typingUser.id === currentUserId) return;
 
-      // Clear auto-clear timer cũ của conversation này (nếu có)
-      const existingTimer = autoClearTimers.current.get(conversationId);
+      const typingKey = `${conversationId}:${typingUser.id}`;
+      const existingTimer = autoClearTimers.current.get(typingKey);
       if (existingTimer) {
         window.clearTimeout(existingTimer);
-        autoClearTimers.current.delete(conversationId);
+        autoClearTimers.current.delete(typingKey);
       }
 
-      setTypingUsers((current) => {
-        const next = { ...current };
-        if (typing) next[conversationId] = typingUser.displayName;
-        else delete next[conversationId];
-        return next;
-      });
+      setTypingUsersByConversation((current) =>
+        updateTypingUsers(current, conversationId, typingUser, typing),
+      );
 
-      // FIX: lưu timer vào map theo conversationId thay vì dùng 1 ref chung
-      // để tránh timer của conversation A xóa nhầm indicator của conversation B
       if (typing) {
         const timerId = window.setTimeout(() => {
-          setTypingUsers((current) => {
-            const next = { ...current };
-            delete next[conversationId];
-            return next;
-          });
-          autoClearTimers.current.delete(conversationId);
+          setTypingUsersByConversation((current) =>
+            updateTypingUsers(current, conversationId, typingUser, false),
+          );
+          autoClearTimers.current.delete(typingKey);
         }, TYPING_AUTO_CLEAR_MS);
-        autoClearTimers.current.set(conversationId, timerId);
+        autoClearTimers.current.set(typingKey, timerId);
       }
     },
     [currentUserId],
+  );
+
+  const typingUsers = Object.fromEntries(
+    Object.entries(typingUsersByConversation)
+      .map(([conversationId, users]) => [
+        conversationId,
+        formatTypingNames(Object.values(users)),
+      ])
+      .filter(([, label]) => label),
   );
 
   /**
@@ -108,4 +112,36 @@ export function useTypingIndicator(
     emitTypingStart,
     emitTypingStop,
   };
+}
+
+function updateTypingUsers(
+  current: Record<string, Record<string, string>>,
+  conversationId: string,
+  typingUser: { id: string; displayName: string },
+  typing: boolean,
+) {
+  const next = { ...current };
+  const users = { ...(next[conversationId] ?? {}) };
+
+  if (typing) {
+    users[typingUser.id] = typingUser.displayName;
+  } else {
+    delete users[typingUser.id];
+  }
+
+  if (Object.keys(users).length) {
+    next[conversationId] = users;
+  } else {
+    delete next[conversationId];
+  }
+
+  return next;
+}
+
+function formatTypingNames(names: string[]) {
+  const filtered = names.filter(Boolean);
+  if (!filtered.length) return '';
+  if (filtered.length === 1) return filtered[0];
+  if (filtered.length === 2) return `${filtered[0]} and ${filtered[1]}`;
+  return `${filtered[0]} and ${filtered.length - 1} others`;
 }

@@ -1,6 +1,6 @@
 import type { FastifyRequest } from "fastify";
-import { getSocialConversation, listSocialConversations } from "../../domain/services/social-conversation.service.js";
-import { socialConversationListQuerySchema, socialConversationParamsSchema } from "../validators/social-conversation.validator.js";
+import { createSocialGroupConversation, getSocialConversation, listSocialConversations } from "../../domain/services/social-conversation.service.js";
+import { createSocialGroupConversationSchema, socialConversationListQuerySchema, socialConversationParamsSchema } from "../validators/social-conversation.validator.js";
 
 export async function handleListSocialConversations(request: FastifyRequest) {
   const query = socialConversationListQuerySchema.parse(request.query ?? {});
@@ -10,4 +10,9 @@ export async function handleListSocialConversations(request: FastifyRequest) {
 export async function handleGetSocialConversation(request: FastifyRequest) {
   const { id } = socialConversationParamsSchema.parse(request.params);
   return getSocialConversation(request.user.sub, id);
+}
+
+export async function handleCreateSocialGroupConversation(request: FastifyRequest) {
+  const body = createSocialGroupConversationSchema.parse(request.body);
+  return createSocialGroupConversation(request.user.sub, body);
 }

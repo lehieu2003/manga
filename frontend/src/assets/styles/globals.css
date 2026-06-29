@@ -1622,6 +1622,15 @@ img {
   padding: 0.85rem;
 }
 
+.social-chat-sidebar-head > div,
+.social-thread-header > div {
+  min-width: 0;
+}
+
+.social-sidebar-action {
+  margin-left: auto;
+}
+
 .social-chat-sidebar-head h1,
 .social-thread-header h2 {
   margin: 0;
@@ -2124,6 +2133,18 @@ button.social-friend-main:hover .social-friend-copy strong {
   box-shadow: 0 24px 80px var(--shadow);
 }
 
+.social-group-dialog {
+  display: grid;
+  width: min(34rem, 100%);
+  max-height: min(40rem, calc(100vh - 2rem));
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  box-shadow: 0 24px 80px var(--shadow);
+}
+
 .social-share-picker-head {
   display: flex;
   align-items: flex-start;
@@ -2142,6 +2163,105 @@ button.social-friend-main:hover .social-friend-copy strong {
   margin: 0.2rem 0 0;
   color: var(--muted);
   font-size: 0.82rem;
+}
+
+.social-group-form {
+  display: grid;
+  gap: 0.7rem;
+  border-bottom: 1px solid var(--line);
+  padding: 0.85rem 1rem;
+}
+
+.social-group-form label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.social-group-form label span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.social-group-form input {
+  min-height: 2.45rem;
+  border-radius: 0.55rem;
+  padding: 0 0.7rem;
+}
+
+.social-group-selected {
+  display: flex;
+  min-height: 2rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.social-group-selected span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  padding: 0.2rem 0.5rem 0.2rem 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.social-group-selected small {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.social-group-friend-list {
+  display: grid;
+  align-content: start;
+  gap: 0.4rem;
+  overflow-y: auto;
+  padding: 0.85rem 1rem;
+}
+
+.social-group-friend {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 0.55rem;
+  background: transparent;
+  color: var(--text);
+  padding: 0.45rem;
+  text-align: left;
+}
+
+.social-group-friend:hover,
+.social-group-friend-selected {
+  border-color: color-mix(in srgb, var(--accent), var(--line) 45%);
+  background: var(--accent-soft);
+}
+
+.social-group-friend span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 850;
+}
+
+.social-group-friend strong {
+  color: var(--accent-strong);
+  font-size: 0.75rem;
+}
+
+.social-group-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  border-top: 1px solid var(--line);
+  padding: 0.85rem 1rem;
 }
 
 .social-share-search {

@@ -28,7 +28,7 @@ export function ConversationButton({
 
   const mangaShare = getMangaShareAttachment(latest?.attachments);
   const previewText = typingLabel
-    ? `${typingLabel} is typing`
+    ? formatTypingStatus(typingLabel)
     : (latest?.content ??
       (mangaShare ? `Shared ${mangaShare.manga.title}` : null) ??
       (latest?.deletedAt ? 'Deleted message' : 'No messages'));
@@ -64,4 +64,9 @@ function getMangaShareAttachment(
     return null;
   }
   return candidate as MangaShareAttachment;
+}
+
+function formatTypingStatus(label: string) {
+  const verb = label.includes(' and ') || label.includes(' others') ? 'are' : 'is';
+  return `${label} ${verb} typing`;
 }

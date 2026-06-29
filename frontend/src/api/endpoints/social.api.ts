@@ -48,6 +48,12 @@ export const socialApi = {
     if (params.cursor) query.set("cursor", params.cursor);
     return request<SocialConversationListResponse>(`/social/conversations?${query}`);
   },
+  createSocialGroupConversation(input: { title: string; memberIds: string[] }) {
+    return request<{ conversation: SocialConversationListResponse["data"][number] }>("/social/conversations", {
+      method: "POST",
+      body: JSON.stringify(input)
+    });
+  },
   getSocialConversation(id: string) {
     return request<{ conversation: SocialConversationListResponse["data"][number] }>(`/social/conversations/${id}`);
   },
