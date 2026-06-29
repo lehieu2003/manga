@@ -8,13 +8,13 @@ After this plan is implemented, a signed-in user can manage friendships, exchang
 
 ## Current checkpoint
 
-Last updated: 2026-06-28
+Last updated: 2026-06-29
 
 Reader: an internal engineer continuing the realtime social chat work.
 
 Post-read action: identify the next unfinished slice, update this checkpoint after completing it, and continue without re-auditing the whole codebase.
 
-Current phase: Phase 2, direct-message inbox and real-time delivery.
+Current phase: Phase 4, manga sharing slice.
 
 Completed:
 
@@ -24,13 +24,15 @@ Completed:
 - Phase 2 frontend direct-message slice is implemented and verified: inbox list, selected thread, message history, optimistic text sends, socket reconciliation, delete action, typing indicator handling, and automatic read marking are covered by focused tests.
 - User-facing friendship and DM entry UI is implemented and verified: users can search readers by display name/email, send a friend request from a selected result, review incoming and sent requests, accept or reject requests, block or remove friends, and open an existing direct-message thread from the friend list.
 - Social notification rendering is fixed for friendship events: friend requests and accepted-request notifications label as social events and route to `/messages` instead of falling through to comment notification copy/routes.
+- Manga sharing is implemented for the social message path: backend accepts `MANGA_SHARE`, validates cached manga/chapter IDs, stores a server-built card payload, emits the normal message event, and mobile can search/share a manga from the DM composer and render the saved card.
 
 In progress:
 
-- Prepare the Phase 3 group chat foundation slice.
+- Verify the manga sharing slice across backend and mobile, then add optional chapter picking to the mobile share sheet if needed.
 
 Latest verification:
 
+- Pending after manga sharing changes: backend typecheck/tests and mobile analyze/widget tests.
 - `npm run typecheck` in `frontend`
 - `npm run build` in `frontend`
 - `npm test` in `frontend`
@@ -40,7 +42,7 @@ Latest verification:
 Not started:
 
 - Phase 3 group chat: group creation, invites, member roles, leave/kick, ownership transfer, disband, and system messages.
-- Phase 4 rich features: manga sharing, image uploads, reactions UI/API completion, mute controls, offline push delivery, and voice notes.
+- Phase 4 rich features after manga sharing: image uploads, reactions UI/API completion, mute controls, offline push delivery, and voice notes.
 
 Checkpoint update rule:
 

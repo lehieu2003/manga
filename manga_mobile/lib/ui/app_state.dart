@@ -35,8 +35,15 @@ class AppState extends ChangeNotifier {
   User? user;
   ThemeMode themeMode = ThemeMode.system;
   bool isBooting = true;
+  bool hideShellChrome = false;
 
   bool get isSignedIn => user != null;
+
+  void setShellChromeHidden(bool hidden) {
+    if (hideShellChrome == hidden) return;
+    hideShellChrome = hidden;
+    notifyListeners();
+  }
 
   Future<void> restore() async {
     isBooting = true;

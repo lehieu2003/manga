@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:manga_mobile/main.dart';
 
@@ -87,6 +88,10 @@ void main() {
     );
     await tester.pump();
     expect(find.text('Mina is typing...'), findsWidgets);
+    expect(
+      find.byKey(const ValueKey('message-thread-typing-indicator')),
+      findsOneWidget,
+    );
 
     expect(
       tester.getTopLeft(find.text('See you at chapter 12')).dy,
@@ -104,6 +109,14 @@ void main() {
       tester.getTopLeft(find.text('I am caught up')).dy,
       lessThan(tester.getTopLeft(find.text('Mobile hello')).dy),
     );
+
+    await tester.tap(find.byTooltip('Share manga'));
+    await tester.pumpAndSettle();
+    expect(find.text('Share manga'), findsOneWidget);
+    await tester.tap(find.byTooltip('Share Alpha Manga'));
+    await tester.pumpAndSettle();
+    expect(find.text('Manga share'), findsOneWidget);
+    expect(find.text('Alpha Manga'), findsWidgets);
 
     socket.emitMessageNew(social.pushPeerMessage('Realtime ping'));
     await tester.pump();

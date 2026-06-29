@@ -13,6 +13,8 @@ const prismaMocks = vi.hoisted(() => ({
   socialMessageCreate: vi.fn(),
   socialMessageUpdate: vi.fn(),
   friendshipFindUnique: vi.fn(),
+  cachedMangaFindUnique: vi.fn(),
+  cachedChapterFindFirst: vi.fn(),
   emitMessageNew: vi.fn(),
   emitMessageDeleted: vi.fn(),
   emitReadUpdated: vi.fn()
@@ -37,6 +39,12 @@ vi.mock("../../../infrastructure/database/client.js", () => ({
     },
     friendship: {
       findUnique: prismaMocks.friendshipFindUnique
+    },
+    cachedManga: {
+      findUnique: prismaMocks.cachedMangaFindUnique
+    },
+    cachedChapter: {
+      findFirst: prismaMocks.cachedChapterFindFirst
     }
   }
 }));
@@ -139,6 +147,75 @@ describe("social message routes", () => {
     expect(response.json()).toMatchObject({ message: { id: "msg-1" }, idempotent: true });
     expect(prismaMocks.transaction).not.toHaveBeenCalled();
     expect(prismaMocks.emitMessageNew).not.toHaveBeenCalled();
+    await app.close();
+  });
+
+  it("creates a manga share from cached catalog data", async () => {
+    const app = await makeSocialMessageApp();
+    prismaMocks.socialConversationFindFirst.mockResolvedValue(makeConversation());
+    prismaMocks.friendshipFindUnique.mockResolvedValue({ status: FriendshipStatus.ACCEPTED });
+    prismaMocks.socialMessageFindUnique.mockResolvedValue(null);
+    prismaMocks.cachedMangaFindUnique.mockResolvedValue({
+      id: "11111111-1111-4111-8111-111111111111",
+      title: "Alpha Manga",
+      coverUrl: "/api/media/cover/alpha.jpg",
+      status: "ongoing",
+      year: 2026,
+      contentRating: "safe",
+      tags: ["Action", "Drama"]
+    });
+    prismaMocks.cachedChapterFindFirst.mockResolvedValue({
+      id: "22222222-2222-4222-8222-222222222222",
+      title: "Start",
+      chapter: "1",
+      translatedLanguage: "en",
+      pages: 12
+    });
+    prismaMocks.socialMessageCreate.mockResolvedValue(
+      makeMessage({
+        type: SocialMessageType.MANGA_SHARE,
+        content: null,
+        attachments: {
+          kind: "MANGA_SHARE",
+          manga: { id: "11111111-1111-4111-8111-111111111111", title: "Alpha Manga" },
+          chapter: { id: "22222222-2222-4222-8222-222222222222", chapter: "1" }
+        }
+      })
+    );
+    prismaMocks.transaction.mockImplementation((callback) =>
+      callback({
+        socialMessage: { create: prismaMocks.socialMessageCreate },
+        socialConversation: { update: prismaMocks.socialConversationUpdate }
+      })
+    );
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/social/conversations/conv-1/messages",
+      payload: {
+        clientMessageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        type: "MANGA_SHARE",
+        mangaId: "11111111-1111-4111-8111-111111111111",
+        chapterId: "22222222-2222-4222-8222-222222222222"
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(prismaMocks.socialMessageCreate).toHaveBeenCalledWith({
+      data: {
+        conversationId: "conv-1",
+        senderId: "user-1",
+        clientMessageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        type: SocialMessageType.MANGA_SHARE,
+        content: null,
+        attachments: expect.objectContaining({
+          kind: "MANGA_SHARE",
+          manga: expect.objectContaining({ title: "Alpha Manga" }),
+          chapter: expect.objectContaining({ chapter: "1" })
+        })
+      },
+      include: { sender: { select: { id: true, displayName: true, avatarUrl: true } } }
+    });
     await app.close();
   });
 

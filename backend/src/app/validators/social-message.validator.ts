@@ -15,7 +15,14 @@ export const sendSocialMessageSchema = z.object({
   clientMessageId: uuidSchema,
   type: z.literal(SocialMessageType.TEXT).default(SocialMessageType.TEXT),
   content: z.string().trim().min(1).max(4000)
-});
+}).or(
+  z.object({
+    clientMessageId: uuidSchema,
+    type: z.literal(SocialMessageType.MANGA_SHARE),
+    mangaId: uuidSchema,
+    chapterId: uuidSchema.optional()
+  })
+);
 
 export const markSocialConversationReadSchema = z.object({
   lastMessageId: z.string().trim().min(1)

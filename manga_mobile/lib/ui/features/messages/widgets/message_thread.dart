@@ -11,6 +11,7 @@ class MessageThread extends StatelessWidget {
     required this.messageController,
     required this.onBack,
     required this.onSend,
+    required this.onShareManga,
     required this.onTypingChanged,
     required this.onTypingStopped,
     this.showBackButton = false,
@@ -21,6 +22,7 @@ class MessageThread extends StatelessWidget {
   final TextEditingController messageController;
   final VoidCallback onBack;
   final ValueChanged<String> onSend;
+  final VoidCallback onShareManga;
   final ValueChanged<String> onTypingChanged;
   final VoidCallback onTypingStopped;
   final bool showBackButton;
@@ -65,15 +67,27 @@ class MessageThread extends StatelessWidget {
         ),
         const Divider(height: 1),
         Expanded(
-          child: state.messages.isEmpty
+          child: state.messages.isEmpty && typingName == null
               ? const Center(child: Text('No messages yet.'))
               : ListView.builder(
                   reverse: true,
                   padding: const EdgeInsets.fromLTRB(14, 14, 14, 18),
-                  itemCount: state.messages.length,
+                  itemCount:
+                      state.messages.length + (typingName == null ? 0 : 1),
                   itemBuilder: (context, index) {
-                    final message =
-                        state.messages[state.messages.length - 1 - index];
+                    if (typingName != null && index == 0) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 3),
+                        child: _TypingIndicator(
+                          label: '$typingName is typing...',
+                        ),
+                      );
+                    }
+                    final messageIndex =
+                        state.messages.length -
+                        1 -
+                        (typingName == null ? index : index - 1);
+                    final message = state.messages[messageIndex];
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 3),
                       child: MessageBubble(
@@ -97,9 +111,9 @@ class MessageThread extends StatelessWidget {
                 children: [
                   const SizedBox(width: 8),
                   IconButton(
-                    tooltip: 'More actions',
-                    onPressed: () {},
-                    icon: const Icon(Icons.add_circle_outline),
+                    tooltip: 'Share manga',
+                    onPressed: onShareManga,
+                    icon: const Icon(Icons.menu_book_outlined),
                   ),
                   Expanded(
                     child: TextField(
@@ -133,6 +147,46 @@ class MessageThread extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
                 ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TypingIndicator extends StatelessWidget {
+  const _TypingIndicator({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      key: const ValueKey('message-thread-typing-indicator'),
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        const CircleAvatar(radius: 12, child: Text('...')),
+        const SizedBox(width: 6),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerHighest,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+              bottomLeft: Radius.circular(6),
+              bottomRight: Radius.circular(20),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../domain/models/models.dart';
+import '../../../app_state.dart';
 
 class MessageBubble extends StatelessWidget {
   const MessageBubble({super.key, required this.message, required this.own});
@@ -11,9 +13,9 @@ class MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final content = message.deletedAt != null
-        ? 'Deleted message'
-        : message.content ?? '';
+    final deleted = message.deletedAt != null;
+    final content = deleted ? 'Deleted message' : message.content ?? '';
+    final share = deleted ? null : message.mangaShare;
 
     return Row(
       mainAxisAlignment: own ? MainAxisAlignment.end : MainAxisAlignment.start,
@@ -49,12 +51,15 @@ class MessageBubble extends StatelessWidget {
                       ? CrossAxisAlignment.end
                       : CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      content,
-                      style: TextStyle(
-                        color: own ? scheme.onPrimary : scheme.onSurface,
-                      ),
-                    ),
+                    if (share == null)
+                      Text(
+                        content,
+                        style: TextStyle(
+                          color: own ? scheme.onPrimary : scheme.onSurface,
+                        ),
+                      )
+                    else
+                      _MangaShareCard(share: share, own: own),
                     const SizedBox(height: 3),
                     Text(
                       _timeLabel(message.createdAt),
@@ -75,8 +80,106 @@ class MessageBubble extends StatelessWidget {
   }
 }
 
+class _MangaShareCard extends StatelessWidget {
+  const _MangaShareCard({required this.share, required this.own});
+
+  final MangaShareAttachment share;
+  final bool own;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final coverUrl = share.manga.coverUrl;
+    final resolvedCover = coverUrl == null
+        ? null
+        : AppScope.read(context).catalogRepository.assetUrl(coverUrl);
+    final textColor = own ? scheme.onPrimary : scheme.onSurface;
+    final mutedColor = own
+        ? scheme.onPrimary.withValues(alpha: 0.76)
+        : scheme.onSurfaceVariant;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => context.push('/manga/${share.manga.id}'),
+      child: SizedBox(
+        width: 240,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: SizedBox(
+                width: 54,
+                height: 72,
+                child: resolvedCover == null || resolvedCover.isEmpty
+                    ? ColoredBox(
+                        color: scheme.surface,
+                        child: Icon(Icons.menu_book_outlined, color: textColor),
+                      )
+                    : Image.network(resolvedCover, fit: BoxFit.cover),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Manga share',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: mutedColor,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    share.manga.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: textColor,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _shareSubtitle(share),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.labelSmall?.copyWith(color: mutedColor),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _shareSubtitle(MangaShareAttachment share) {
+  final chapter = share.chapter;
+  if (chapter != null) {
+    return [
+      if (chapter.chapter != null) 'Ch. ${chapter.chapter}',
+      if (chapter.translatedLanguage != null)
+        chapter.translatedLanguage!.toUpperCase(),
+    ].join(' · ');
+  }
+  return [
+    if (share.manga.status != null) share.manga.status,
+    if (share.manga.year != null) '${share.manga.year}',
+  ].join(' · ');
+}
+
 String _timeLabel(DateTime date) {
-  final hour = date.hour.toString().padLeft(2, '0');
-  final minute = date.minute.toString().padLeft(2, '0');
-  return '$hour:$minute';
+  final local = date.toLocal();
+  final hour12 = local.hour % 12 == 0 ? 12 : local.hour % 12;
+  final hour = hour12.toString().padLeft(2, '0');
+  final minute = local.minute.toString().padLeft(2, '0');
+  final period = local.hour < 12 ? 'AM' : 'PM';
+  return '$hour:$minute $period';
 }
