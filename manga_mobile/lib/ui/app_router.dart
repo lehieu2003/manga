@@ -132,7 +132,10 @@ class AppShell extends StatelessWidget {
     final location = GoRouterState.of(context).matchedLocation;
     final app = AppScope.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final showSearchAction = MediaQuery.sizeOf(context).width >= 360;
+    final width = MediaQuery.sizeOf(context).width;
+    final showSearchAction = width >= 360;
+    final hideShellChrome =
+        location == '/messages' && app.hideShellChrome && width < 760;
     final routeContext = _routeContext(location);
     final showChatAssistant = app.isSignedIn && location != '/messages';
     final index = switch (location) {
@@ -143,30 +146,37 @@ class AppShell extends StatelessWidget {
       _ => 0,
     };
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Manga Cafe'),
-        actions: [
-          IconButton(
-            tooltip: isDark ? 'Switch to light mode' : 'Switch to dark mode',
-            onPressed: () =>
-                app.setThemeMode(isDark ? ThemeMode.light : ThemeMode.dark),
-            icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
-          ),
-          if (showSearchAction)
-            IconButton(
-              tooltip: 'Search',
-              onPressed: () => context.go('/search'),
-              icon: const Icon(Icons.search),
+      appBar: hideShellChrome
+          ? null
+          : AppBar(
+              title: const Text('Manga Cafe'),
+              actions: [
+                IconButton(
+                  tooltip: isDark
+                      ? 'Switch to light mode'
+                      : 'Switch to dark mode',
+                  onPressed: () => app.setThemeMode(
+                    isDark ? ThemeMode.light : ThemeMode.dark,
+                  ),
+                  icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+                ),
+                if (showSearchAction)
+                  IconButton(
+                    tooltip: 'Search',
+                    onPressed: () => context.go('/search'),
+                    icon: const Icon(Icons.search),
+                  ),
+                const NotificationCenterButton(),
+              ],
             ),
-          const NotificationCenterButton(),
-        ],
-      ),
-      drawer: _AppDrawer(
-        location: location,
-        isDark: isDark,
-        onThemeToggle: () =>
-            app.setThemeMode(isDark ? ThemeMode.light : ThemeMode.dark),
-      ),
+      drawer: hideShellChrome
+          ? null
+          : _AppDrawer(
+              location: location,
+              isDark: isDark,
+              onThemeToggle: () =>
+                  app.setThemeMode(isDark ? ThemeMode.light : ThemeMode.dark),
+            ),
       body: SafeArea(child: child),
       floatingActionButton: showChatAssistant
           ? ChatAssistantButton(
@@ -175,50 +185,52 @@ class AppShell extends StatelessWidget {
             )
           : null,
 
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: index,
-        onTap: (value) {
-          switch (value) {
-            case 1:
-              context.go('/search');
-            case 2:
-              context.go('/library');
-            case 3:
-              context.go('/messages');
-            case 4:
-              context.go('/settings');
-            default:
-              context.go('/');
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.explore_outlined),
-            activeIcon: Icon(Icons.explore),
-            label: 'Search',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.library_books_outlined),
-            activeIcon: Icon(Icons.library_books),
-            label: 'Library',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            activeIcon: Icon(Icons.chat_bubble),
-            label: 'Messages',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Settings',
-          ),
-        ],
-      ),
+      bottomNavigationBar: hideShellChrome
+          ? null
+          : BottomNavigationBar(
+              currentIndex: index,
+              onTap: (value) {
+                switch (value) {
+                  case 1:
+                    context.go('/search');
+                  case 2:
+                    context.go('/library');
+                  case 3:
+                    context.go('/messages');
+                  case 4:
+                    context.go('/settings');
+                  default:
+                    context.go('/');
+                }
+              },
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.home_outlined),
+                  activeIcon: Icon(Icons.home),
+                  label: 'Home',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.explore_outlined),
+                  activeIcon: Icon(Icons.explore),
+                  label: 'Search',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.library_books_outlined),
+                  activeIcon: Icon(Icons.library_books),
+                  label: 'Library',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.chat_bubble_outline),
+                  activeIcon: Icon(Icons.chat_bubble),
+                  label: 'Messages',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.person_outline),
+                  activeIcon: Icon(Icons.person),
+                  label: 'Settings',
+                ),
+              ],
+            ),
     );
   }
 }

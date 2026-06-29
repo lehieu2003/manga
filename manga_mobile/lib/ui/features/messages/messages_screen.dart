@@ -44,12 +44,34 @@ class _MessagesView extends StatefulWidget {
 
 class _MessagesViewState extends State<_MessagesView> {
   final _messageController = TextEditingController();
+  late AppState _appState;
   bool _showCompactThread = false;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _appState = AppScope.read(context);
+  }
+
+  @override
   void dispose() {
+    _appState.setShellChromeHidden(false);
     _messageController.dispose();
     super.dispose();
+  }
+
+  void _setCompactThreadVisible(bool visible) {
+    if (_showCompactThread == visible) return;
+    setState(() => _showCompactThread = visible);
+    _appState.setShellChromeHidden(visible);
+  }
+
+  void _showShellChromeAfterBuild() {
+    if (!_appState.hideShellChrome) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _appState.setShellChromeHidden(false);
+    });
   }
 
   void _showSnack(String message) {
@@ -107,6 +129,7 @@ class _MessagesViewState extends State<_MessagesView> {
           builder: (context, constraints) {
             final wide = constraints.maxWidth >= 760;
             if (wide) {
+              _showShellChromeAfterBuild();
               return Row(
                 children: [
                   SizedBox(
@@ -144,7 +167,7 @@ class _MessagesViewState extends State<_MessagesView> {
                 currentUserId: widget.currentUserId,
                 messageController: _messageController,
                 showBackButton: true,
-                onBack: () => setState(() => _showCompactThread = false),
+                onBack: () => _setCompactThreadVisible(false),
                 onSend: messagesCubit.sendMessage,
                 onTypingChanged: messagesCubit.typingChanged,
                 onTypingStopped: messagesCubit.stopTyping,
@@ -158,7 +181,7 @@ class _MessagesViewState extends State<_MessagesView> {
               onOpenRequests: () => _openFriendRequestsSheet(context),
               onSelectConversation: (conversation) {
                 messagesCubit.selectConversation(conversation.id);
-                setState(() => _showCompactThread = true);
+                _setCompactThreadVisible(true);
               },
             );
           },

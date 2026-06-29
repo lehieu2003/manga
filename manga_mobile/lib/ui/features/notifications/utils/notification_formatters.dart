@@ -15,12 +15,13 @@ String notificationTitle(UserNotification item) {
 }
 
 String formatNotificationDateTime(DateTime date) {
-  final month = date.month.toString().padLeft(2, '0');
-  final day = date.day.toString().padLeft(2, '0');
-  final hour = date.hour.toString().padLeft(2, '0');
-  final minute = date.minute.toString().padLeft(2, '0');
+  final local = date.toLocal();
+  final month = local.month.toString().padLeft(2, '0');
+  final day = local.day.toString().padLeft(2, '0');
+  final hour = local.hour.toString().padLeft(2, '0');
+  final minute = local.minute.toString().padLeft(2, '0');
 
-  return '${date.year}-$month-$day $hour:$minute';
+  return '${local.year}-$month-$day $hour:$minute';
 }
 
 String notificationTargetPath(UserNotification item) {

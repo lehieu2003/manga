@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:manga_mobile/main.dart';
 
@@ -87,6 +88,10 @@ void main() {
     );
     await tester.pump();
     expect(find.text('Mina is typing...'), findsWidgets);
+    expect(
+      find.byKey(const ValueKey('message-thread-typing-indicator')),
+      findsOneWidget,
+    );
 
     expect(
       tester.getTopLeft(find.text('See you at chapter 12')).dy,
