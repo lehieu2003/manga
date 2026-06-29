@@ -11,6 +11,7 @@ class MessageThread extends StatelessWidget {
     required this.messageController,
     required this.onBack,
     required this.onSend,
+    required this.onShareManga,
     required this.onTypingChanged,
     required this.onTypingStopped,
     this.showBackButton = false,
@@ -21,6 +22,7 @@ class MessageThread extends StatelessWidget {
   final TextEditingController messageController;
   final VoidCallback onBack;
   final ValueChanged<String> onSend;
+  final VoidCallback onShareManga;
   final ValueChanged<String> onTypingChanged;
   final VoidCallback onTypingStopped;
   final bool showBackButton;
@@ -109,9 +111,9 @@ class MessageThread extends StatelessWidget {
                 children: [
                   const SizedBox(width: 8),
                   IconButton(
-                    tooltip: 'More actions',
-                    onPressed: () {},
-                    icon: const Icon(Icons.add_circle_outline),
+                    tooltip: 'Share manga',
+                    onPressed: onShareManga,
+                    icon: const Icon(Icons.menu_book_outlined),
                   ),
                   Expanded(
                     child: TextField(

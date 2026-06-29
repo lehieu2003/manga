@@ -25,6 +25,8 @@ class ConversationTile extends StatelessWidget {
         ? '$typingLabel is typing...'
         : latest?.deletedAt != null
         ? 'Deleted message'
+        : latest?.mangaShare != null
+        ? 'Shared ${latest!.mangaShare!.manga.title}'
         : latest?.content ?? 'No messages yet';
 
     final scheme = Theme.of(context).colorScheme;

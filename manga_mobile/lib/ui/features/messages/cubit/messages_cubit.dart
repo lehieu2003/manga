@@ -227,6 +227,32 @@ class MessagesCubit extends Cubit<MessagesState> {
     }
   }
 
+  Future<void> sendMangaShare(String mangaId, {String? chapterId}) async {
+    final conversation = state.selectedConversation;
+    if (conversation == null || mangaId.trim().isEmpty) return;
+
+    stopTyping();
+    emit(state.copyWith(sending: true, notice: null));
+    try {
+      final message = await socialRepository.sendMangaShare(
+        conversationId: conversation.id,
+        clientMessageId: _uuidV4(),
+        mangaId: mangaId,
+        chapterId: chapterId,
+      );
+      emit(
+        state.copyWith(
+          messages: _chronologicalMessages([...state.messages, message]),
+          sending: false,
+          error: null,
+        ),
+      );
+      await refreshConversations(selectedConversationId: conversation.id);
+    } catch (error) {
+      emit(state.copyWith(sending: false, notice: error.toString()));
+    }
+  }
+
   void clearNotice() {
     emit(state.copyWith(notice: null));
   }

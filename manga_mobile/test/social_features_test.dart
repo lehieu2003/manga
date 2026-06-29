@@ -110,6 +110,14 @@ void main() {
       lessThan(tester.getTopLeft(find.text('Mobile hello')).dy),
     );
 
+    await tester.tap(find.byTooltip('Share manga'));
+    await tester.pumpAndSettle();
+    expect(find.text('Share manga'), findsOneWidget);
+    await tester.tap(find.byTooltip('Share Alpha Manga'));
+    await tester.pumpAndSettle();
+    expect(find.text('Manga share'), findsOneWidget);
+    expect(find.text('Alpha Manga'), findsWidgets);
+
     socket.emitMessageNew(social.pushPeerMessage('Realtime ping'));
     await tester.pump();
     await tester.pumpAndSettle();

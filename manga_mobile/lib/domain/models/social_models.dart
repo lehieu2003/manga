@@ -348,6 +348,7 @@ class SocialMessage {
     this.replyToId,
     this.deletedAt,
     this.sender,
+    this.mangaShare,
   });
 
   final String id;
@@ -362,6 +363,7 @@ class SocialMessage {
   final DateTime createdAt;
   final DateTime updatedAt;
   final SocialUser? sender;
+  final MangaShareAttachment? mangaShare;
 
   factory SocialMessage.fromJson(Map<String, dynamic> json) => SocialMessage(
     id: json['id']?.toString() ?? '',
@@ -382,7 +384,99 @@ class SocialMessage {
     sender: json['sender'] is Map<String, dynamic>
         ? SocialUser.fromJson(json['sender'] as Map<String, dynamic>)
         : null,
+    mangaShare: MangaShareAttachment.tryParse(json['attachments']),
   );
+}
+
+class MangaShareAttachment {
+  const MangaShareAttachment({required this.manga, this.chapter});
+
+  final MangaShareManga manga;
+  final MangaShareChapter? chapter;
+
+  static MangaShareAttachment? tryParse(Object? value) {
+    final json = value is Map<String, dynamic>
+        ? value
+        : value is Map
+        ? value.map((key, value) => MapEntry(key.toString(), value))
+        : null;
+    if (json == null || json['kind'] != 'MANGA_SHARE') return null;
+    final mangaJson = json['manga'];
+    if (mangaJson is! Map) return null;
+    final chapterJson = json['chapter'];
+    return MangaShareAttachment(
+      manga: MangaShareManga.fromJson(
+        mangaJson.map((key, value) => MapEntry(key.toString(), value)),
+      ),
+      chapter: chapterJson is Map
+          ? MangaShareChapter.fromJson(
+              chapterJson.map((key, value) => MapEntry(key.toString(), value)),
+            )
+          : null,
+    );
+  }
+}
+
+class MangaShareManga {
+  const MangaShareManga({
+    required this.id,
+    required this.title,
+    this.coverUrl,
+    this.status,
+    this.year,
+    this.contentRating,
+    this.tags = const [],
+  });
+
+  final String id;
+  final String title;
+  final String? coverUrl;
+  final String? status;
+  final int? year;
+  final String? contentRating;
+  final List<String> tags;
+
+  factory MangaShareManga.fromJson(Map<String, dynamic> json) =>
+      MangaShareManga(
+        id: json['id']?.toString() ?? '',
+        title: json['title']?.toString() ?? 'Untitled manga',
+        coverUrl: json['coverUrl'] as String?,
+        status: json['status'] as String?,
+        year: json['year'] is int
+            ? json['year'] as int
+            : int.tryParse('${json['year']}'),
+        contentRating: json['contentRating'] as String?,
+        tags: (json['tags'] as List<dynamic>? ?? [])
+            .map((item) => item.toString())
+            .toList(),
+      );
+}
+
+class MangaShareChapter {
+  const MangaShareChapter({
+    required this.id,
+    this.title,
+    this.chapter,
+    this.translatedLanguage,
+    this.pages,
+  });
+
+  final String id;
+  final String? title;
+  final String? chapter;
+  final String? translatedLanguage;
+  final int? pages;
+
+  factory MangaShareChapter.fromJson(Map<String, dynamic> json) =>
+      MangaShareChapter(
+        id: json['id']?.toString() ?? '',
+        title: json['title'] as String?,
+        chapter: json['chapter'] as String?,
+        translatedLanguage: json['translatedLanguage'] as String?,
+        pages: json['pages'] is int
+            ? json['pages'] as int
+            : int.tryParse('${json['pages']}'),
+      );
 }
 
 class SocialConversation {

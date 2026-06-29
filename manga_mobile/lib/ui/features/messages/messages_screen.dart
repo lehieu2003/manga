@@ -7,6 +7,7 @@ import 'cubit/messages_cubit.dart';
 import 'cubit/messages_state.dart';
 import 'widgets/add_friend_sheet.dart';
 import 'widgets/friend_requests_sheet.dart';
+import 'widgets/manga_share_sheet.dart';
 import 'widgets/message_thread.dart';
 import 'widgets/messages_inbox.dart';
 
@@ -102,6 +103,17 @@ class _MessagesViewState extends State<_MessagesView> {
     );
   }
 
+  Future<void> _openMangaShareSheet(BuildContext context) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => BlocProvider.value(
+        value: context.read<MessagesCubit>(),
+        child: const MangaShareSheet(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<MessagesCubit, MessagesState>(
@@ -153,6 +165,7 @@ class _MessagesViewState extends State<_MessagesView> {
                       showBackButton: false,
                       onBack: () {},
                       onSend: messagesCubit.sendMessage,
+                      onShareManga: () => _openMangaShareSheet(context),
                       onTypingChanged: messagesCubit.typingChanged,
                       onTypingStopped: messagesCubit.stopTyping,
                     ),
@@ -169,6 +182,7 @@ class _MessagesViewState extends State<_MessagesView> {
                 showBackButton: true,
                 onBack: () => _setCompactThreadVisible(false),
                 onSend: messagesCubit.sendMessage,
+                onShareManga: () => _openMangaShareSheet(context),
                 onTypingChanged: messagesCubit.typingChanged,
                 onTypingStopped: messagesCubit.stopTyping,
               );

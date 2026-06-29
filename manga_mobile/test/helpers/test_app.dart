@@ -731,6 +731,39 @@ class FakeSocialRepository extends SocialRepository {
   }
 
   @override
+  Future<SocialMessage> sendMangaShare({
+    required String conversationId,
+    required String clientMessageId,
+    required String mangaId,
+    String? chapterId,
+  }) async {
+    final manga = testManga.firstWhere((item) => item.id == mangaId);
+    final message = SocialMessage(
+      id: 'message-${messages.length + 1}',
+      conversationId: conversationId,
+      senderId: 'user-1',
+      clientMessageId: clientMessageId,
+      type: 'MANGA_SHARE',
+      createdAt: testNow.add(Duration(minutes: messages.length + 1)),
+      updatedAt: testNow.add(Duration(minutes: messages.length + 1)),
+      sender: const SocialUser(id: 'user-1', displayName: 'Reader'),
+      mangaShare: MangaShareAttachment(
+        manga: MangaShareManga(
+          id: manga.id,
+          title: manga.title,
+          coverUrl: manga.coverUrl,
+          status: manga.status,
+          year: manga.year,
+          contentRating: manga.contentRating,
+          tags: manga.tags,
+        ),
+      ),
+    );
+    messages = [message, ...messages];
+    return message;
+  }
+
+  @override
   Future<void> markConversationRead(
     String conversationId,
     String lastMessageId,

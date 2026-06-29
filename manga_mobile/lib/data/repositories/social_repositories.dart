@@ -207,6 +207,22 @@ class SocialRepository {
     return SocialMessage.fromJson(payload['message'] as Map<String, dynamic>);
   }
 
+  Future<SocialMessage> sendMangaShare({
+    required String conversationId,
+    required String clientMessageId,
+    required String mangaId,
+    String? chapterId,
+  }) async {
+    final payload = await _api
+        .post('/social/conversations/$conversationId/messages', {
+          'clientMessageId': clientMessageId,
+          'type': 'MANGA_SHARE',
+          'mangaId': mangaId,
+          if (chapterId != null) 'chapterId': chapterId,
+        }, (json) => json);
+    return SocialMessage.fromJson(payload['message'] as Map<String, dynamic>);
+  }
+
   Future<SocialMessage> deleteMessage(String messageId) async {
     final payload = await _api.delete(
       '/social/messages/$messageId',
