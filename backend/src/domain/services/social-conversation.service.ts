@@ -1,6 +1,7 @@
-import { FriendshipStatus, SocialConversationType, SocialMemberRole, SocialMembershipStatus } from "@prisma/client";
+import { FriendshipStatus, NotificationSubjectType, NotificationType, Prisma, SocialConversationType, SocialMemberRole, SocialMembershipStatus } from "@prisma/client";
 import { prisma } from "../../infrastructure/database/client.js";
 import { HttpError } from "../../shared/errors/http-error.js";
+import { publishNotification } from "./notification-stream.service.js";
 
 type ConversationCursor = {
   id: string;
@@ -14,6 +15,15 @@ type ListConversationsInput = {
 type CreateGroupConversationInput = {
   title: string;
   memberIds: string[];
+};
+
+type CreateGroupInviteInput = {
+  userId: string;
+};
+
+type ResolveGroupInviteInput = {
+  targetUserId: string;
+  action: "accept" | "decline" | "cancel";
 };
 
 const conversationInclude = {
@@ -124,6 +134,82 @@ export async function createSocialGroupConversation(userId: string, input: Creat
   return { conversation: serializeConversation(conversation, userId) };
 }
 
+export async function createSocialGroupInvite(userId: string, conversationId: string, input: CreateGroupInviteInput) {
+  const targetUserId = input.userId.trim();
+  if (targetUserId === userId) throw new HttpError(400, "You cannot invite yourself", "SOCIAL_GROUP_INVITE_SELF");
+
+  const result = await prisma.$transaction(async (tx) => {
+    const conversation = await loadGroupConversationForMutation(tx, conversationId);
+    assertGroupInviteManager(conversation, userId);
+    await assertAcceptedFriends(tx, userId, targetUserId);
+
+    const existing = conversation.members.find((member) => member.userId === targetUserId);
+    if (existing?.status === SocialMembershipStatus.ACTIVE) {
+      throw new HttpError(409, "User is already an active group member", "SOCIAL_GROUP_MEMBER_EXISTS");
+    }
+
+    if (existing?.status === SocialMembershipStatus.PENDING_INVITE) {
+      const updatedConversation = await loadConversationOrThrow(tx, conversationId);
+      return { conversation: updatedConversation, notification: null };
+    }
+
+    if (existing) {
+      await tx.socialConversationMember.update({
+        where: { conversationId_userId: { conversationId, userId: targetUserId } },
+        data: { role: SocialMemberRole.MEMBER, status: SocialMembershipStatus.PENDING_INVITE, joinedAt: new Date() }
+      });
+    } else {
+      await tx.socialConversationMember.create({
+        data: { conversationId, userId: targetUserId, role: SocialMemberRole.MEMBER, status: SocialMembershipStatus.PENDING_INVITE }
+      });
+    }
+
+    const notification = await tx.notification.create({
+      data: {
+        userId: targetUserId,
+        actorId: userId,
+        type: NotificationType.GROUP_INVITE,
+        subjectType: NotificationSubjectType.CONVERSATION,
+        subjectId: conversationId,
+        payload: { conversationId, inviterId: userId, conversationTitle: conversation.title }
+      }
+    });
+
+    const updatedConversation = await loadConversationOrThrow(tx, conversationId);
+    return { conversation: updatedConversation, notification };
+  });
+
+  if (result.notification) publishNotification(result.notification);
+  return { conversation: serializeConversation(result.conversation, userId) };
+}
+
+export async function resolveSocialGroupInvite(userId: string, conversationId: string, input: ResolveGroupInviteInput) {
+  const result = await prisma.$transaction(async (tx) => {
+    const conversation = await loadGroupConversationForMutation(tx, conversationId);
+
+    if (input.action === "cancel") {
+      assertGroupInviteManager(conversation, userId);
+    } else if (input.targetUserId !== userId) {
+      throw new HttpError(403, "Only the invitee can resolve this group invite", "SOCIAL_GROUP_INVITE_FORBIDDEN");
+    }
+
+    const targetMember = conversation.members.find((member) => member.userId === input.targetUserId);
+    if (!targetMember || targetMember.status !== SocialMembershipStatus.PENDING_INVITE) {
+      throw new HttpError(404, "Group invite not found", "SOCIAL_GROUP_INVITE_NOT_FOUND");
+    }
+
+    const status = input.action === "accept" ? SocialMembershipStatus.ACTIVE : SocialMembershipStatus.LEFT;
+    await tx.socialConversationMember.update({
+      where: { conversationId_userId: { conversationId, userId: input.targetUserId } },
+      data: { status, ...(input.action === "accept" ? { joinedAt: new Date() } : {}) }
+    });
+
+    return loadConversationOrThrow(tx, conversationId);
+  });
+
+  return { conversation: serializeConversation(result, userId) };
+}
+
 function serializeConversation<TConversation extends Awaited<ReturnType<typeof prisma.socialConversation.findMany>>[number]>(
   conversation: TConversation & {
     members: Array<{
@@ -214,4 +300,36 @@ function decodeConversationCursor(cursor: string): ConversationCursor {
 
 function canonicalPair(firstUserId: string, secondUserId: string): [string, string] {
   return firstUserId < secondUserId ? [firstUserId, secondUserId] : [secondUserId, firstUserId];
+}
+
+async function loadGroupConversationForMutation(tx: Prisma.TransactionClient, conversationId: string) {
+  const conversation = await tx.socialConversation.findUnique({ where: { id: conversationId }, include: conversationInclude });
+  if (!conversation) throw new HttpError(404, "Conversation not found", "SOCIAL_CONVERSATION_NOT_FOUND");
+  if (conversation.type !== SocialConversationType.GROUP) throw new HttpError(409, "Group invites are only available for group conversations", "SOCIAL_GROUP_INVITE_NOT_GROUP");
+  return conversation;
+}
+
+async function loadConversationOrThrow(tx: Prisma.TransactionClient, conversationId: string) {
+  const conversation = await tx.socialConversation.findUnique({ where: { id: conversationId }, include: conversationInclude });
+  if (!conversation) throw new HttpError(404, "Conversation not found", "SOCIAL_CONVERSATION_NOT_FOUND");
+  return conversation;
+}
+
+function assertGroupInviteManager(conversation: Awaited<ReturnType<typeof loadGroupConversationForMutation>>, userId: string) {
+  const actor = conversation.members.find((member) => member.userId === userId && member.status === SocialMembershipStatus.ACTIVE);
+  if (!actor) throw new HttpError(404, "Conversation not found", "SOCIAL_CONVERSATION_NOT_FOUND");
+  if (actor.role !== SocialMemberRole.OWNER && actor.role !== SocialMemberRole.ADMIN) {
+    throw new HttpError(403, "Only group owners and admins can manage invites", "SOCIAL_GROUP_INVITE_ROLE_FORBIDDEN");
+  }
+}
+
+async function assertAcceptedFriends(tx: Prisma.TransactionClient, firstUserId: string, secondUserId: string) {
+  const [userAId, userBId] = canonicalPair(firstUserId, secondUserId);
+  const friendship = await tx.friendship.findUnique({
+    where: { userAId_userBId: { userAId, userBId } },
+    select: { status: true }
+  });
+  if (friendship?.status !== FriendshipStatus.ACCEPTED) {
+    throw new HttpError(403, "Group invitee must be an accepted friend", "SOCIAL_GROUP_INVITEE_NOT_FRIEND");
+  }
 }
