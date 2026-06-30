@@ -62,6 +62,15 @@ type TypingIndicatorPayload = {
   typing: boolean;
 };
 
+type SocialMemberPayload = {
+  id: string;
+  userId: string;
+  role: string;
+  status: string;
+  joinedAt: Date;
+  user: UserSummaryPayload;
+};
+
 type RealtimeAck<TData> =
   | { ok: true; data: TData }
   | { ok: false; error: { code: string; message: string } };
@@ -85,6 +94,9 @@ type ServerToClientEvents = {
   "message:deleted": (payload: { conversationId: string; messageId: string }) => void;
   "typing:indicator": (payload: TypingIndicatorPayload) => void;
   "read:updated": (payload: ReadUpdatedPayload) => void;
+  "member:invited": (payload: { conversationId: string; member: SocialMemberPayload }) => void;
+  "member:added": (payload: { conversationId: string; member: SocialMemberPayload }) => void;
+  "member:removed": (payload: { conversationId: string; userId: string }) => void;
   "presence:update": (payload: { userId: string; online: boolean; lastSeenAt: Date }) => void;
 };
 
@@ -252,6 +264,26 @@ export function emitMessageDeleted(conversationId: string, messageId: string) {
 
 export function emitReadUpdated(payload: ReadUpdatedPayload) {
   io?.to(conversationRoom(payload.conversationId)).emit("read:updated", payload);
+}
+
+export function emitMemberInvited(conversationId: string, targetUserId: string, member: SocialMemberPayload) {
+  const server = io;
+  if (!server) return;
+  server.to(conversationRoom(conversationId)).to(userRoom(targetUserId)).emit("member:invited", { conversationId, member });
+}
+
+export function emitMemberAdded(conversationId: string, userId: string, member: SocialMemberPayload) {
+  const server = io;
+  if (!server) return;
+  server.in(userRoom(userId)).socketsJoin(conversationRoom(conversationId));
+  server.to(conversationRoom(conversationId)).to(userRoom(userId)).emit("member:added", { conversationId, member });
+}
+
+export function emitMemberRemoved(conversationId: string, userId: string) {
+  const server = io;
+  if (!server) return;
+  server.in(userRoom(userId)).socketsLeave(conversationRoom(conversationId));
+  server.to(conversationRoom(conversationId)).to(userRoom(userId)).emit("member:removed", { conversationId, userId });
 }
 
 function emitPresenceUpdate(conversationIds: string[], payload: { userId: string; online: boolean; lastSeenAt: Date }) {

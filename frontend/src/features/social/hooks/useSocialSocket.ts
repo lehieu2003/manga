@@ -72,6 +72,21 @@ export function useSocialSocket({
       queryClient.invalidateQueries({ queryKey: ['social-conversations'] });
     });
 
+    socket.on('member:invited', () => {
+      queryClient.invalidateQueries({ queryKey: ['social-conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['social-conversation-invites'] });
+    });
+
+    socket.on('member:added', () => {
+      queryClient.invalidateQueries({ queryKey: ['social-conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['social-conversation-invites'] });
+    });
+
+    socket.on('member:removed', () => {
+      queryClient.invalidateQueries({ queryKey: ['social-conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['social-conversation-invites'] });
+    });
+
     socket.on('typing:indicator', handleTypingIndicator);
 
     // presence:update — hiện chưa xử lý UI, giữ lại để dễ implement sau

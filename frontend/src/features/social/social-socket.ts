@@ -1,6 +1,6 @@
 import { io, type Socket } from 'socket.io-client';
 import { API_ORIGIN, getAccessToken } from '@/api';
-import type { SocialMessage, User } from '@/types';
+import type { SocialMember, SocialMessage, User } from '@/types';
 
 export type SocialServerEvents = {
   'message:new': (payload: {
@@ -21,6 +21,18 @@ export type SocialServerEvents = {
     userId: string;
     lastReadMessageId: string;
     lastReadAt: string;
+  }) => void;
+  'member:invited': (payload: {
+    conversationId: string;
+    member: SocialMember;
+  }) => void;
+  'member:added': (payload: {
+    conversationId: string;
+    member: SocialMember;
+  }) => void;
+  'member:removed': (payload: {
+    conversationId: string;
+    userId: string;
   }) => void;
   'presence:update': (payload: {
     userId: string;
