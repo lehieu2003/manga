@@ -14,6 +14,8 @@ class MessageThread extends StatelessWidget {
     required this.onBack,
     required this.onSend,
     required this.onShareManga,
+    required this.onInviteMember,
+    required this.onCancelInvite,
     required this.onTypingChanged,
     required this.onTypingStopped,
     this.showBackButton = false,
@@ -25,6 +27,8 @@ class MessageThread extends StatelessWidget {
   final VoidCallback onBack;
   final ValueChanged<String> onSend;
   final VoidCallback onShareManga;
+  final VoidCallback onInviteMember;
+  final ValueChanged<String> onCancelInvite;
   final ValueChanged<String> onTypingChanged;
   final VoidCallback onTypingStopped;
   final bool showBackButton;
@@ -40,6 +44,14 @@ class MessageThread extends StatelessWidget {
     final typingName = typingLabelFor(state.typingUsers, conversation.id);
     final typingSentence = typingSentenceFor(typingName);
     final avatarUrl = _conversationAvatarUrl(conversation, currentUserId);
+    final canManageInvites =
+        conversation.type == 'GROUP' &&
+        conversation.currentMember?.status == 'ACTIVE' &&
+        (conversation.currentMember?.role == 'OWNER' ||
+            conversation.currentMember?.role == 'ADMIN');
+    final pendingMembers = conversation.members
+        .where((member) => member.status == 'PENDING_INVITE')
+        .toList();
 
     return Column(
       children: [
@@ -62,13 +74,43 @@ class MessageThread extends StatelessWidget {
             subtitle: Text(
               typingSentence.isEmpty ? 'Active now' : typingSentence,
             ),
-            trailing: IconButton(
-              tooltip: 'Conversation options',
-              onPressed: () {},
-              icon: const Icon(Icons.more_horiz),
-            ),
+            trailing: canManageInvites
+                ? IconButton.filledTonal(
+                    tooltip: 'Invite member',
+                    onPressed: onInviteMember,
+                    icon: const Icon(Icons.person_add_alt),
+                  )
+                : IconButton(
+                    tooltip: 'Conversation options',
+                    onPressed: () {},
+                    icon: const Icon(Icons.more_horiz),
+                  ),
           ),
         ),
+        if (canManageInvites && pendingMembers.isNotEmpty)
+          SizedBox(
+            height: 44,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              scrollDirection: Axis.horizontal,
+              itemCount: pendingMembers.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final member = pendingMembers[index];
+                return InputChip(
+                  avatar: SocialAvatar(
+                    label: member.user.displayName,
+                    avatarUrl: member.user.avatarUrl,
+                    radius: 12,
+                  ),
+                  label: Text(member.user.displayName),
+                  tooltip: 'Cancel invite for ${member.user.displayName}',
+                  onDeleted: () => onCancelInvite(member.userId),
+                  deleteIcon: const Icon(Icons.close, size: 16),
+                );
+              },
+            ),
+          ),
         const Divider(height: 1),
         Expanded(
           child: state.messages.isEmpty && typingName.isEmpty
@@ -82,9 +124,7 @@ class MessageThread extends StatelessWidget {
                     if (typingName.isNotEmpty && index == 0) {
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 3),
-                        child: _TypingIndicator(
-                          label: typingSentence,
-                        ),
+                        child: _TypingIndicator(label: typingSentence),
                       );
                     }
                     final messageIndex =

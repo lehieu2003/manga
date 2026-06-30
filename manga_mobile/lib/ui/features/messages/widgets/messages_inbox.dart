@@ -13,6 +13,7 @@ class MessagesInbox extends StatefulWidget {
     required this.onAddFriend,
     required this.onCreateGroup,
     required this.onOpenRequests,
+    required this.onResolveInvite,
     required this.onSelectConversation,
   });
 
@@ -21,6 +22,8 @@ class MessagesInbox extends StatefulWidget {
   final VoidCallback onAddFriend;
   final VoidCallback onCreateGroup;
   final VoidCallback onOpenRequests;
+  final void Function(SocialConversation conversation, String action)
+  onResolveInvite;
   final ValueChanged<SocialConversation> onSelectConversation;
 
   @override
@@ -105,6 +108,55 @@ class _MessagesInboxState extends State<MessagesInbox> {
               onTap: widget.onOpenRequests,
             ),
           ),
+        if (widget.state.pendingInvites.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Group invites',
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 6),
+          ...widget.state.pendingInvites.map(
+            (conversation) => Card(
+              child: ListTile(
+                leading: SocialAvatar(
+                  label: conversation.titleFor(widget.currentUserId),
+                  avatarUrl: conversation.avatarUrl,
+                  icon: Icons.group_add_outlined,
+                ),
+                title: Text(
+                  conversation.titleFor(widget.currentUserId),
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                subtitle: Text(
+                  '${conversation.members.where((member) => member.status == 'ACTIVE').length} members',
+                ),
+                trailing: Wrap(
+                  spacing: 6,
+                  children: [
+                    IconButton.filledTonal(
+                      tooltip: 'Accept group invite',
+                      onPressed: widget.state.sending
+                          ? null
+                          : () =>
+                                widget.onResolveInvite(conversation, 'accept'),
+                      icon: const Icon(Icons.check),
+                    ),
+                    IconButton(
+                      tooltip: 'Decline group invite',
+                      onPressed: widget.state.sending
+                          ? null
+                          : () =>
+                                widget.onResolveInvite(conversation, 'decline'),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
         if (conversations.isEmpty)
           const Padding(
             padding: EdgeInsets.only(top: 40),
@@ -117,7 +169,10 @@ class _MessagesInboxState extends State<MessagesInbox> {
               currentUserId: widget.currentUserId,
               selected:
                   conversation.id == widget.state.selectedConversation?.id,
-              typingLabel: typingLabelFor(widget.state.typingUsers, conversation.id),
+              typingLabel: typingLabelFor(
+                widget.state.typingUsers,
+                conversation.id,
+              ),
               onTap: () => widget.onSelectConversation(conversation),
             ),
           ),

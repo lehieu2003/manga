@@ -55,7 +55,11 @@ void main() {
     expect(find.text('Chats'), findsOneWidget);
     expect(find.text('Mina'), findsWidgets);
     expect(find.text('Friend requests'), findsOneWidget);
+    expect(find.text('Pending Club'), findsOneWidget);
     expect(find.byTooltip('Open manga assistant'), findsNothing);
+
+    await tester.tap(find.byTooltip('Accept group invite'));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('Add friend'));
     await tester.pumpAndSettle();
@@ -63,7 +67,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Kira'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Send friend request'));
+    await tester.tap(find.text('Send friend request'));
     await tester.pumpAndSettle();
 
     final social = app.socialRepository as FakeSocialRepository;
@@ -139,7 +143,7 @@ void main() {
 
     await tester.tap(find.byTooltip('Back to chats'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Create group'));
+    await tester.tap(find.text('Create group'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(EditableText).last, 'Manga Club');
     await tester.pumpAndSettle();
@@ -153,5 +157,15 @@ void main() {
     expect(social.createdGroups.single.$1, 'Manga Club');
     expect(social.createdGroups.single.$2, ['user-2', 'user-3']);
     expect(find.text('Manga Club'), findsWidgets);
+
+    await tester.tap(find.byTooltip('Invite member'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Yui').last);
+    await tester.pumpAndSettle();
+    expect(social.createdInvites.single, ('group-3', 'user-5'));
+    expect(find.byTooltip('Cancel invite for Yui'), findsOneWidget);
+    await tester.tap(find.byTooltip('Cancel invite for Yui'));
+    await tester.pumpAndSettle();
+    expect(social.resolvedInvites.last, ('group-3', 'user-5', 'cancel'));
   });
 }

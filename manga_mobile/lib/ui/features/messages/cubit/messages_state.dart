@@ -11,6 +11,7 @@ class MessagesState {
     required this.incomingRequests,
     required this.sentRequests,
     required this.conversations,
+    required this.pendingInvites,
     required this.typingUsers,
     required this.messages,
     this.selectedConversationId,
@@ -29,6 +30,7 @@ class MessagesState {
       incomingRequests: [],
       sentRequests: [],
       conversations: [],
+      pendingInvites: [],
       typingUsers: {},
       messages: [],
     );
@@ -43,6 +45,7 @@ class MessagesState {
   final List<Friendship> incomingRequests;
   final List<Friendship> sentRequests;
   final List<SocialConversation> conversations;
+  final List<SocialConversation> pendingInvites;
   final Map<String, Map<String, String>> typingUsers;
   final String? selectedConversationId;
   final List<SocialMessage> messages;
@@ -68,6 +71,7 @@ class MessagesState {
     List<Friendship>? incomingRequests,
     List<Friendship>? sentRequests,
     List<SocialConversation>? conversations,
+    List<SocialConversation>? pendingInvites,
     Map<String, Map<String, String>>? typingUsers,
     Object? selectedConversationId = _unset,
     List<SocialMessage>? messages,
@@ -84,6 +88,7 @@ class MessagesState {
       incomingRequests: incomingRequests ?? this.incomingRequests,
       sentRequests: sentRequests ?? this.sentRequests,
       conversations: conversations ?? this.conversations,
+      pendingInvites: pendingInvites ?? this.pendingInvites,
       typingUsers: typingUsers ?? this.typingUsers,
       selectedConversationId: selectedConversationId == _unset
           ? this.selectedConversationId
@@ -95,8 +100,15 @@ class MessagesState {
   }
 }
 
-String typingLabelFor(Map<String, Map<String, String>> typingUsers, String conversationId) {
-  final names = typingUsers[conversationId]?.values.where((name) => name.isNotEmpty).toList() ?? const <String>[];
+String typingLabelFor(
+  Map<String, Map<String, String>> typingUsers,
+  String conversationId,
+) {
+  final names =
+      typingUsers[conversationId]?.values
+          .where((name) => name.isNotEmpty)
+          .toList() ??
+      const <String>[];
   if (names.isEmpty) return '';
   if (names.length == 1) return names.first;
   if (names.length == 2) return '${names[0]} and ${names[1]}';
@@ -105,6 +117,8 @@ String typingLabelFor(Map<String, Map<String, String>> typingUsers, String conve
 
 String typingSentenceFor(String typingLabel) {
   if (typingLabel.isEmpty) return '';
-  final verb = typingLabel.contains(' and ') || typingLabel.contains(' others') ? 'are' : 'is';
+  final verb = typingLabel.contains(' and ') || typingLabel.contains(' others')
+      ? 'are'
+      : 'is';
   return '$typingLabel $verb typing...';
 }

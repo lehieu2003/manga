@@ -37,6 +37,7 @@ class MessagesCubit extends Cubit<MessagesState> {
     try {
       final results = await Future.wait<Object>([
         socialRepository.listConversations(),
+        socialRepository.listConversations(membershipStatus: 'PENDING_INVITE'),
         socialRepository.listFriends(),
         socialRepository.listIncomingRequests(),
         socialRepository.listSentRequests(),
@@ -49,10 +50,11 @@ class MessagesCubit extends Cubit<MessagesState> {
       emit(
         state.copyWith(
           conversations: conversations,
-          friends: (results[1] as FriendshipListResponse).data,
-          incomingRequests: (results[2] as FriendshipListResponse).data,
-          sentRequests: (results[3] as FriendshipListResponse).data,
-          userResults: (results[4] as SocialUserSearchResponse).data,
+          pendingInvites: (results[1] as SocialConversationListResponse).data,
+          friends: (results[2] as FriendshipListResponse).data,
+          incomingRequests: (results[3] as FriendshipListResponse).data,
+          sentRequests: (results[4] as FriendshipListResponse).data,
+          userResults: (results[5] as SocialUserSearchResponse).data,
           selectedConversationId: selectedId,
           loading: false,
           friendshipLoading: false,
@@ -199,11 +201,81 @@ class MessagesCubit extends Cubit<MessagesState> {
     }
   }
 
+  Future<void> createGroupInvite({
+    required String conversationId,
+    required String userId,
+  }) async {
+    if (conversationId.trim().isEmpty || userId.trim().isEmpty) return;
+
+    emit(state.copyWith(sending: true, notice: null));
+    try {
+      final conversation = await socialRepository.createGroupInvite(
+        conversationId: conversationId,
+        userId: userId,
+      );
+      emit(
+        state.copyWith(
+          conversations: _upsertConversation(state.conversations, conversation),
+          selectedConversationId: conversation.id,
+          sending: false,
+          notice: 'Invite sent.',
+        ),
+      );
+    } catch (error) {
+      emit(state.copyWith(sending: false, notice: error.toString()));
+    }
+  }
+
+  Future<void> resolveGroupInvite({
+    required String conversationId,
+    required String userId,
+    required String action,
+  }) async {
+    if (conversationId.trim().isEmpty || userId.trim().isEmpty) return;
+
+    emit(state.copyWith(sending: true, notice: null));
+    try {
+      final conversation = await socialRepository.resolveGroupInvite(
+        conversationId: conversationId,
+        userId: userId,
+        action: action,
+      );
+      final accepted = action == 'accept';
+      emit(
+        state.copyWith(
+          conversations: accepted || action == 'cancel'
+              ? _upsertConversation(state.conversations, conversation)
+              : state.conversations,
+          pendingInvites: state.pendingInvites
+              .where((item) => item.id != conversation.id)
+              .toList(),
+          selectedConversationId: accepted
+              ? conversation.id
+              : state.selectedConversationId,
+          sending: false,
+          notice: accepted
+              ? 'Invite accepted.'
+              : action == 'decline'
+              ? 'Invite declined.'
+              : 'Invite canceled.',
+        ),
+      );
+      if (accepted) await selectConversation(conversation.id);
+    } catch (error) {
+      emit(state.copyWith(sending: false, notice: error.toString()));
+    }
+  }
+
   Future<void> refreshConversations({
     String? selectedConversationId,
     bool reloadSelected = true,
   }) async {
-    final conversations = await socialRepository.listConversations();
+    final results = await Future.wait([
+      socialRepository.listConversations(),
+      socialRepository.listConversations(membershipStatus: 'PENDING_INVITE'),
+    ]);
+    final conversations = results[0];
+    final pendingInvites = results[1];
     final selectedId =
         selectedConversationId ??
         state.selectedConversationId ??
@@ -211,6 +283,7 @@ class MessagesCubit extends Cubit<MessagesState> {
     emit(
       state.copyWith(
         conversations: conversations.data,
+        pendingInvites: pendingInvites.data,
         selectedConversationId: selectedId,
       ),
     );
@@ -333,6 +406,9 @@ class MessagesCubit extends Cubit<MessagesState> {
         (_) => refreshConversations(reloadSelected: false),
       ),
       socialSocketService.typing.listen(_handleTypingIndicator),
+      socialSocketService.memberChanged.listen((_) {
+        if (!isClosed) refreshConversations(reloadSelected: false);
+      }),
     ]);
   }
 
@@ -415,6 +491,16 @@ class MessagesCubit extends Cubit<MessagesState> {
       return clientMessageId == null || item.clientMessageId != clientMessageId;
     });
     return _chronologicalMessages([...filtered, message]);
+  }
+
+  List<SocialConversation> _upsertConversation(
+    List<SocialConversation> conversations,
+    SocialConversation conversation,
+  ) {
+    return [
+      conversation,
+      ...conversations.where((item) => item.id != conversation.id),
+    ];
   }
 
   Future<void> _markConversationRead(

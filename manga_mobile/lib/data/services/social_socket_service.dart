@@ -51,6 +51,13 @@ class SocialTypingEvent {
   final bool typing;
 }
 
+class SocialMemberEvent {
+  const SocialMemberEvent({required this.conversationId, required this.userId});
+
+  final String conversationId;
+  final String userId;
+}
+
 class SocialSocketService {
   SocialSocketService(this._apiClient);
 
@@ -64,6 +71,7 @@ class SocialSocketService {
   final _readUpdatedController =
       StreamController<SocialReadUpdatedEvent>.broadcast();
   final _typingController = StreamController<SocialTypingEvent>.broadcast();
+  final _memberController = StreamController<SocialMemberEvent>.broadcast();
 
   Stream<SocialMessageNewEvent> get messageNew => _messageNewController.stream;
   Stream<SocialMessageDeletedEvent> get messageDeleted =>
@@ -71,6 +79,7 @@ class SocialSocketService {
   Stream<SocialReadUpdatedEvent> get readUpdated =>
       _readUpdatedController.stream;
   Stream<SocialTypingEvent> get typing => _typingController.stream;
+  Stream<SocialMemberEvent> get memberChanged => _memberController.stream;
 
   bool get isConnected => _socket?.connected == true;
 
@@ -136,6 +145,7 @@ class SocialSocketService {
       _messageDeletedController.close(),
       _readUpdatedController.close(),
       _typingController.close(),
+      _memberController.close(),
     ]);
   }
 
@@ -189,6 +199,25 @@ class SocialSocketService {
         ),
       );
     });
+
+    void handleMemberChanged(Object? payload) {
+      final json = _asMap(payload);
+      if (json == null) return;
+      final memberJson = _asMap(json['member']);
+      _memberController.add(
+        SocialMemberEvent(
+          conversationId: json['conversationId']?.toString() ?? '',
+          userId:
+              memberJson?['userId']?.toString() ??
+              json['userId']?.toString() ??
+              '',
+        ),
+      );
+    }
+
+    socket.on('member:invited', handleMemberChanged);
+    socket.on('member:added', handleMemberChanged);
+    socket.on('member:removed', handleMemberChanged);
   }
 
   Map<String, dynamic>? _asMap(Object? value) {

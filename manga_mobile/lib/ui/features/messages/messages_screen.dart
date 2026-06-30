@@ -8,6 +8,7 @@ import 'cubit/messages_state.dart';
 import 'widgets/add_friend_sheet.dart';
 import 'widgets/create_group_sheet.dart';
 import 'widgets/friend_requests_sheet.dart';
+import 'widgets/group_invite_sheet.dart';
 import 'widgets/manga_share_sheet.dart';
 import 'widgets/message_thread.dart';
 import 'widgets/messages_inbox.dart';
@@ -115,6 +116,17 @@ class _MessagesViewState extends State<_MessagesView> {
     );
   }
 
+  Future<void> _openGroupInviteSheet(BuildContext context) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => BlocProvider.value(
+        value: context.read<MessagesCubit>(),
+        child: const GroupInviteSheet(),
+      ),
+    );
+  }
+
   Future<void> _openMangaShareSheet(BuildContext context) {
     return showModalBottomSheet<void>(
       context: context,
@@ -164,6 +176,13 @@ class _MessagesViewState extends State<_MessagesView> {
                       onAddFriend: () => _openAddFriendSheet(context),
                       onCreateGroup: () => _openCreateGroupSheet(context),
                       onOpenRequests: () => _openFriendRequestsSheet(context),
+                      onResolveInvite: (conversation, action) {
+                        messagesCubit.resolveGroupInvite(
+                          conversationId: conversation.id,
+                          userId: widget.currentUserId,
+                          action: action,
+                        );
+                      },
                       onSelectConversation: (conversation) {
                         messagesCubit.selectConversation(conversation.id);
                       },
@@ -179,6 +198,16 @@ class _MessagesViewState extends State<_MessagesView> {
                       onBack: () {},
                       onSend: messagesCubit.sendMessage,
                       onShareManga: () => _openMangaShareSheet(context),
+                      onInviteMember: () => _openGroupInviteSheet(context),
+                      onCancelInvite: (userId) {
+                        final conversation = state.selectedConversation;
+                        if (conversation == null) return;
+                        messagesCubit.resolveGroupInvite(
+                          conversationId: conversation.id,
+                          userId: userId,
+                          action: 'cancel',
+                        );
+                      },
                       onTypingChanged: messagesCubit.typingChanged,
                       onTypingStopped: messagesCubit.stopTyping,
                     ),
@@ -196,6 +225,16 @@ class _MessagesViewState extends State<_MessagesView> {
                 onBack: () => _setCompactThreadVisible(false),
                 onSend: messagesCubit.sendMessage,
                 onShareManga: () => _openMangaShareSheet(context),
+                onInviteMember: () => _openGroupInviteSheet(context),
+                onCancelInvite: (userId) {
+                  final conversation = state.selectedConversation;
+                  if (conversation == null) return;
+                  messagesCubit.resolveGroupInvite(
+                    conversationId: conversation.id,
+                    userId: userId,
+                    action: 'cancel',
+                  );
+                },
                 onTypingChanged: messagesCubit.typingChanged,
                 onTypingStopped: messagesCubit.stopTyping,
               );
@@ -207,6 +246,13 @@ class _MessagesViewState extends State<_MessagesView> {
               onAddFriend: () => _openAddFriendSheet(context),
               onCreateGroup: () => _openCreateGroupSheet(context),
               onOpenRequests: () => _openFriendRequestsSheet(context),
+              onResolveInvite: (conversation, action) {
+                messagesCubit.resolveGroupInvite(
+                  conversationId: conversation.id,
+                  userId: widget.currentUserId,
+                  action: action,
+                );
+              },
               onSelectConversation: (conversation) {
                 messagesCubit.selectConversation(conversation.id);
                 _setCompactThreadVisible(true);

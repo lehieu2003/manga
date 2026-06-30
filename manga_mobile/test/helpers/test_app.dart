@@ -61,6 +61,7 @@ class FakeSocialSocketService extends SocialSocketService {
   final _readUpdatedController =
       StreamController<SocialReadUpdatedEvent>.broadcast();
   final _typingController = StreamController<SocialTypingEvent>.broadcast();
+  final _memberController = StreamController<SocialMemberEvent>.broadcast();
   final List<String> readMessageIds = [];
   final List<String> typingStarts = [];
   final List<String> typingStops = [];
@@ -78,6 +79,9 @@ class FakeSocialSocketService extends SocialSocketService {
 
   @override
   Stream<SocialTypingEvent> get typing => _typingController.stream;
+
+  @override
+  Stream<SocialMemberEvent> get memberChanged => _memberController.stream;
 
   @override
   Future<void> connect() async {}
@@ -131,6 +135,7 @@ class FakeSocialSocketService extends SocialSocketService {
       _messageDeletedController.close(),
       _readUpdatedController.close(),
       _typingController.close(),
+      _memberController.close(),
     ]);
   }
 }
@@ -514,11 +519,14 @@ class FakeSocialRepository extends SocialRepository {
     SocialUser(id: 'user-2', displayName: 'Mina'),
     SocialUser(id: 'user-3', displayName: 'Nori'),
     SocialUser(id: 'user-4', displayName: 'Kira'),
+    SocialUser(id: 'user-5', displayName: 'Yui'),
   ];
 
   final List<String> sentRequests = [];
   final List<String> acceptedRequests = [];
   final List<(String, List<String>)> createdGroups = [];
+  final List<(String, String)> createdInvites = [];
+  final List<(String, String, String)> resolvedInvites = [];
 
   late List<Friendship> friends = [
     Friendship(
@@ -530,6 +538,16 @@ class FakeSocialRepository extends SocialRepository {
       createdAt: testNow,
       updatedAt: testNow,
       friend: users[0],
+    ),
+    Friendship(
+      id: 'friendship-3',
+      userAId: 'user-1',
+      userBId: 'user-5',
+      requestedById: 'user-1',
+      status: 'ACCEPTED',
+      createdAt: testNow,
+      updatedAt: testNow,
+      friend: users[3],
     ),
   ];
 
@@ -584,6 +602,40 @@ class FakeSocialRepository extends SocialRepository {
         updatedAt: testNow,
         sender: users[0],
       ),
+    ),
+  ];
+
+  late List<SocialConversation> pendingInvites = [
+    SocialConversation(
+      id: 'invite-1',
+      type: 'GROUP',
+      title: 'Pending Club',
+      createdAt: testNow,
+      updatedAt: testNow,
+      currentMember: SocialCurrentMember(
+        id: 'group-member-1',
+        role: 'OWNER',
+        status: 'ACTIVE',
+        joinedAt: testNow,
+      ),
+      members: [
+        SocialMember(
+          id: 'invite-member-1',
+          userId: 'user-1',
+          role: 'MEMBER',
+          status: 'PENDING_INVITE',
+          joinedAt: testNow,
+          user: const SocialUser(id: 'user-1', displayName: 'Reader'),
+        ),
+        SocialMember(
+          id: 'invite-member-2',
+          userId: 'user-2',
+          role: 'OWNER',
+          status: 'ACTIVE',
+          joinedAt: testNow,
+          user: users[0],
+        ),
+      ],
     ),
   ];
 
@@ -701,7 +753,10 @@ class FakeSocialRepository extends SocialRepository {
   Future<SocialConversationListResponse> listConversations({
     int limit = 30,
     String? cursor,
-  }) async => SocialConversationListResponse(data: conversations);
+    String? membershipStatus,
+  }) async => SocialConversationListResponse(
+    data: membershipStatus == 'PENDING_INVITE' ? pendingInvites : conversations,
+  );
 
   @override
   Future<SocialConversation> createGroupConversation({
@@ -741,6 +796,99 @@ class FakeSocialRepository extends SocialRepository {
     );
     conversations = [conversation, ...conversations];
     return conversation;
+  }
+
+  @override
+  Future<SocialConversation> createGroupInvite({
+    required String conversationId,
+    required String userId,
+  }) async {
+    createdInvites.add((conversationId, userId));
+    final conversation = conversations.firstWhere(
+      (item) => item.id == conversationId,
+    );
+    final user = users.firstWhere((item) => item.id == userId);
+    final updated = SocialConversation(
+      id: conversation.id,
+      type: conversation.type,
+      title: conversation.title,
+      avatarUrl: conversation.avatarUrl,
+      directKey: conversation.directKey,
+      lastMessageAt: conversation.lastMessageAt,
+      createdAt: conversation.createdAt,
+      updatedAt: testNow,
+      currentMember: conversation.currentMember,
+      latestMessage: conversation.latestMessage,
+      members: [
+        ...conversation.members,
+        SocialMember(
+          id: 'pending-member-$userId',
+          userId: userId,
+          role: 'MEMBER',
+          status: 'PENDING_INVITE',
+          joinedAt: testNow,
+          user: user,
+        ),
+      ],
+    );
+    conversations = [
+      updated,
+      ...conversations.where((item) => item.id != conversationId),
+    ];
+    return updated;
+  }
+
+  @override
+  Future<SocialConversation> resolveGroupInvite({
+    required String conversationId,
+    required String userId,
+    required String action,
+  }) async {
+    resolvedInvites.add((conversationId, userId, action));
+    final invite = pendingInvites.firstWhere(
+      (item) => item.id == conversationId,
+      orElse: () =>
+          conversations.firstWhere((item) => item.id == conversationId),
+    );
+    pendingInvites = pendingInvites
+        .where((item) => item.id != conversationId)
+        .toList();
+    if (action == 'accept') {
+      final accepted = SocialConversation(
+        id: invite.id,
+        type: invite.type,
+        title: invite.title,
+        avatarUrl: invite.avatarUrl,
+        directKey: invite.directKey,
+        lastMessageAt: invite.lastMessageAt,
+        createdAt: invite.createdAt,
+        updatedAt: testNow,
+        currentMember: SocialCurrentMember(
+          id: 'invite-member-1',
+          role: 'MEMBER',
+          status: 'ACTIVE',
+          joinedAt: testNow,
+        ),
+        latestMessage: invite.latestMessage,
+        members: invite.members
+            .map(
+              (member) => member.userId == userId
+                  ? SocialMember(
+                      id: member.id,
+                      userId: member.userId,
+                      role: member.role,
+                      status: 'ACTIVE',
+                      joinedAt: testNow,
+                      user: member.user,
+                    )
+                  : member,
+            )
+            .toList(),
+      );
+      conversations = [accepted, ...conversations];
+      return accepted;
+    }
+    return invite;
   }
 
   @override

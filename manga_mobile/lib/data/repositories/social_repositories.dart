@@ -174,11 +174,16 @@ class SocialRepository {
   Future<SocialConversationListResponse> listConversations({
     int limit = 30,
     String? cursor,
+    String? membershipStatus,
   }) {
     return _api.get(
       '/social/conversations',
       SocialConversationListResponse.fromJson,
-      query: {'limit': '$limit', 'cursor': cursor},
+      query: {
+        'limit': '$limit',
+        'cursor': cursor,
+        'membershipStatus': membershipStatus,
+      },
     );
   }
 
@@ -190,6 +195,35 @@ class SocialRepository {
       'title': title,
       'memberIds': memberIds,
     }, (json) => json);
+    return SocialConversation.fromJson(
+      payload['conversation'] as Map<String, dynamic>,
+    );
+  }
+
+  Future<SocialConversation> createGroupInvite({
+    required String conversationId,
+    required String userId,
+  }) async {
+    final payload = await _api.post(
+      '/social/conversations/$conversationId/invites',
+      {'userId': userId},
+      (json) => json,
+    );
+    return SocialConversation.fromJson(
+      payload['conversation'] as Map<String, dynamic>,
+    );
+  }
+
+  Future<SocialConversation> resolveGroupInvite({
+    required String conversationId,
+    required String userId,
+    required String action,
+  }) async {
+    final payload = await _api.patch(
+      '/social/conversations/$conversationId/invites/$userId',
+      {'action': action},
+      (json) => json,
+    );
     return SocialConversation.fromJson(
       payload['conversation'] as Map<String, dynamic>,
     );
