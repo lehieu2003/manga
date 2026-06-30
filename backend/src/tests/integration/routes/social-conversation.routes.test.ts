@@ -15,6 +15,18 @@ const prismaMocks = vi.hoisted(() => ({
   transaction: vi.fn()
 }));
 
+const socketMocks = vi.hoisted(() => ({
+  emitFriendAccepted: vi.fn(),
+  emitFriendIncoming: vi.fn(),
+  emitMemberAdded: vi.fn(),
+  emitMemberInvited: vi.fn(),
+  emitMemberRemoved: vi.fn(),
+  emitMessageDeleted: vi.fn(),
+  emitMessageNew: vi.fn(),
+  emitNotification: vi.fn(),
+  emitReadUpdated: vi.fn()
+}));
+
 vi.mock("../../../infrastructure/database/client.js", () => ({
   prisma: {
     $transaction: prismaMocks.transaction,
@@ -37,6 +49,8 @@ vi.mock("../../../infrastructure/database/client.js", () => ({
     }
   }
 }));
+
+vi.mock("../../../infrastructure/realtime/socket-server.js", () => socketMocks);
 
 describe("socialConversationRoutes", () => {
   afterEach(() => {
@@ -224,6 +238,35 @@ describe("socialConversationRoutes", () => {
     await app.close();
   });
 
+  it("lists pending invite conversations for the authenticated invitee", async () => {
+    const app = await makeSocialConversationApp("user-4");
+    prismaMocks.socialConversationFindMany.mockResolvedValue([
+      makeConversation({
+        id: "group-1",
+        type: SocialConversationType.GROUP,
+        title: "Manga Club",
+        directKey: null,
+        members: [makeMember({ id: "pending-member", userId: "user-4", status: SocialMembershipStatus.PENDING_INVITE, displayName: "Kira" })],
+        messages: []
+      })
+    ]);
+
+    const response = await app.inject({ method: "GET", url: "/api/social/conversations?membershipStatus=PENDING_INVITE&limit=10" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      data: [{ id: "group-1", type: "GROUP", currentMember: { status: "PENDING_INVITE" } }],
+      nextCursor: null
+    });
+    expect(prismaMocks.socialConversationFindMany).toHaveBeenCalledWith({
+      where: { members: { some: { userId: "user-4", status: SocialMembershipStatus.PENDING_INVITE } } },
+      orderBy: [{ lastMessageAt: { sort: "desc", nulls: "last" } }, { updatedAt: "desc" }, { id: "desc" }],
+      take: 11,
+      include: expect.any(Object)
+    });
+    await app.close();
+  });
+
   it("invites an accepted friend to a group as a pending member", async () => {
     const app = await makeSocialConversationApp();
     mockTransaction();
@@ -284,6 +327,11 @@ describe("socialConversationRoutes", () => {
         payload: { conversationId: "group-1", inviterId: "user-1", conversationTitle: "Manga Club" }
       }
     });
+    expect(socketMocks.emitMemberInvited).toHaveBeenCalledWith(
+      "group-1",
+      "user-4",
+      expect.objectContaining({ userId: "user-4", status: SocialMembershipStatus.PENDING_INVITE })
+    );
     await app.close();
   });
 
@@ -313,6 +361,7 @@ describe("socialConversationRoutes", () => {
     expect(response.statusCode).toBe(200);
     expect(prismaMocks.socialConversationMemberCreate).not.toHaveBeenCalled();
     expect(prismaMocks.notificationCreate).not.toHaveBeenCalled();
+    expect(socketMocks.emitMemberInvited).not.toHaveBeenCalled();
     await app.close();
   });
 
@@ -452,6 +501,11 @@ describe("socialConversationRoutes", () => {
       where: { conversationId_userId: { conversationId: "group-1", userId: "user-4" } },
       data: { status: SocialMembershipStatus.ACTIVE, joinedAt: expect.any(Date) }
     });
+    expect(socketMocks.emitMemberAdded).toHaveBeenCalledWith(
+      "group-1",
+      "user-4",
+      expect.objectContaining({ userId: "user-4", status: SocialMembershipStatus.ACTIVE })
+    );
     await app.close();
   });
 
@@ -492,6 +546,7 @@ describe("socialConversationRoutes", () => {
       where: { conversationId_userId: { conversationId: "group-1", userId: "user-4" } },
       data: { status: SocialMembershipStatus.LEFT }
     });
+    expect(socketMocks.emitMemberRemoved).toHaveBeenCalledWith("group-1", "user-4");
     await app.close();
   });
 
@@ -538,6 +593,7 @@ describe("socialConversationRoutes", () => {
       where: { conversationId_userId: { conversationId: "group-1", userId: "user-4" } },
       data: { status: SocialMembershipStatus.LEFT }
     });
+    expect(socketMocks.emitMemberRemoved).toHaveBeenCalledWith("group-1", "user-4");
     await app.close();
   });
 

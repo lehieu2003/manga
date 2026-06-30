@@ -1,5 +1,6 @@
 import { FriendshipStatus, NotificationSubjectType, NotificationType, Prisma, SocialConversationType, SocialMemberRole, SocialMembershipStatus } from "@prisma/client";
 import { prisma } from "../../infrastructure/database/client.js";
+import { emitMemberAdded, emitMemberInvited, emitMemberRemoved } from "../../infrastructure/realtime/socket-server.js";
 import { HttpError } from "../../shared/errors/http-error.js";
 import { publishNotification } from "./notification-stream.service.js";
 
@@ -10,6 +11,7 @@ type ConversationCursor = {
 type ListConversationsInput = {
   limit: number;
   cursor?: string;
+  membershipStatus?: "ACTIVE" | "PENDING_INVITE";
 };
 
 type CreateGroupConversationInput = {
@@ -44,12 +46,13 @@ const conversationInclude = {
 
 export async function listSocialConversations(userId: string, input: ListConversationsInput) {
   const cursor = input.cursor ? decodeConversationCursor(input.cursor) : undefined;
+  const membershipStatus = input.membershipStatus ?? SocialMembershipStatus.ACTIVE;
   const rows = await prisma.socialConversation.findMany({
     where: {
       members: {
         some: {
           userId,
-          status: SocialMembershipStatus.ACTIVE
+          status: membershipStatus
         }
       }
     },
@@ -176,10 +179,12 @@ export async function createSocialGroupInvite(userId: string, conversationId: st
     });
 
     const updatedConversation = await loadConversationOrThrow(tx, conversationId);
-    return { conversation: updatedConversation, notification };
+    const invitedMember = updatedConversation.members.find((member) => member.userId === targetUserId);
+    return { conversation: updatedConversation, notification, invitedMember };
   });
 
   if (result.notification) publishNotification(result.notification);
+  if (result.invitedMember) emitMemberInvited(conversationId, targetUserId, serializeMember(result.invitedMember));
   return { conversation: serializeConversation(result.conversation, userId) };
 }
 
@@ -204,10 +209,18 @@ export async function resolveSocialGroupInvite(userId: string, conversationId: s
       data: { status, ...(input.action === "accept" ? { joinedAt: new Date() } : {}) }
     });
 
-    return loadConversationOrThrow(tx, conversationId);
+    const updatedConversation = await loadConversationOrThrow(tx, conversationId);
+    const updatedTargetMember = updatedConversation.members.find((member) => member.userId === input.targetUserId);
+    return { conversation: updatedConversation, targetMember: updatedTargetMember };
   });
 
-  return { conversation: serializeConversation(result, userId) };
+  if (input.action === "accept" && result.targetMember) {
+    emitMemberAdded(conversationId, input.targetUserId, serializeMember(result.targetMember));
+  } else {
+    emitMemberRemoved(conversationId, input.targetUserId);
+  }
+
+  return { conversation: serializeConversation(result.conversation, userId) };
 }
 
 function serializeConversation<TConversation extends Awaited<ReturnType<typeof prisma.socialConversation.findMany>>[number]>(
@@ -300,6 +313,24 @@ function decodeConversationCursor(cursor: string): ConversationCursor {
 
 function canonicalPair(firstUserId: string, secondUserId: string): [string, string] {
   return firstUserId < secondUserId ? [firstUserId, secondUserId] : [secondUserId, firstUserId];
+}
+
+function serializeMember(member: {
+  id: string;
+  userId: string;
+  role: string;
+  status: string;
+  joinedAt: Date;
+  user: { id: string; displayName: string; avatarUrl: string | null };
+}) {
+  return {
+    id: member.id,
+    userId: member.userId,
+    role: member.role,
+    status: member.status,
+    joinedAt: member.joinedAt,
+    user: member.user
+  };
 }
 
 async function loadGroupConversationForMutation(tx: Prisma.TransactionClient, conversationId: string) {
