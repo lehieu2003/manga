@@ -1,5 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, Loader2, MessageCircle, Send, UsersRound } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { BookOpen, Check, Loader2, MessageCircle, Send, UsersRound, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/api';
 import { useAuth } from '@/features/auth/stores/auth.store';
@@ -9,9 +9,11 @@ import { CONVERSATIONS_PAGE_SIZE } from './constants';
 import { useFriendships } from './hooks/useFriendships';
 import { useSocialMessages } from './hooks/useSocialMessages';
 import { useSocialSocket } from './hooks/useSocialSocket';
+import { getConversationTitle } from './utils';
 import { ConversationButton } from './components/ConversationButton';
 import { CreateGroupDialog } from './components/CreateGroupDialog';
 import { FriendshipPanel } from './components/FriendshipPanel';
+import { GroupInviteDialog } from './components/GroupInviteDialog';
 import { MangaSharePicker } from './components/MangaSharePicker';
 import { MessageRow } from './components/MessageRow';
 import { ThreadHeader } from './components/ThreadHeader';
@@ -27,6 +29,7 @@ export function SocialChatPage() {
   const [draft, setDraft] = useState('');
   const [friendSearchQuery, setFriendSearchQuery] = useState('');
   const [groupDialogOpen, setGroupDialogOpen] = useState(false);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [mangaShareOpen, setMangaShareOpen] = useState(false);
   const [mangaShareQuery, setMangaShareQuery] = useState('');
   const messageListRef = useRef<HTMLDivElement | null>(null);
@@ -39,6 +42,18 @@ export function SocialChatPage() {
     enabled: Boolean(user),
   });
   const conversationItems = conversations.data?.data ?? [];
+
+  const pendingInvites = useQuery({
+    queryKey: ['social-conversation-invites'],
+    queryFn: () =>
+      api.listSocialConversations({
+        limit: CONVERSATIONS_PAGE_SIZE,
+        membershipStatus: 'PENDING_INVITE',
+      }),
+    enabled: Boolean(user),
+  });
+  const pendingInviteItems = pendingInvites.data?.data ?? [];
+
   const selectedConversation =
     conversationItems.find((c) => c.id === selectedConversationId) ??
     conversationItems[0] ??
@@ -69,6 +84,43 @@ export function SocialChatPage() {
     },
     onError: () => {
       showToast({ title: 'Could not create group', kind: 'error' });
+    },
+  });
+
+  const createGroupInvite = useMutation({
+    mutationFn: (input: { conversationId: string; userId: string }) =>
+      api.createSocialGroupInvite(input.conversationId, input.userId),
+    onSuccess: ({ conversation }) => {
+      upsertConversation(queryClient, ['social-conversations'], conversation);
+      setInviteDialogOpen(false);
+    },
+    onError: () => {
+      showToast({ title: 'Could not send invite', kind: 'error' });
+    },
+  });
+
+  const resolveGroupInvite = useMutation({
+    mutationFn: (input: {
+      conversationId: string;
+      userId: string;
+      action: 'accept' | 'decline' | 'cancel';
+    }) =>
+      api.resolveSocialGroupInvite(
+        input.conversationId,
+        input.userId,
+        input.action,
+      ),
+    onSuccess: ({ conversation }, input) => {
+      removeConversation(queryClient, ['social-conversation-invites'], conversation.id);
+      if (input.action === 'accept') {
+        upsertConversation(queryClient, ['social-conversations'], conversation);
+        setSelectedConversationId(conversation.id);
+      } else if (input.action === 'cancel') {
+        upsertConversation(queryClient, ['social-conversations'], conversation);
+      }
+    },
+    onError: () => {
+      showToast({ title: 'Could not update invite', kind: 'error' });
     },
   });
 
@@ -239,6 +291,60 @@ export function SocialChatPage() {
             />
           ))}
         </div>
+        <section className='social-invite-panel' aria-label='Group invites'>
+          <div className='social-friend-panel-head'>
+            <strong>Invites</strong>
+            <span>{pendingInviteItems.length} pending</span>
+          </div>
+          {pendingInvites.isLoading ? (
+            <LoadingRow label='Loading invites' />
+          ) : null}
+          {!pendingInvites.isLoading && !pendingInviteItems.length ? (
+            <EmptyPanel label='No group invites' />
+          ) : null}
+          {pendingInviteItems.map((conversation) => (
+            <div className='social-invite-card' key={conversation.id}>
+              <span>
+                <strong>{getConversationTitle(conversation, user?.id ?? '')}</strong>
+                <small>
+                  {conversation.members.filter((member) => member.status === 'ACTIVE').length} members
+                </small>
+              </span>
+              <div>
+                <button
+                  className='reader-icon-button'
+                  type='button'
+                  aria-label={`Accept invite to ${getConversationTitle(conversation, user?.id ?? '')}`}
+                  disabled={resolveGroupInvite.isPending}
+                  onClick={() =>
+                    resolveGroupInvite.mutate({
+                      conversationId: conversation.id,
+                      userId: user?.id ?? '',
+                      action: 'accept',
+                    })
+                  }
+                >
+                  <Check size={14} />
+                </button>
+                <button
+                  className='reader-icon-button'
+                  type='button'
+                  aria-label={`Decline invite to ${getConversationTitle(conversation, user?.id ?? '')}`}
+                  disabled={resolveGroupInvite.isPending}
+                  onClick={() =>
+                    resolveGroupInvite.mutate({
+                      conversationId: conversation.id,
+                      userId: user?.id ?? '',
+                      action: 'decline',
+                    })
+                  }
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </section>
         <FriendshipPanel
           friends={friendships.friends}
           incomingRequests={friendships.incomingRequests}
@@ -267,6 +373,17 @@ export function SocialChatPage() {
             <ThreadHeader
               conversation={selectedConversation}
               currentUserId={user?.id ?? ''}
+              inviteBusy={
+                createGroupInvite.isPending || resolveGroupInvite.isPending
+              }
+              onOpenInvite={() => setInviteDialogOpen(true)}
+              onCancelInvite={(userId) =>
+                resolveGroupInvite.mutate({
+                  conversationId: selectedConversation.id,
+                  userId,
+                  action: 'cancel',
+                })
+              }
             />
             <div className='social-message-list' ref={messageListRef}>
               {messagesQuery.isLoading ? (
@@ -354,6 +471,17 @@ export function SocialChatPage() {
         onCreate={(input) => createGroup.mutate(input)}
         onClose={() => setGroupDialogOpen(false)}
       />
+      <GroupInviteDialog
+        open={inviteDialogOpen}
+        conversation={selectedConversation}
+        friends={friendships.friends}
+        busy={createGroupInvite.isPending}
+        onInvite={(userId) => {
+          if (!selectedConversation) return;
+          createGroupInvite.mutate({ conversationId: selectedConversation.id, userId });
+        }}
+        onClose={() => setInviteDialogOpen(false)}
+      />
     </section>
   );
 }
@@ -361,4 +489,35 @@ export function SocialChatPage() {
 function formatTypingStatus(label: string) {
   const verb = label.includes(' and ') || label.includes(' others') ? 'are' : 'is';
   return `${label} ${verb} typing`;
+}
+
+function upsertConversation(
+  queryClient: QueryClient,
+  queryKey: readonly unknown[],
+  conversation: SocialConversationListResponse['data'][number],
+) {
+  queryClient.setQueryData<SocialConversationListResponse>(
+    queryKey,
+    (current) => ({
+      data: [
+        conversation,
+        ...(current?.data.filter((item) => item.id !== conversation.id) ?? []),
+      ],
+      nextCursor: current?.nextCursor ?? null,
+    }),
+  );
+}
+
+function removeConversation(
+  queryClient: QueryClient,
+  queryKey: readonly unknown[],
+  conversationId: string,
+) {
+  queryClient.setQueryData<SocialConversationListResponse>(
+    queryKey,
+    (current) => ({
+      data: current?.data.filter((item) => item.id !== conversationId) ?? [],
+      nextCursor: current?.nextCursor ?? null,
+    }),
+  );
 }

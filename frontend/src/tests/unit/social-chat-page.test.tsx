@@ -18,6 +18,8 @@ const mocks = vi.hoisted(() => ({
   searchSocialUsers: vi.fn(),
   searchManga: vi.fn(),
   createSocialGroupConversation: vi.fn(),
+  createSocialGroupInvite: vi.fn(),
+  resolveSocialGroupInvite: vi.fn(),
   sendFriendRequest: vi.fn(),
   acceptFriendRequest: vi.fn(),
   rejectFriendRequest: vi.fn(),
@@ -43,6 +45,8 @@ vi.mock("@/api", () => ({
     searchSocialUsers: mocks.searchSocialUsers,
     searchManga: mocks.searchManga,
     createSocialGroupConversation: mocks.createSocialGroupConversation,
+    createSocialGroupInvite: mocks.createSocialGroupInvite,
+    resolveSocialGroupInvite: mocks.resolveSocialGroupInvite,
     sendFriendRequest: mocks.sendFriendRequest,
     acceptFriendRequest: mocks.acceptFriendRequest,
     rejectFriendRequest: mocks.rejectFriendRequest,
@@ -82,7 +86,9 @@ describe("SocialChatPage", () => {
       if (event === "message:read") ack?.({ ok: false, error: { code: "SOCKET_READ_FAILED", message: "read failed" } });
     });
     mocks.markSocialConversationRead.mockResolvedValue({ readState: { conversationId: "conv-1", userId: currentUser.id, lastReadMessageId: "message-2", lastReadAt: now } });
-    mocks.listSocialConversations.mockResolvedValue({ data: [conversation], nextCursor: null });
+    mocks.listSocialConversations.mockImplementation((params?: { membershipStatus?: string }) =>
+      Promise.resolve(params?.membershipStatus === "PENDING_INVITE" ? { data: [], nextCursor: null } : { data: [conversation], nextCursor: null })
+    );
     mocks.listSocialMessages.mockResolvedValue({ data: [peerMessage, ownMessage], nextCursor: null });
     mocks.listFriends.mockResolvedValue({ data: [friendship] });
     mocks.listIncomingFriendRequests.mockResolvedValue({ data: [incomingFriendship] });
@@ -90,6 +96,8 @@ describe("SocialChatPage", () => {
     mocks.searchSocialUsers.mockResolvedValue({ data: [searchResult] });
     mocks.searchManga.mockResolvedValue({ data: [mangaResult], limit: 8, offset: 0, total: 1 });
     mocks.createSocialGroupConversation.mockResolvedValue({ conversation: groupConversation });
+    mocks.createSocialGroupInvite.mockResolvedValue({ conversation: groupConversationWithPendingInvite });
+    mocks.resolveSocialGroupInvite.mockResolvedValue({ conversation: groupConversation });
     mocks.sendFriendRequest.mockResolvedValue({ friendship: sentFriendship });
     mocks.acceptFriendRequest.mockResolvedValue({ friendship: acceptedFriendship, conversation });
     mocks.rejectFriendRequest.mockResolvedValue({ friendship: incomingFriendship });
@@ -249,6 +257,46 @@ describe("SocialChatPage", () => {
     );
     expect(await screen.findByRole("heading", { name: "Manga Club" })).toBeInTheDocument();
     expect(screen.getByText("3 members")).toBeInTheDocument();
+  });
+
+  it("accepts an incoming group invite from the sidebar", async () => {
+    const user = userEvent.setup();
+    mocks.listSocialConversations.mockImplementation((params?: { membershipStatus?: string }) =>
+      Promise.resolve(params?.membershipStatus === "PENDING_INVITE" ? { data: [pendingInviteConversation], nextCursor: null } : { data: [conversation], nextCursor: null })
+    );
+    mocks.resolveSocialGroupInvite.mockResolvedValue({ conversation: groupConversation });
+
+    renderWithClient(<SocialChatPage />);
+
+    await screen.findByText("Manga Club");
+    await user.click(screen.getByRole("button", { name: "Accept invite to Manga Club" }));
+
+    await waitFor(() =>
+      expect(mocks.resolveSocialGroupInvite).toHaveBeenCalledWith("group-1", currentUser.id, "accept")
+    );
+    expect(await screen.findByRole("heading", { name: "Manga Club" })).toBeInTheDocument();
+  });
+
+  it("invites an accepted friend from a group thread", async () => {
+    const user = userEvent.setup();
+    mocks.listSocialConversations.mockImplementation((params?: { membershipStatus?: string }) =>
+      Promise.resolve(params?.membershipStatus === "PENDING_INVITE" ? { data: [], nextCursor: null } : { data: [groupConversation], nextCursor: null })
+    );
+    mocks.listFriends.mockResolvedValue({ data: [friendship, groupFriendship, inviteFriendship] });
+    mocks.createSocialGroupInvite.mockResolvedValue({ conversation: groupConversationWithPendingInvite });
+
+    renderWithClient(<SocialChatPage />);
+
+    await screen.findByRole("heading", { name: "Manga Club" });
+    await user.click(screen.getByRole("button", { name: "Invite member" }));
+    const dialog = screen.getByRole("dialog", { name: "Invite group member" });
+    await user.click(within(dialog).getByRole("button", { name: "Invite Kira" }));
+    await user.click(within(dialog).getByRole("button", { name: "Send invite" }));
+
+    await waitFor(() =>
+      expect(mocks.createSocialGroupInvite).toHaveBeenCalledWith("group-1", "user-5")
+    );
+    expect(await screen.findByRole("button", { name: "Cancel invite for Kira" })).toBeInTheDocument();
   });
 });
 
@@ -481,6 +529,37 @@ const groupConversation: SocialConversation = {
   latestMessage: null
 };
 
+const pendingInviteConversation: SocialConversation = {
+  ...groupConversation,
+  currentMember: {
+    id: "group-member-1",
+    role: "MEMBER",
+    status: "PENDING_INVITE",
+    lastReadMessageId: null,
+    lastReadAt: null,
+    mutedUntil: null,
+    joinedAt: "2026-06-28T09:10:00.000Z"
+  },
+  members: groupConversation.members.map((member) =>
+    member.userId === currentUser.id ? { ...member, role: "MEMBER" as const, status: "PENDING_INVITE" as const } : member
+  )
+};
+
+const groupConversationWithPendingInvite: SocialConversation = {
+  ...groupConversation,
+  members: [
+    ...groupConversation.members,
+    {
+      id: "group-member-4",
+      userId: searchResult.id,
+      role: "MEMBER",
+      status: "PENDING_INVITE",
+      joinedAt: "2026-06-28T09:12:00.000Z",
+      user: searchResult
+    }
+  ]
+};
+
 const friendship = {
   id: "friendship-1",
   userAId: currentUser.id,
@@ -527,6 +606,18 @@ const groupFriendship = {
   createdAt: "2026-06-28T08:25:00.000Z",
   updatedAt: "2026-06-28T08:25:00.000Z",
   friend: groupPeer
+};
+
+const inviteFriendship = {
+  id: "friendship-invite",
+  userAId: currentUser.id,
+  userBId: searchResult.id,
+  requestedById: currentUser.id,
+  blockedById: null,
+  status: "ACCEPTED" as const,
+  createdAt: "2026-06-28T08:35:00.000Z",
+  updatedAt: "2026-06-28T08:35:00.000Z",
+  friend: searchResult
 };
 
 const acceptedFriendship = {

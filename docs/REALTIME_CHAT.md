@@ -28,10 +28,11 @@ Completed:
 - Phase 3 group creation backend slice is implemented: authenticated users can create a `GROUP` conversation with accepted friends as active members; the creator is `OWNER`, selected friends are `MEMBER`, and the response uses the standard conversation payload.
 - Phase 3 web group creation UI is implemented: users can open the group creator from the Messages sidebar, select at least two accepted friends, create the group, and switch directly into the new group thread.
 - Phase 3 group invite backend slice is implemented: group owners/admins can invite accepted friends, pending invitees can accept or decline, owners/admins can cancel pending invites, invitees can list pending invite conversations, invite lifecycle socket events are emitted, and invite creation emits `GROUP_INVITE` notifications without duplicating already-pending invites.
+- Phase 3 web group invite UI is implemented: users can see pending group invites, accept or decline incoming invites, invite eligible friends from group threads, cancel pending invites as owner/admin, and refresh invite state from member lifecycle socket events.
 
 In progress:
 
-- Phase 3 group chat continuation: add web/mobile controls for pending invites, then implement member management after invites are usable from clients.
+- Phase 3 group chat continuation: add mobile controls for pending invites, then implement member management after invites are usable from clients.
 - Verify the manga sharing slice across backend and mobile, then add optional chapter picking to the share sheet if needed.
 
 Latest verification:
@@ -45,6 +46,8 @@ Latest verification:
 - Phase 3 web group creation UI: `npm run typecheck` in `frontend` passed.
 - Phase 3 group invite backend: `npm run test -- social-conversation.routes.test.ts` in `backend` passed with 17 tests.
 - Phase 3 group invite backend: `npm run typecheck` in `backend` passed.
+- Phase 3 web group invite UI: `npm run test -- social-chat-page.test.tsx` in `frontend` passed with 10 tests.
+- Phase 3 web group invite UI: `npm run typecheck` in `frontend` passed.
 - Pending after manga sharing changes: backend typecheck/tests and mobile analyze/widget tests.
 - `npm run typecheck` in `backend`
 - `npm test -- src/tests/unit/friendship.service.test.ts` in `backend`

@@ -1604,7 +1604,7 @@ img {
 
 .social-chat-sidebar {
   display: grid;
-  grid-template-rows: auto minmax(10rem, 1fr) auto;
+  grid-template-rows: auto minmax(8rem, 1fr) auto auto;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -1628,6 +1628,27 @@ img {
 }
 
 .social-sidebar-action {
+  margin-left: auto;
+}
+
+.social-thread-header-rich {
+  display: grid;
+  align-items: stretch;
+  gap: 0.65rem;
+}
+
+.social-thread-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.social-thread-title-row > div {
+  min-width: 0;
+}
+
+.social-thread-action {
   margin-left: auto;
 }
 
@@ -1766,6 +1787,56 @@ img {
   gap: 0.6rem;
   border-top: 1px solid var(--line);
   padding: 0.65rem;
+}
+
+.social-invite-panel {
+  display: grid;
+  gap: 0.45rem;
+  border-top: 1px solid var(--line);
+  padding: 0.65rem;
+}
+
+.social-invite-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--accent), var(--line) 58%);
+  border-radius: 0.62rem;
+  background: var(--accent-soft);
+  padding: 0.55rem;
+}
+
+.social-invite-card > span {
+  display: grid;
+  min-width: 0;
+  gap: 0.15rem;
+}
+
+.social-invite-card strong,
+.social-invite-card small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.social-invite-card strong {
+  color: var(--text);
+  font-size: 0.82rem;
+}
+
+.social-invite-card small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.social-invite-card > div {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 
 .social-friend-panel-head {
@@ -2093,6 +2164,42 @@ button.social-friend-main:hover .social-friend-copy strong {
   padding: 0.45rem 1rem;
   color: var(--muted);
   font-size: 0.78rem;
+}
+
+.social-pending-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding-left: 3.2rem;
+}
+
+.social-pending-strip span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  max-width: 11rem;
+  border: 1px solid color-mix(in srgb, var(--accent), var(--line) 55%);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  padding: 0.25rem 0.35rem 0.25rem 0.55rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.social-pending-strip button {
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface), var(--accent) 10%);
+  color: var(--muted);
+}
+
+.social-pending-strip button:hover:not(:disabled) {
+  color: var(--danger);
 }
 
 .social-composer {

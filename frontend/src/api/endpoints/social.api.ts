@@ -1,4 +1,4 @@
-import type { Friendship, FriendshipListResponse, SocialConversationListResponse, SocialMessage, SocialMessageListResponse, SocialMessageType, SocialUserSearchResponse } from "@/types";
+import type { Friendship, FriendshipListResponse, SocialConversationListResponse, SocialMembershipStatus, SocialMessage, SocialMessageListResponse, SocialMessageType, SocialUserSearchResponse } from "@/types";
 import { request } from "../interceptors/auth.interceptor";
 
 type SendSocialMessageInput =
@@ -42,10 +42,11 @@ export const socialApi = {
   unfriend(id: string) {
     return request<{ friendship: Friendship }>(`/social/friends/${id}`, { method: "DELETE" });
   },
-  listSocialConversations(params: { limit?: number; cursor?: string } = {}) {
+  listSocialConversations(params: { limit?: number; cursor?: string; membershipStatus?: Extract<SocialMembershipStatus, "ACTIVE" | "PENDING_INVITE"> } = {}) {
     const query = new URLSearchParams();
     query.set("limit", String(params.limit ?? 30));
     if (params.cursor) query.set("cursor", params.cursor);
+    if (params.membershipStatus) query.set("membershipStatus", params.membershipStatus);
     return request<SocialConversationListResponse>(`/social/conversations?${query}`);
   },
   createSocialGroupConversation(input: { title: string; memberIds: string[] }) {
@@ -56,6 +57,18 @@ export const socialApi = {
   },
   getSocialConversation(id: string) {
     return request<{ conversation: SocialConversationListResponse["data"][number] }>(`/social/conversations/${id}`);
+  },
+  createSocialGroupInvite(conversationId: string, userId: string) {
+    return request<{ conversation: SocialConversationListResponse["data"][number] }>(`/social/conversations/${conversationId}/invites`, {
+      method: "POST",
+      body: JSON.stringify({ userId })
+    });
+  },
+  resolveSocialGroupInvite(conversationId: string, userId: string, action: "accept" | "decline" | "cancel") {
+    return request<{ conversation: SocialConversationListResponse["data"][number] }>(`/social/conversations/${conversationId}/invites/${userId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ action })
+    });
   },
   listSocialMessages(conversationId: string, params: { limit?: number; cursor?: string } = {}) {
     const query = new URLSearchParams();
