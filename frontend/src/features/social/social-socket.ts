@@ -34,6 +34,11 @@ export type SocialServerEvents = {
     conversationId: string;
     userId: string;
   }) => void;
+  'reaction:updated': (payload: {
+    conversationId: string;
+    messageId: string;
+    reactionCounts: Record<string, number>;
+  }) => void;
   'presence:update': (payload: {
     userId: string;
     online: boolean;

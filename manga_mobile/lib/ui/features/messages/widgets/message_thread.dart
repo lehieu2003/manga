@@ -16,6 +16,8 @@ class MessageThread extends StatelessWidget {
     required this.onShareManga,
     required this.onInviteMember,
     required this.onCancelInvite,
+    required this.onToggleMute,
+    required this.onToggleReaction,
     required this.onTypingChanged,
     required this.onTypingStopped,
     this.showBackButton = false,
@@ -29,6 +31,8 @@ class MessageThread extends StatelessWidget {
   final VoidCallback onShareManga;
   final VoidCallback onInviteMember;
   final ValueChanged<String> onCancelInvite;
+  final VoidCallback onToggleMute;
+  final void Function(SocialMessage message, String emoji) onToggleReaction;
   final ValueChanged<String> onTypingChanged;
   final VoidCallback onTypingStopped;
   final bool showBackButton;
@@ -52,6 +56,8 @@ class MessageThread extends StatelessWidget {
     final pendingMembers = conversation.members
         .where((member) => member.status == 'PENDING_INVITE')
         .toList();
+    final mutedUntil = conversation.currentMember?.mutedUntil;
+    final isMuted = mutedUntil != null && mutedUntil.isAfter(DateTime.now());
 
     return Column(
       children: [
@@ -75,15 +81,37 @@ class MessageThread extends StatelessWidget {
               typingSentence.isEmpty ? 'Active now' : typingSentence,
             ),
             trailing: canManageInvites
-                ? IconButton.filledTonal(
-                    tooltip: 'Invite member',
-                    onPressed: onInviteMember,
-                    icon: const Icon(Icons.person_add_alt),
+                ? Wrap(
+                    spacing: 4,
+                    children: [
+                      IconButton.filledTonal(
+                        tooltip: 'Invite member',
+                        onPressed: onInviteMember,
+                        icon: const Icon(Icons.person_add_alt),
+                      ),
+                      IconButton(
+                        tooltip: isMuted
+                            ? 'Unmute conversation'
+                            : 'Mute conversation',
+                        onPressed: onToggleMute,
+                        icon: Icon(
+                          isMuted
+                              ? Icons.notifications_off
+                              : Icons.notifications_none,
+                        ),
+                      ),
+                    ],
                   )
                 : IconButton(
-                    tooltip: 'Conversation options',
-                    onPressed: () {},
-                    icon: const Icon(Icons.more_horiz),
+                    tooltip: isMuted
+                        ? 'Unmute conversation'
+                        : 'Mute conversation',
+                    onPressed: onToggleMute,
+                    icon: Icon(
+                      isMuted
+                          ? Icons.notifications_off
+                          : Icons.notifications_none,
+                    ),
                   ),
           ),
         ),
@@ -137,6 +165,8 @@ class MessageThread extends StatelessWidget {
                       child: MessageBubble(
                         message: message,
                         own: message.senderId == currentUserId,
+                        onToggleReaction: (emoji) =>
+                            onToggleReaction(message, emoji),
                       ),
                     );
                   },

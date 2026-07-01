@@ -1,8 +1,9 @@
 import type { FastifyRequest } from "fastify";
-import { createSocialGroupConversation, createSocialGroupInvite, getSocialConversation, listSocialConversations, resolveSocialGroupInvite } from "../../domain/services/social-conversation.service.js";
+import { createSocialGroupConversation, createSocialGroupInvite, getSocialConversation, listSocialConversations, muteSocialConversation, resolveSocialGroupInvite } from "../../domain/services/social-conversation.service.js";
 import {
   createSocialGroupConversationSchema,
   createSocialGroupInviteSchema,
+  muteSocialConversationSchema,
   resolveSocialGroupInviteSchema,
   socialConversationInviteParamsSchema,
   socialConversationListQuerySchema,
@@ -34,4 +35,10 @@ export async function handleResolveSocialGroupInvite(request: FastifyRequest) {
   const { id, userId } = socialConversationInviteParamsSchema.parse(request.params);
   const body = resolveSocialGroupInviteSchema.parse(request.body);
   return resolveSocialGroupInvite(request.user.sub, id, { targetUserId: userId, action: body.action });
+}
+
+export async function handleMuteSocialConversation(request: FastifyRequest) {
+  const { id } = socialConversationParamsSchema.parse(request.params);
+  const body = muteSocialConversationSchema.parse(request.body);
+  return muteSocialConversation(request.user.sub, id, body);
 }

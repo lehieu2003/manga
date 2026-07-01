@@ -409,6 +409,7 @@ class MessagesCubit extends Cubit<MessagesState> {
       socialSocketService.memberChanged.listen((_) {
         if (!isClosed) refreshConversations(reloadSelected: false);
       }),
+      socialSocketService.reactionUpdated.listen(_handleReactionUpdated),
     ]);
   }
 
@@ -464,6 +465,65 @@ class MessagesCubit extends Cubit<MessagesState> {
       }
     }
     emit(state.copyWith(typingUsers: next));
+  }
+
+  Future<void> toggleReaction(SocialMessage message, String emoji) async {
+    if (message.deletedAt != null || emoji.trim().isEmpty) return;
+
+    try {
+      final updated = message.currentUserReactions.contains(emoji)
+          ? await socialRepository.removeMessageReaction(message.id, emoji)
+          : await socialRepository.setMessageReaction(message.id, emoji);
+      emit(state.copyWith(messages: _upsertMessage(state.messages, updated)));
+    } catch (error) {
+      emit(state.copyWith(notice: error.toString()));
+    }
+  }
+
+  Future<void> toggleMuteSelectedConversation() async {
+    final conversation = state.selectedConversation;
+    if (conversation == null) return;
+
+    final mutedUntil = conversation.currentMember?.mutedUntil;
+    final isMuted =
+        mutedUntil != null && mutedUntil.isAfter(DateTime.now().toUtc());
+    final nextMutedUntil = isMuted
+        ? null
+        : DateTime.now().toUtc().add(const Duration(hours: 8));
+
+    try {
+      final updated = await socialRepository.muteConversation(
+        conversation.id,
+        nextMutedUntil,
+      );
+      emit(
+        state.copyWith(
+          conversations: _upsertConversation(state.conversations, updated),
+          notice: nextMutedUntil == null
+              ? 'Conversation unmuted.'
+              : 'Conversation muted for 8 hours.',
+        ),
+      );
+    } catch (error) {
+      emit(state.copyWith(notice: error.toString()));
+    }
+  }
+
+  void _handleReactionUpdated(SocialReactionUpdatedEvent event) {
+    if (isClosed || event.conversationId != state.selectedConversation?.id) {
+      return;
+    }
+    emit(
+      state.copyWith(
+        messages: state.messages
+            .map(
+              (message) => message.id == event.messageId
+                  ? message.copyWith(reactionCounts: event.reactionCounts)
+                  : message,
+            )
+            .toList(),
+      ),
+    );
   }
 
   void _clearTyping(String conversationId, String userId) {

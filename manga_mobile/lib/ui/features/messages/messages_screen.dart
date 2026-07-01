@@ -208,6 +208,9 @@ class _MessagesViewState extends State<_MessagesView> {
                           action: 'cancel',
                         );
                       },
+                      onToggleMute:
+                          messagesCubit.toggleMuteSelectedConversation,
+                      onToggleReaction: messagesCubit.toggleReaction,
                       onTypingChanged: messagesCubit.typingChanged,
                       onTypingStopped: messagesCubit.stopTyping,
                     ),
@@ -235,6 +238,8 @@ class _MessagesViewState extends State<_MessagesView> {
                     action: 'cancel',
                   );
                 },
+                onToggleMute: messagesCubit.toggleMuteSelectedConversation,
+                onToggleReaction: messagesCubit.toggleReaction,
                 onTypingChanged: messagesCubit.typingChanged,
                 onTypingStopped: messagesCubit.stopTyping,
               );

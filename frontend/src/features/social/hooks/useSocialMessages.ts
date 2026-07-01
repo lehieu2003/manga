@@ -125,6 +125,21 @@ export function useSocialMessages(
       showToast({ title: 'Could not delete message', kind: 'error' }),
   });
 
+  const toggleReaction = useMutation({
+    mutationFn: (input: { message: SocialMessage; emoji: string }) =>
+      (input.message.currentUserReactions ?? []).includes(input.emoji)
+        ? api.removeSocialMessageReaction(input.message.id, input.emoji)
+        : api.setSocialMessageReaction(input.message.id, input.emoji),
+    onSuccess: ({ message }) => {
+      queryClient.setQueryData<SocialMessageListResponse>(
+        ['social-messages', message.conversationId],
+        (current) => replaceMessageInPage(current, message),
+      );
+    },
+    onError: () =>
+      showToast({ title: 'Could not update reaction', kind: 'error' }),
+  });
+
   // --- Helpers ---
 
   /** Xóa pending message theo clientMessageId (gọi từ socket handler) */
@@ -159,6 +174,8 @@ export function useSocialMessages(
             displayName: currentUser.displayName,
             avatarUrl: currentUser.avatarUrl,
           },
+          reactionCounts: {},
+          currentUserReactions: [],
           pending: true,
         },
       ]);
@@ -215,6 +232,8 @@ export function useSocialMessages(
             displayName: currentUser.displayName,
             avatarUrl: currentUser.avatarUrl,
           },
+          reactionCounts: {},
+          currentUserReactions: [],
           pending: true,
         },
       ]);
@@ -237,6 +256,7 @@ export function useSocialMessages(
     sendMessage,
     sendMangaShare,
     deleteMessage,
+    toggleReaction,
     addPendingMessage,
     addPendingMangaShare,
     resolvePending,

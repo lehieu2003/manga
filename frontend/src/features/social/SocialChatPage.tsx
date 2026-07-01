@@ -124,6 +124,30 @@ export function SocialChatPage() {
     },
   });
 
+  const muteConversation = useMutation({
+    mutationFn: (conversation: SocialConversationListResponse['data'][number]) => {
+      const muted = conversation.currentMember?.mutedUntil
+        ? new Date(conversation.currentMember.mutedUntil).getTime() > Date.now()
+        : false;
+      const mutedUntil = muted
+        ? null
+        : new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
+      return api.muteSocialConversation(conversation.id, mutedUntil);
+    },
+    onSuccess: ({ conversation }) => {
+      upsertConversation(queryClient, ['social-conversations'], conversation);
+      showToast({
+        title: conversation.currentMember?.mutedUntil
+          ? 'Conversation muted'
+          : 'Conversation unmuted',
+        kind: 'success',
+      });
+    },
+    onError: () => {
+      showToast({ title: 'Could not update mute setting', kind: 'error' });
+    },
+  });
+
   const mangaShareResults = useQuery({
     queryKey: ['social-manga-share-search', mangaShareQuery],
     queryFn: () =>
@@ -149,6 +173,7 @@ export function SocialChatPage() {
     sendMessage,
     sendMangaShare,
     deleteMessage,
+    toggleReaction,
     addPendingMessage,
     addPendingMangaShare,
     resolvePending,
@@ -273,97 +298,104 @@ export function SocialChatPage() {
             )}
           </button>
         </div>
-        <div className='social-conversation-list'>
-          {conversations.isLoading ? (
-            <LoadingRow label='Loading conversations' />
-          ) : null}
-          {!conversations.isLoading && !conversationItems.length ? (
-            <EmptyPanel label='No conversations yet' />
-          ) : null}
-          {conversationItems.map((conversation) => (
-            <ConversationButton
-              key={conversation.id}
-              conversation={conversation}
-              currentUserId={user?.id ?? ''}
-              active={conversation.id === selectedConversation?.id}
-              typingLabel={typingUsers[conversation.id]}
-              onSelect={() => setSelectedConversationId(conversation.id)}
-            />
-          ))}
-        </div>
-        <section className='social-invite-panel' aria-label='Group invites'>
-          <div className='social-friend-panel-head'>
-            <strong>Invites</strong>
-            <span>{pendingInviteItems.length} pending</span>
+        <div className='social-sidebar-body'>
+          <div className='social-conversation-list'>
+            {conversations.isLoading ? (
+              <LoadingRow label='Loading conversations' />
+            ) : null}
+            {!conversations.isLoading && !conversationItems.length ? (
+              <EmptyPanel label='No conversations yet' />
+            ) : null}
+            {conversationItems.map((conversation) => (
+              <ConversationButton
+                key={conversation.id}
+                conversation={conversation}
+                currentUserId={user?.id ?? ''}
+                active={conversation.id === selectedConversation?.id}
+                typingLabel={typingUsers[conversation.id]}
+                onSelect={() => setSelectedConversationId(conversation.id)}
+              />
+            ))}
           </div>
-          {pendingInvites.isLoading ? (
-            <LoadingRow label='Loading invites' />
-          ) : null}
-          {!pendingInvites.isLoading && !pendingInviteItems.length ? (
-            <EmptyPanel label='No group invites' />
-          ) : null}
-          {pendingInviteItems.map((conversation) => (
-            <div className='social-invite-card' key={conversation.id}>
-              <span>
-                <strong>{getConversationTitle(conversation, user?.id ?? '')}</strong>
-                <small>
-                  {conversation.members.filter((member) => member.status === 'ACTIVE').length} members
-                </small>
-              </span>
-              <div>
-                <button
-                  className='reader-icon-button'
-                  type='button'
-                  aria-label={`Accept invite to ${getConversationTitle(conversation, user?.id ?? '')}`}
-                  disabled={resolveGroupInvite.isPending}
-                  onClick={() =>
-                    resolveGroupInvite.mutate({
-                      conversationId: conversation.id,
-                      userId: user?.id ?? '',
-                      action: 'accept',
-                    })
-                  }
-                >
-                  <Check size={14} />
-                </button>
-                <button
-                  className='reader-icon-button'
-                  type='button'
-                  aria-label={`Decline invite to ${getConversationTitle(conversation, user?.id ?? '')}`}
-                  disabled={resolveGroupInvite.isPending}
-                  onClick={() =>
-                    resolveGroupInvite.mutate({
-                      conversationId: conversation.id,
-                      userId: user?.id ?? '',
-                      action: 'decline',
-                    })
-                  }
-                >
-                  <X size={14} />
-                </button>
+          {(pendingInvites.isLoading || pendingInviteItems.length > 0) ? (
+            <section className='social-invite-panel' aria-label='Group invites'>
+              <div className='social-friend-panel-head'>
+                <strong>Invites</strong>
+                <span>{pendingInviteItems.length} pending</span>
               </div>
-            </div>
-          ))}
-        </section>
-        <FriendshipPanel
-          friends={friendships.friends}
-          incomingRequests={friendships.incomingRequests}
-          sentRequests={friendships.sentRequests}
-          userResults={friendships.userResults}
-          userSearchQuery={friendSearchQuery}
-          userSearchLoading={friendships.userSearchLoading}
-          loading={friendships.loading}
-          busy={friendships.busy}
-          currentUserId={user?.id ?? ''}
-          conversations={conversationItems}
-          onUserSearchChange={setFriendSearchQuery}
-          onSendRequest={friendships.sendFriendRequest}
-          onOpenFriend={openFriendConversation}
-          onAccept={friendships.acceptFriendRequest}
-          onReject={friendships.rejectFriendRequest}
-          onBlock={friendships.blockFriend}
-          onUnfriend={friendships.unfriend}
-        />
+              {pendingInvites.isLoading ? (
+                <LoadingRow label='Loading invites' />
+              ) : null}
+              {pendingInviteItems.map((conversation) => (
+                <div className='social-invite-card' key={conversation.id}>
+                  <span>
+                    <strong>
+                      {getConversationTitle(conversation, user?.id ?? '')}
+                    </strong>
+                    <small>
+                      {
+                        conversation.members.filter(
+                          (member) => member.status === 'ACTIVE',
+                        ).length
+                      } members
+                    </small>
+                  </span>
+                  <div>
+                    <button
+                      className='reader-icon-button'
+                      type='button'
+                      aria-label={`Accept invite to ${getConversationTitle(conversation, user?.id ?? '')}`}
+                      disabled={resolveGroupInvite.isPending}
+                      onClick={() =>
+                        resolveGroupInvite.mutate({
+                          conversationId: conversation.id,
+                          userId: user?.id ?? '',
+                          action: 'accept',
+                        })
+                      }
+                    >
+                      <Check size={14} />
+                    </button>
+                    <button
+                      className='reader-icon-button'
+                      type='button'
+                      aria-label={`Decline invite to ${getConversationTitle(conversation, user?.id ?? '')}`}
+                      disabled={resolveGroupInvite.isPending}
+                      onClick={() =>
+                        resolveGroupInvite.mutate({
+                          conversationId: conversation.id,
+                          userId: user?.id ?? '',
+                          action: 'decline',
+                        })
+                      }
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </section>
+          ) : null}
+          <FriendshipPanel
+            friends={friendships.friends}
+            incomingRequests={friendships.incomingRequests}
+            sentRequests={friendships.sentRequests}
+            userResults={friendships.userResults}
+            userSearchQuery={friendSearchQuery}
+            userSearchLoading={friendships.userSearchLoading}
+            loading={friendships.loading}
+            busy={friendships.busy}
+            currentUserId={user?.id ?? ''}
+            conversations={conversationItems}
+            onUserSearchChange={setFriendSearchQuery}
+            onSendRequest={friendships.sendFriendRequest}
+            onOpenFriend={openFriendConversation}
+            onAccept={friendships.acceptFriendRequest}
+            onReject={friendships.rejectFriendRequest}
+            onBlock={friendships.blockFriend}
+            onUnfriend={friendships.unfriend}
+          />
+        </div>
       </aside>
 
       {/* Thread */}
@@ -376,7 +408,9 @@ export function SocialChatPage() {
               inviteBusy={
                 createGroupInvite.isPending || resolveGroupInvite.isPending
               }
+              muteBusy={muteConversation.isPending}
               onOpenInvite={() => setInviteDialogOpen(true)}
+              onToggleMute={() => muteConversation.mutate(selectedConversation)}
               onCancelInvite={(userId) =>
                 resolveGroupInvite.mutate({
                   conversationId: selectedConversation.id,
@@ -398,6 +432,9 @@ export function SocialChatPage() {
                   message={message}
                   own={message.senderId === user?.id}
                   onDelete={() => deleteMessage.mutate(message.id)}
+                  onToggleReaction={(message, emoji) =>
+                    toggleReaction.mutate({ message, emoji })
+                  }
                 />
               ))}
             </div>

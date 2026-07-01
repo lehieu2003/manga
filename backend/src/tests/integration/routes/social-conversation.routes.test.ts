@@ -7,6 +7,7 @@ const prismaMocks = vi.hoisted(() => ({
   socialConversationFindFirst: vi.fn(),
   socialConversationFindUnique: vi.fn(),
   socialConversationCreate: vi.fn(),
+  socialConversationMemberFindUnique: vi.fn(),
   socialConversationMemberCreate: vi.fn(),
   socialConversationMemberUpdate: vi.fn(),
   friendshipFindMany: vi.fn(),
@@ -37,6 +38,7 @@ vi.mock("../../../infrastructure/database/client.js", () => ({
       create: prismaMocks.socialConversationCreate
     },
     socialConversationMember: {
+      findUnique: prismaMocks.socialConversationMemberFindUnique,
       create: prismaMocks.socialConversationMemberCreate,
       update: prismaMocks.socialConversationMemberUpdate
     },
@@ -197,6 +199,44 @@ describe("socialConversationRoutes", () => {
         members: { some: { userId: "user-1", status: SocialMembershipStatus.ACTIVE } }
       },
       include: expect.any(Object)
+    });
+    await app.close();
+  });
+
+  it("updates the authenticated member mute setting", async () => {
+    const app = await makeSocialConversationApp();
+    prismaMocks.transaction.mockImplementation((callback) =>
+      callback({
+        socialConversationMember: {
+          findUnique: prismaMocks.socialConversationMemberFindUnique,
+          update: prismaMocks.socialConversationMemberUpdate
+        },
+        socialConversation: { findUnique: prismaMocks.socialConversationFindUnique }
+      })
+    );
+    prismaMocks.socialConversationMemberFindUnique.mockResolvedValue({ status: SocialMembershipStatus.ACTIVE });
+    prismaMocks.socialConversationFindUnique.mockResolvedValue(
+      makeConversation({
+        members: [
+          makeMember({ id: "member-1", userId: "user-1", displayName: "Reader", mutedUntil: new Date("2026-06-30T12:00:00.000Z") }),
+          makeMember({ id: "member-2", userId: "user-2", displayName: "Friend" })
+        ]
+      })
+    );
+
+    const response = await app.inject({
+      method: "PATCH",
+      url: "/api/social/conversations/conv-1/mute",
+      payload: { mutedUntil: "2026-06-30T12:00:00.000Z" }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      conversation: { id: "conv-1", currentMember: { mutedUntil: "2026-06-30T12:00:00.000Z" } }
+    });
+    expect(prismaMocks.socialConversationMemberUpdate).toHaveBeenCalledWith({
+      where: { conversationId_userId: { conversationId: "conv-1", userId: "user-1" } },
+      data: { mutedUntil: new Date("2026-06-30T12:00:00.000Z") }
     });
     await app.close();
   });
@@ -694,7 +734,7 @@ function makeConversationBase() {
   };
 }
 
-function makeMember(input: { id: string; userId: string; displayName: string; role?: SocialMemberRole; status?: SocialMembershipStatus }) {
+function makeMember(input: { id: string; userId: string; displayName: string; role?: SocialMemberRole; status?: SocialMembershipStatus; mutedUntil?: Date | null }) {
   return {
     id: input.id,
     conversationId: "conv-1",
@@ -703,7 +743,7 @@ function makeMember(input: { id: string; userId: string; displayName: string; ro
     status: input.status ?? SocialMembershipStatus.ACTIVE,
     lastReadMessageId: null,
     lastReadAt: null,
-    mutedUntil: null,
+    mutedUntil: input.mutedUntil ?? null,
     joinedAt: new Date("2024-01-01T00:00:00.000Z"),
     user: { id: input.userId, displayName: input.displayName, avatarUrl: null }
   };

@@ -87,6 +87,13 @@ export function useSocialSocket({
       queryClient.invalidateQueries({ queryKey: ['social-conversation-invites'] });
     });
 
+    socket.on('reaction:updated', ({ conversationId, messageId, reactionCounts }) => {
+      queryClient.setQueryData<SocialMessageListResponse>(
+        ['social-messages', conversationId],
+        (current) => updateMessageReactionCounts(current, messageId, reactionCounts),
+      );
+    });
+
     socket.on('typing:indicator', handleTypingIndicator);
 
     // presence:update — hiện chưa xử lý UI, giữ lại để dễ implement sau
@@ -129,4 +136,18 @@ export function useSocialSocket({
   }, [latestMessage, selectedConversation, currentUserId]);
 
   return { socketRef, typingUsers, emitTypingStart, emitTypingStop };
+}
+
+function updateMessageReactionCounts(
+  current: SocialMessageListResponse | undefined,
+  messageId: string,
+  reactionCounts: Record<string, number>,
+): SocialMessageListResponse | undefined {
+  if (!current) return current;
+  return {
+    ...current,
+    data: current.data.map((message) =>
+      message.id === messageId ? { ...message, reactionCounts } : message,
+    ),
+  };
 }

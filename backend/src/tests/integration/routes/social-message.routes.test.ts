@@ -9,15 +9,19 @@ const prismaMocks = vi.hoisted(() => ({
   socialConversationMemberUpdate: vi.fn(),
   socialMessageFindMany: vi.fn(),
   socialMessageFindUnique: vi.fn(),
+  socialMessageFindUniqueOrThrow: vi.fn(),
   socialMessageFindFirst: vi.fn(),
   socialMessageCreate: vi.fn(),
   socialMessageUpdate: vi.fn(),
+  messageReactionUpsert: vi.fn(),
+  messageReactionDeleteMany: vi.fn(),
   friendshipFindUnique: vi.fn(),
   cachedMangaFindUnique: vi.fn(),
   cachedChapterFindFirst: vi.fn(),
   emitMessageNew: vi.fn(),
   emitMessageDeleted: vi.fn(),
-  emitReadUpdated: vi.fn()
+  emitReadUpdated: vi.fn(),
+  emitReactionUpdated: vi.fn()
 }));
 
 vi.mock("../../../infrastructure/database/client.js", () => ({
@@ -30,9 +34,14 @@ vi.mock("../../../infrastructure/database/client.js", () => ({
     socialMessage: {
       findMany: prismaMocks.socialMessageFindMany,
       findUnique: prismaMocks.socialMessageFindUnique,
+      findUniqueOrThrow: prismaMocks.socialMessageFindUniqueOrThrow,
       findFirst: prismaMocks.socialMessageFindFirst,
       create: prismaMocks.socialMessageCreate,
       update: prismaMocks.socialMessageUpdate
+    },
+    messageReaction: {
+      upsert: prismaMocks.messageReactionUpsert,
+      deleteMany: prismaMocks.messageReactionDeleteMany
     },
     socialConversationMember: {
       update: prismaMocks.socialConversationMemberUpdate
@@ -52,8 +61,14 @@ vi.mock("../../../infrastructure/database/client.js", () => ({
 vi.mock("../../../infrastructure/realtime/socket-server.js", () => ({
   emitMessageNew: prismaMocks.emitMessageNew,
   emitMessageDeleted: prismaMocks.emitMessageDeleted,
+  emitReactionUpdated: prismaMocks.emitReactionUpdated,
   emitReadUpdated: prismaMocks.emitReadUpdated
 }));
+
+const expectedMessageInclude = {
+  sender: { select: { id: true, displayName: true, avatarUrl: true } },
+  reactions: { select: { userId: true, emoji: true } }
+};
 
 describe("social message routes", () => {
   afterEach(() => {
@@ -80,7 +95,7 @@ describe("social message routes", () => {
       where: { conversationId: "conv-1" },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: 21,
-      include: { sender: { select: { id: true, displayName: true, avatarUrl: true } } }
+      include: expectedMessageInclude
     });
     await app.close();
   });
@@ -118,7 +133,7 @@ describe("social message routes", () => {
         type: SocialMessageType.TEXT,
         content: "hello"
       },
-      include: { sender: { select: { id: true, displayName: true, avatarUrl: true } } }
+      include: expectedMessageInclude
     });
     expect(prismaMocks.socialConversationUpdate).toHaveBeenCalledWith({
       where: { id: "conv-1" },
@@ -214,7 +229,7 @@ describe("social message routes", () => {
           chapter: expect.objectContaining({ chapter: "1" })
         })
       },
-      include: { sender: { select: { id: true, displayName: true, avatarUrl: true } } }
+      include: expectedMessageInclude
     });
     await app.close();
   });
@@ -324,12 +339,12 @@ describe("social message routes", () => {
         id: "msg-1",
         conversation: { members: { some: { userId: "user-1", status: SocialMembershipStatus.ACTIVE } } }
       },
-      include: { sender: { select: { id: true, displayName: true, avatarUrl: true } } }
+      include: expectedMessageInclude
     });
     expect(prismaMocks.socialMessageUpdate).toHaveBeenCalledWith({
       where: { id: "msg-1" },
       data: { deletedAt: expect.any(Date) },
-      include: { sender: { select: { id: true, displayName: true, avatarUrl: true } } }
+      include: expectedMessageInclude
     });
     expect(prismaMocks.emitMessageDeleted).toHaveBeenCalledWith("conv-1", "msg-1");
     await app.close();
@@ -358,6 +373,65 @@ describe("social message routes", () => {
     expect(response.json()).toMatchObject({ message: { id: "msg-1", content: null }, idempotent: true });
     expect(prismaMocks.socialMessageUpdate).not.toHaveBeenCalled();
     expect(prismaMocks.emitMessageDeleted).not.toHaveBeenCalled();
+    await app.close();
+  });
+
+  it("adds a message reaction and emits aggregate counts", async () => {
+    const app = await makeSocialMessageApp();
+    prismaMocks.socialMessageFindFirst.mockResolvedValue({ id: "msg-1", conversationId: "conv-1" });
+    prismaMocks.messageReactionUpsert.mockResolvedValue({ id: "reaction-1" });
+    prismaMocks.socialMessageFindUniqueOrThrow.mockResolvedValue(
+      makeMessage({
+        reactions: [
+          { userId: "user-1", emoji: "like" },
+          { userId: "user-2", emoji: "like" }
+        ]
+      })
+    );
+
+    const response = await app.inject({ method: "PUT", url: "/api/social/messages/msg-1/reactions/like" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      message: {
+        id: "msg-1",
+        reactionCounts: { like: 2 },
+        currentUserReactions: ["like"]
+      }
+    });
+    expect(prismaMocks.messageReactionUpsert).toHaveBeenCalledWith({
+      where: { messageId_userId_emoji: { messageId: "msg-1", userId: "user-1", emoji: "like" } },
+      update: {},
+      create: { messageId: "msg-1", userId: "user-1", emoji: "like" }
+    });
+    expect(prismaMocks.emitReactionUpdated).toHaveBeenCalledWith({
+      conversationId: "conv-1",
+      messageId: "msg-1",
+      reactionCounts: { like: 2 }
+    });
+    await app.close();
+  });
+
+  it("removes a message reaction idempotently", async () => {
+    const app = await makeSocialMessageApp();
+    prismaMocks.socialMessageFindFirst.mockResolvedValue({ id: "msg-1", conversationId: "conv-1" });
+    prismaMocks.messageReactionDeleteMany.mockResolvedValue({ count: 1 });
+    prismaMocks.socialMessageFindUniqueOrThrow.mockResolvedValue(makeMessage());
+
+    const response = await app.inject({ method: "DELETE", url: "/api/social/messages/msg-1/reactions/like" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      message: { id: "msg-1", reactionCounts: {}, currentUserReactions: [] }
+    });
+    expect(prismaMocks.messageReactionDeleteMany).toHaveBeenCalledWith({
+      where: { messageId: "msg-1", userId: "user-1", emoji: "like" }
+    });
+    expect(prismaMocks.emitReactionUpdated).toHaveBeenCalledWith({
+      conversationId: "conv-1",
+      messageId: "msg-1",
+      reactionCounts: {}
+    });
     await app.close();
   });
 });
@@ -425,6 +499,7 @@ type MessageFixture = {
   createdAt: Date;
   updatedAt: Date;
   sender: { id: string; displayName: string; avatarUrl: string | null } | null;
+  reactions: Array<{ userId: string; emoji: string }>;
 };
 
 function makeMessage(input: Partial<MessageFixture> = {}): MessageFixture {
@@ -441,6 +516,7 @@ function makeMessage(input: Partial<MessageFixture> = {}): MessageFixture {
     createdAt: new Date("2024-01-04T00:00:00.000Z"),
     updatedAt: new Date("2024-01-04T00:00:00.000Z"),
     sender: { id: "user-1", displayName: "Reader", avatarUrl: null },
+    reactions: [],
     ...input
   };
 }

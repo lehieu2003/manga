@@ -349,6 +349,8 @@ class SocialMessage {
     this.deletedAt,
     this.sender,
     this.mangaShare,
+    this.reactionCounts = const {},
+    this.currentUserReactions = const [],
   });
 
   final String id;
@@ -364,6 +366,31 @@ class SocialMessage {
   final DateTime updatedAt;
   final SocialUser? sender;
   final MangaShareAttachment? mangaShare;
+  final Map<String, int> reactionCounts;
+  final List<String> currentUserReactions;
+
+  SocialMessage copyWith({
+    Map<String, int>? reactionCounts,
+    List<String>? currentUserReactions,
+  }) {
+    return SocialMessage(
+      id: id,
+      conversationId: conversationId,
+      senderId: senderId,
+      clientMessageId: clientMessageId,
+      type: type,
+      content: content,
+      attachments: attachments,
+      replyToId: replyToId,
+      deletedAt: deletedAt,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      sender: sender,
+      mangaShare: mangaShare,
+      reactionCounts: reactionCounts ?? this.reactionCounts,
+      currentUserReactions: currentUserReactions ?? this.currentUserReactions,
+    );
+  }
 
   factory SocialMessage.fromJson(Map<String, dynamic> json) => SocialMessage(
     id: json['id']?.toString() ?? '',
@@ -385,6 +412,13 @@ class SocialMessage {
         ? SocialUser.fromJson(json['sender'] as Map<String, dynamic>)
         : null,
     mangaShare: MangaShareAttachment.tryParse(json['attachments']),
+    reactionCounts: (json['reactionCounts'] as Map<String, dynamic>? ?? {}).map(
+      (key, value) =>
+          MapEntry(key, value is int ? value : int.tryParse('$value') ?? 0),
+    ),
+    currentUserReactions: (json['currentUserReactions'] as List<dynamic>? ?? [])
+        .map((item) => item.toString())
+        .toList(),
   );
 }
 

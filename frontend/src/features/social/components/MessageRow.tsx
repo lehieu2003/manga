@@ -9,10 +9,15 @@ interface MessageRowProps {
   message: PendingMessage;
   own: boolean;
   onDelete: () => void;
+  onToggleReaction: (message: PendingMessage, emoji: string) => void;
 }
 
-export function MessageRow({ message, own, onDelete }: MessageRowProps) {
+const quickReactions = ['👍', '❤️', '😂'];
+
+export function MessageRow({ message, own, onDelete, onToggleReaction }: MessageRowProps) {
   const mangaShare = getMangaShareAttachment(message.attachments);
+  const reactionCounts = message.reactionCounts ?? {};
+  const currentUserReactions = message.currentUserReactions ?? [];
   const timeLabel = message.pending
     ? 'Sending'
     : message.failed
@@ -34,7 +39,11 @@ export function MessageRow({ message, own, onDelete }: MessageRowProps) {
         />
       ) : null}
       <div
-        className={`social-message-bubble ${message.failed ? 'social-message-failed' : ''}`}
+        className={[
+          'social-message-bubble',
+          mangaShare ? 'social-message-share-bubble' : '',
+          message.failed ? 'social-message-failed' : '',
+        ].filter(Boolean).join(' ')}
       >
         {message.deletedAt ? (
           <p>Deleted message</p>
@@ -43,7 +52,7 @@ export function MessageRow({ message, own, onDelete }: MessageRowProps) {
         ) : (
           <p>{message.content}</p>
         )}
-        <span>
+        <span className='social-message-meta'>
           {timeLabel}
           {own && !message.pending && !message.failed && !message.deletedAt ? (
             <button
@@ -59,6 +68,26 @@ export function MessageRow({ message, own, onDelete }: MessageRowProps) {
             <CheckCheck size={13} />
           ) : null}
         </span>
+        {!message.pending && !message.failed && !message.deletedAt ? (
+          <div className='social-message-reactions' aria-label='Message reactions'>
+            {quickReactions.map((emoji) => {
+              const count = reactionCounts[emoji] ?? 0;
+              const active = currentUserReactions.includes(emoji);
+              return (
+                <button
+                  key={emoji}
+                  className={active ? 'social-message-reaction-active' : ''}
+                  type='button'
+                  aria-label={`${active ? 'Remove' : 'Add'} ${emoji} reaction`}
+                  onClick={() => onToggleReaction(message, emoji)}
+                >
+                  <span>{emoji}</span>
+                  {count > 0 ? <small>{count}</small> : null}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
     </article>
   );

@@ -278,6 +278,43 @@ class SocialRepository {
     return SocialMessage.fromJson(payload['message'] as Map<String, dynamic>);
   }
 
+  Future<SocialMessage> setMessageReaction(
+    String messageId,
+    String emoji,
+  ) async {
+    final payload = await _api.put(
+      '/social/messages/$messageId/reactions/${Uri.encodeComponent(emoji)}',
+      const {},
+      (json) => json,
+    );
+    return SocialMessage.fromJson(payload['message'] as Map<String, dynamic>);
+  }
+
+  Future<SocialMessage> removeMessageReaction(
+    String messageId,
+    String emoji,
+  ) async {
+    final payload = await _api.delete(
+      '/social/messages/$messageId/reactions/${Uri.encodeComponent(emoji)}',
+      (json) => json,
+    );
+    return SocialMessage.fromJson(payload['message'] as Map<String, dynamic>);
+  }
+
+  Future<SocialConversation> muteConversation(
+    String conversationId,
+    DateTime? mutedUntil,
+  ) async {
+    final payload = await _api.patch(
+      '/social/conversations/$conversationId/mute',
+      {'mutedUntil': mutedUntil?.toUtc().toIso8601String()},
+      (json) => json,
+    );
+    return SocialConversation.fromJson(
+      payload['conversation'] as Map<String, dynamic>,
+    );
+  }
+
   Future<void> markConversationRead(
     String conversationId,
     String lastMessageId,

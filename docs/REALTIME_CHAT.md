@@ -14,7 +14,7 @@ Reader: an internal engineer continuing the realtime social chat work.
 
 Post-read action: identify the next unfinished slice, update this checkpoint after completing it, and continue without re-auditing the whole codebase.
 
-Current phase: Phase 3, group chat creation slice.
+Current phase: Phase 4, rich chat controls slice.
 
 Completed:
 
@@ -29,11 +29,13 @@ Completed:
 - Phase 3 web group creation UI is implemented: users can open the group creator from the Messages sidebar, select at least two accepted friends, create the group, and switch directly into the new group thread.
 - Phase 3 group invite backend slice is implemented: group owners/admins can invite accepted friends, pending invitees can accept or decline, owners/admins can cancel pending invites, invitees can list pending invite conversations, invite lifecycle socket events are emitted, and invite creation emits `GROUP_INVITE` notifications without duplicating already-pending invites.
 - Phase 3 web group invite UI is implemented: users can see pending group invites, accept or decline incoming invites, invite eligible friends from group threads, cancel pending invites as owner/admin, and refresh invite state from member lifecycle socket events.
+- Phase 4 reactions and mute controls are implemented across backend, web, and mobile: active members can add/remove quick message reactions, reaction aggregates update through Socket.io, and each member can mute/unmute a conversation by setting `mutedUntil`.
 
 In progress:
 
 - Phase 3 group chat continuation: add mobile controls for pending invites, then implement member management after invites are usable from clients.
 - Verify the manga sharing slice across backend and mobile, then add optional chapter picking to the share sheet if needed.
+- Phase 4 follow-up slices: image upload flow, reply previews, offline push delivery, and voice notes remain separate infrastructure-heavy work.
 
 Latest verification:
 
@@ -55,7 +57,7 @@ Latest verification:
 Not started:
 
 - Phase 3 group chat after creation: member roles, leave/kick, ownership transfer, disband, and system messages.
-- Phase 4 rich features after manga sharing: image uploads, reactions UI/API completion, mute controls, offline push delivery, and voice notes.
+- Phase 4 rich features after reactions/mute: image uploads, reply previews, offline push delivery, and voice notes.
 
 Checkpoint update rule:
 
@@ -71,7 +73,7 @@ Use a separate social-chat domain rather than extending the existing AI chat tab
 
 The existing chat persistence is owned by one user and stores AI-specific roles, model metadata, sources, and token usage. Reusing it for group membership would make ownership, authorization, retention, and queries ambiguous. Social chat therefore introduces its own conversations and messages, while the RAG assistant schema and `/api/v1/chat/*` endpoints remain unchanged.
 
-The public social API is namespaced under `/api/v1/social/*`. Socket.io carries transient events and real-time notifications. HTTP remains the canonical command path for durable actions, including sending messages; both transports call the same domain services when a socket command is supported.
+The public social API is namespaced under `/api/social/*` in the current Fastify app. Socket.io carries transient events and real-time notifications. HTTP remains the canonical command path for durable actions, including sending messages; both transports call the same domain services when a socket command is supported.
 
 ## Data model and migration
 
@@ -265,7 +267,7 @@ All routes require authenticated users and return the project-standard error env
 | PATCH | `/social/conversations/:id/invites/:userId` | Accept, decline, or cancel an invite as authorized. |
 | DELETE | `/social/conversations/:id/members/:userId` | Leave or kick an active member as authorized. |
 | PATCH | `/social/conversations/:id/members/:userId/role` | Change a member role; owner only. |
-| PATCH | `/social/conversations/:id/mute` | Set or clear `mutedUntil`. |
+| PATCH | `/social/conversations/:id/mute` | Set or clear the caller's `mutedUntil`. |
 | GET | `/social/conversations/:id/messages` | Fetch messages before a `(createdAt, id)` cursor. |
 | POST | `/social/conversations/:id/messages` | Persist a message using `clientMessageId`; broadcasts after commit. |
 | PATCH | `/social/conversations/:id/read` | Advance the caller's read checkpoint. |

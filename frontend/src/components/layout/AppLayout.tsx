@@ -79,7 +79,9 @@ export function AppLayout() {
       <main className={isReaderRoute ? "reader-main" : isMessagesRoute ? "container-x messages-main" : "container-x py-6"}>
         <Outlet />
       </main>
-      {user ? <FloatingChatWidget routeContext={routeContext} /> : null}
+      {user && !isMessagesRoute ? (
+        <FloatingChatWidget routeContext={routeContext} />
+      ) : null}
       <ScrollToTopButton />
     </div>
   );
