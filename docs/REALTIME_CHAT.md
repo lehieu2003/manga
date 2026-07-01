@@ -30,14 +30,14 @@ Completed:
 - Phase 3 group invite backend slice is implemented: group owners/admins can invite accepted friends, pending invitees can accept or decline, owners/admins can cancel pending invites, invitees can list pending invite conversations, invite lifecycle socket events are emitted, and invite creation emits `GROUP_INVITE` notifications without duplicating already-pending invites.
 - Phase 3 web group invite UI is implemented: users can see pending group invites, accept or decline incoming invites, invite eligible friends from group threads, cancel pending invites as owner/admin, and refresh invite state from member lifecycle socket events.
 - Phase 4 reactions and mute controls are implemented across backend, web, and mobile: active members can add/remove quick message reactions, reaction aggregates update through Socket.io, and each member can mute/unmute a conversation by setting `mutedUntil`.
-- Phase 5 backend call contract is started: call session/participant persistence, authenticated call HTTP routes, live-call conflict protection, ICE server config response, and Socket.io signaling relay events exist for web/mobile clients to build on.
+- Phase 5 backend call contract is started: call session/participant persistence, authenticated call HTTP routes, live-call conflict protection, ICE server config response, Socket.io signaling relay events, and ringing timeout/missed-call handling exist for web/mobile clients to build on.
 
 In progress:
 
 - Phase 3 group chat continuation: add mobile controls for pending invites, then implement member management after invites are usable from clients.
 - Verify the manga sharing slice across backend and mobile, then add optional chapter picking to the share sheet if needed.
 - Phase 4 follow-up slices: image upload flow, reply previews, offline push delivery, and voice notes remain separate infrastructure-heavy work.
-- Phase 5 follow-up slices: ringing timeout/missed-call sweep, TURN provider credentials, web WebRTC UI, Flutter WebRTC UI, push/native incoming-call UI, and full cross-network QA remain separate work.
+- Phase 5 follow-up slices: TURN provider credentials, web WebRTC UI, Flutter WebRTC UI, push/native incoming-call UI, and full cross-network QA remain separate work.
 
 Latest verification:
 
@@ -57,6 +57,11 @@ Latest verification:
 - Phase 5 backend call contract: `npm run typecheck` in `backend` passed.
 - Phase 5 backend call contract: `npx prisma validate` in `backend` passed.
 - Phase 5 backend call contract: `npm test` in `backend` passed with 122 tests.
+- Phase 5 missed-call timeout: `npx prisma generate` in `backend` passed.
+- Phase 5 missed-call timeout: `npm test -- src/tests/unit/social-call-timeout.service.test.ts src/tests/integration/routes/social-call.routes.test.ts src/tests/integration/realtime/socket-server.test.ts` in `backend` passed with 11 tests.
+- Phase 5 missed-call timeout: `npm run typecheck` in `backend` passed.
+- Phase 5 missed-call timeout: `npx prisma validate` in `backend` passed.
+- Phase 5 missed-call timeout: `npm test` in `backend` passed with 123 tests.
 
 Not started:
 

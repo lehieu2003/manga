@@ -25,7 +25,8 @@ const prismaMocks = vi.hoisted(() => ({
   emitCallEnded: vi.fn(),
   emitCallIncoming: vi.fn(),
   emitCallParticipantJoined: vi.fn(),
-  emitCallParticipantLeft: vi.fn()
+  emitCallParticipantLeft: vi.fn(),
+  emitNotification: vi.fn()
 }));
 
 vi.mock("../../../infrastructure/database/client.js", () => ({
@@ -70,7 +71,8 @@ vi.mock("../../../infrastructure/realtime/socket-server.js", () => ({
   emitCallEnded: prismaMocks.emitCallEnded,
   emitCallIncoming: prismaMocks.emitCallIncoming,
   emitCallParticipantJoined: prismaMocks.emitCallParticipantJoined,
-  emitCallParticipantLeft: prismaMocks.emitCallParticipantLeft
+  emitCallParticipantLeft: prismaMocks.emitCallParticipantLeft,
+  emitNotification: prismaMocks.emitNotification
 }));
 
 const expectedMessageInclude = {

@@ -3,6 +3,8 @@ import {
   CallParticipantStatus,
   CallStatus,
   FriendshipStatus,
+  NotificationSubjectType,
+  NotificationType,
   Prisma,
   SocialConversationType,
   SocialMembershipStatus
@@ -12,6 +14,7 @@ import { emitCallEnded, emitCallIncoming, emitCallParticipantJoined, emitCallPar
 import { env } from "../../shared/configs/app.config.js";
 import { HttpError } from "../../shared/errors/http-error.js";
 import { canonicalPair } from "./friendship.service.js";
+import { publishNotification } from "./notification-stream.service.js";
 
 type CallCursor = {
   id: string;
@@ -181,6 +184,82 @@ export async function listSocialCallHistory(userId: string, conversationId: stri
     data: page.map(serializeCall),
     nextCursor: next ? encodeCallCursor({ id: next.id }) : null
   };
+}
+
+export async function sweepMissedSocialCalls(now = new Date()) {
+  const timeoutMs = env.CALL_RING_TIMEOUT_SECONDS * 1000;
+  const cutoff = new Date(now.getTime() - timeoutMs);
+  const ringingCalls = await prisma.callSession.findMany({
+    where: {
+      status: CallStatus.RINGING,
+      startedAt: { lt: cutoff }
+    },
+    include: callInclude
+  });
+
+  const results = [];
+  for (const ringingCall of ringingCalls) {
+    const result = await prisma.$transaction(async (tx) => {
+      const updatedCall = await tx.callSession.updateMany({
+        where: { id: ringingCall.id, status: CallStatus.RINGING },
+        data: { status: CallStatus.MISSED, endedAt: now }
+      });
+      if (!updatedCall.count) return null;
+
+      const missedParticipants = ringingCall.participants.filter((participant) => participant.status === CallParticipantStatus.INVITED);
+      await tx.callParticipant.updateMany({
+        where: { callId: ringingCall.id, status: CallParticipantStatus.INVITED },
+        data: { status: CallParticipantStatus.MISSED, leftAt: now }
+      });
+
+      const notifications = await Promise.all(
+        missedParticipants.map((participant) =>
+          tx.notification.create({
+            data: {
+              userId: participant.userId,
+              actorId: ringingCall.initiatorId,
+              type: NotificationType.MISSED_CALL,
+              subjectType: NotificationSubjectType.CALL,
+              subjectId: ringingCall.id,
+              payload: {
+                callId: ringingCall.id,
+                conversationId: ringingCall.conversationId,
+                initiatorId: ringingCall.initiatorId,
+                mediaType: ringingCall.mediaType,
+                reason: "no-answer"
+              }
+            }
+          })
+        )
+      );
+
+      const call = await loadCallOrThrow(tx, ringingCall.id);
+      return { call, notifications };
+    });
+
+    if (!result) continue;
+    const serialized = serializeCall(result.call);
+    for (const notification of result.notifications) publishNotification(notification);
+    emitCallEnded(result.call.conversationId, { callId: result.call.id, reason: "no-answer", call: serialized });
+    results.push(serialized);
+  }
+
+  return { timedOut: results.length, calls: results };
+}
+
+export function startSocialCallTimeoutSweep(options: { intervalMs?: number; log?: { info: (obj: unknown, msg?: string) => void; warn: (obj: unknown, msg?: string) => void } } = {}) {
+  const intervalMs = options.intervalMs ?? Math.max(5_000, Math.floor(env.CALL_RING_TIMEOUT_SECONDS * 1000 / 3));
+  const run = () => {
+    void sweepMissedSocialCalls()
+      .then((result) => {
+        if (result.timedOut) options.log?.info({ result }, "Missed social call sweep completed");
+      })
+      .catch((error) => options.log?.warn({ error }, "Missed social call sweep failed"));
+  };
+
+  const timer = setInterval(run, intervalMs);
+  timer.unref?.();
+  return () => clearInterval(timer);
 }
 
 export async function verifyCallSignalParticipant(callId: string, fromUserId: string, toUserId: string) {

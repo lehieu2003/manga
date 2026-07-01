@@ -4,7 +4,7 @@
 
 This document is a standalone, detailed execution plan for a future Phase 5 of the realtime social chat system: live audio/video calling between friends and group members. It assumes the current codebase baseline after Phase 4 option 1: social conversations, messages, group invites, manga sharing, message reactions, conversation mute controls, authenticated Socket.io rooms, and mobile/web social chat clients exist. Infrastructure-heavy Phase 4 follow-ups such as image upload, offline push delivery, and voice notes are still separate work unless explicitly called out below.
 
-Read this together with `REALTIME_CHAT.md`, which holds the current social-chat baseline and route namespace. The initial backend contract slice has been copied back into `REALTIME_CHAT.md`: call persistence, HTTP lifecycle routes, ICE server config response, and Socket.io signaling relay. Ringing timeout, TURN provisioning, web/mobile WebRTC clients, push/native incoming-call UI, and end-to-end QA remain follow-up work.
+Read this together with `REALTIME_CHAT.md`, which holds the current social-chat baseline and route namespace. The initial backend contract slice has been copied back into `REALTIME_CHAT.md`: call persistence, HTTP lifecycle routes, ICE server config response, Socket.io signaling relay, and missed-call timeout handling. TURN provisioning, web/mobile WebRTC clients, push/native incoming-call UI, and end-to-end QA remain follow-up work.
 
 ## Background: why calling needs different technology than chat
 
@@ -69,11 +69,11 @@ Three technical building blocks make this possible, and the rest of this plan is
 
 **Verification:** socket test suite passes; manual two-browser-tab smoke test of a full call (ring → answer → media flows → hang up).
 
-### Step 5 — Ringing timeout and missed-call handling (Backend)
+### Step 5 — Ringing timeout and missed-call handling (Backend) — backend timeout slice implemented
 
 1. Implement a scheduled sweep (interval job or a delayed queue entry created at call start) that checks `RINGING` sessions older than the timeout (45 seconds default, make it configurable).
 2. On timeout: mark the session `MISSED`, mark all still-`INVITED`/`RINGING` participants `MISSED`, emit `call:ended` with reason `no-answer`, and create a call-specific notification payload. Reuse the existing generic notification table, but add a dedicated notification type if missed-call rendering needs copy or routing that differs from `CHAT_MESSAGE`.
-3. Store the sweep's working state in Redis (`social:call:ringing:{callId}`) so the sweep does not need to scan the full `CallSession` table; the database row remains authoritative if the Redis key is lost (recompute from `status = RINGING AND startedAt < now() - timeout`).
+3. Store the sweep's working state in Redis (`social:call:ringing:{callId}`) so the sweep does not need to scan the full `CallSession` table; the database row remains authoritative if the Redis key is lost (recompute from `status = RINGING AND startedAt < now() - timeout`). The implemented v1 sweep uses the authoritative database query directly; Redis optimization can be added if call volume requires it.
 4. Write a test that fast-forwards time (or directly invokes the sweep function) and asserts the missed-call transition and notification creation.
 
 **Verification:** sweep unit test passes; manual test confirms a real un-answered call transitions to missed within the timeout window.

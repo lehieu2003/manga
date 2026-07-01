@@ -196,7 +196,8 @@ Mobile hiện là reader client của backend với parity cơ bản cho home, d
 - Message reactions đã có backend API, Socket.io aggregate update, web quick reactions và mobile reaction chips.
 - Conversation mute đã có per-member `mutedUntil` trên backend, web header control và mobile thread control.
 - Backend call session contract đã có Prisma models, HTTP lifecycle routes, ICE server config response và Socket.io signaling relay.
-- WebRTC client UI, ringing timeout/missed calls, TURN credentials, mobile native calling, offline push delivery thật, image upload, reply previews và voice notes vẫn chưa implement.
+- Ringing timeout/missed calls đã có backend sweep, `MISSED_CALL` notification và `call:ended` reason `no-answer`.
+- WebRTC client UI, TURN credentials, mobile native calling, offline push delivery thật, image upload, reply previews và voice notes vẫn chưa implement.
 
 ### Data Sync Và Local Dev
 
