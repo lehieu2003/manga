@@ -6,10 +6,12 @@ import { useAuth } from '@/features/auth/stores/auth.store';
 import { useToast } from '@/stores/toast.store';
 import type { Friendship, MangaSummary, SocialConversationListResponse } from '@/types';
 import { CONVERSATIONS_PAGE_SIZE } from './constants';
+import { useCall } from './hooks/useCall';
 import { useFriendships } from './hooks/useFriendships';
 import { useSocialMessages } from './hooks/useSocialMessages';
 import { useSocialSocket } from './hooks/useSocialSocket';
 import { getConversationTitle } from './utils';
+import { CallDock, CallHeaderActions } from './components/CallControls';
 import { ConversationButton } from './components/ConversationButton';
 import { CreateGroupDialog } from './components/CreateGroupDialog';
 import { FriendshipPanel } from './components/FriendshipPanel';
@@ -185,11 +187,18 @@ export function SocialChatPage() {
   const stableResolvePending = useCallback(resolvePending, [resolvePending]);
 
   // --- Socket ---
-  const { typingUsers, emitTypingStart, emitTypingStop } = useSocialSocket({
+  const { socketRef, typingUsers, emitTypingStart, emitTypingStop } = useSocialSocket({
     currentUserId: user?.id,
     selectedConversation,
     latestMessage,
     onPendingResolved: stableResolvePending,
+  });
+  const call = useCall({
+    currentUserId: user?.id,
+    selectedConversation,
+    socketRef,
+    onError: (message) =>
+      showToast({ title: 'Call failed', description: message, kind: 'error' }),
   });
   const selectedTypingLabel = selectedConversation
     ? typingUsers[selectedConversation.id]
@@ -418,6 +427,38 @@ export function SocialChatPage() {
                   action: 'cancel',
                 })
               }
+              callActions={
+                <CallHeaderActions
+                  disabled={call.state !== 'idle' && call.state !== 'ended'}
+                  onStartCall={(mediaType) => {
+                    void call.startCall(mediaType);
+                  }}
+                />
+              }
+            />
+            <CallDock
+              state={call.state}
+              call={call.call}
+              incomingCall={call.incomingCall}
+              audioEnabled={call.audioEnabled}
+              videoEnabled={call.videoEnabled}
+              remoteMediaState={call.remoteMediaState}
+              localVideoRef={call.localVideoRef}
+              remoteVideoRef={call.remoteVideoRef}
+              onStartCall={(mediaType) => {
+                void call.startCall(mediaType);
+              }}
+              onAccept={() => {
+                void call.acceptIncomingCall();
+              }}
+              onDecline={() => {
+                void call.declineIncomingCall();
+              }}
+              onHangUp={() => {
+                void call.hangUp();
+              }}
+              onToggleAudio={call.toggleAudio}
+              onToggleVideo={call.toggleVideo}
             />
             <div className='social-message-list' ref={messageListRef}>
               {messagesQuery.isLoading ? (

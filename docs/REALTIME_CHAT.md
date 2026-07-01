@@ -31,13 +31,14 @@ Completed:
 - Phase 3 web group invite UI is implemented: users can see pending group invites, accept or decline incoming invites, invite eligible friends from group threads, cancel pending invites as owner/admin, and refresh invite state from member lifecycle socket events.
 - Phase 4 reactions and mute controls are implemented across backend, web, and mobile: active members can add/remove quick message reactions, reaction aggregates update through Socket.io, and each member can mute/unmute a conversation by setting `mutedUntil`.
 - Phase 5 backend call contract is started: call session/participant persistence, authenticated call HTTP routes, live-call conflict protection, STUN/static TURN/shared-secret TURN ICE server config responses, Socket.io signaling relay events, and ringing timeout/missed-call handling exist for web/mobile clients to build on.
+- Phase 5 web foreground call UI is implemented: users can start audio/video calls from the thread header, answer or decline incoming calls, exchange WebRTC offer/answer/ICE through Socket.io, toggle microphone/camera, and hang up from an in-thread call dock.
 
 In progress:
 
 - Phase 3 group chat continuation: add mobile controls for pending invites, then implement member management after invites are usable from clients.
 - Verify the manga sharing slice across backend and mobile, then add optional chapter picking to the share sheet if needed.
 - Phase 4 follow-up slices: image upload flow, reply previews, offline push delivery, and voice notes remain separate infrastructure-heavy work.
-- Phase 5 follow-up slices: choosing/provisioning the real TURN provider, web WebRTC UI, Flutter WebRTC UI, push/native incoming-call UI, and full cross-network QA remain separate work.
+- Phase 5 follow-up slices: choosing/provisioning the real TURN provider, Flutter WebRTC UI, push/native incoming-call UI, and full cross-network QA remain separate work.
 
 Latest verification:
 
@@ -66,12 +67,15 @@ Latest verification:
 - Phase 5 ICE credential provider: `npm run typecheck` in `backend` passed.
 - Phase 5 ICE credential provider: `npx prisma validate` in `backend` passed.
 - Phase 5 ICE credential provider: `npm test` in `backend` passed with 127 tests.
+- Phase 5 web foreground call UI: `npm test -- src/tests/unit/social-chat-page.test.tsx` in `frontend` passed with 13 tests.
+- Phase 5 web foreground call UI: `npm run typecheck` in `frontend` passed.
+- Phase 5 web foreground call UI: `npm run build` in `frontend` passed.
 
 Not started:
 
 - Phase 3 group chat after creation: member roles, leave/kick, ownership transfer, disband, and system messages.
 - Phase 4 rich features after reactions/mute: image uploads, reply previews, offline push delivery, and voice notes.
-- Phase 5 call client work: web/mobile WebRTC call UI, mobile background incoming calls, and TURN provisioning.
+- Phase 5 remaining call client work: mobile WebRTC call UI, mobile background incoming calls, real TURN provider provisioning, and cross-network manual QA.
 
 Checkpoint update rule:
 

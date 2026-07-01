@@ -255,8 +255,8 @@ export type SendChatMessageResponse = {
 export type CommentTargetType = "MANGA" | "CHAPTER";
 export type CommentStatus = "VISIBLE" | "DELETED" | "HIDDEN";
 export type CommentReactionType = "LIKE" | "HEART" | "SAD" | "LAUGH" | "ANGRY";
-export type NotificationType = "COMMENT_REPLY" | "COMMENT_REACTION" | "FRIEND_REQUEST" | "FRIEND_ACCEPTED" | "CHAT_MESSAGE" | "GROUP_INVITE";
-export type NotificationSubjectType = "COMMENT" | "FRIENDSHIP" | "CONVERSATION" | "MESSAGE";
+export type NotificationType = "COMMENT_REPLY" | "COMMENT_REACTION" | "FRIEND_REQUEST" | "FRIEND_ACCEPTED" | "CHAT_MESSAGE" | "GROUP_INVITE" | "MISSED_CALL";
+export type NotificationSubjectType = "COMMENT" | "FRIENDSHIP" | "CONVERSATION" | "MESSAGE" | "CALL";
 
 export type CommentAuthor = Pick<User, "id" | "displayName" | "avatarUrl" | "role">;
 
@@ -310,6 +310,9 @@ export type SocialConversationType = "DM" | "GROUP";
 export type SocialMemberRole = "OWNER" | "ADMIN" | "MEMBER";
 export type SocialMembershipStatus = "ACTIVE" | "PENDING_INVITE" | "LEFT";
 export type SocialMessageType = "TEXT" | "MANGA_SHARE" | "IMAGE" | "SYSTEM" | "VOICE_NOTE";
+export type CallStatus = "RINGING" | "ACTIVE" | "ENDED" | "MISSED" | "DECLINED";
+export type CallMediaType = "AUDIO" | "VIDEO";
+export type CallParticipantStatus = "INVITED" | "JOINED" | "DECLINED" | "LEFT" | "MISSED";
 
 export type FriendshipStatus = "PENDING" | "ACCEPTED" | "REJECTED" | "BLOCKED";
 
@@ -396,5 +399,48 @@ export type SocialConversationListResponse = {
 
 export type SocialMessageListResponse = {
   data: SocialMessage[];
+  nextCursor: string | null;
+};
+
+export type IceServer = {
+  urls: string | string[];
+  username?: string;
+  credential?: string;
+};
+
+export type CallParticipant = {
+  id: string;
+  callId: string;
+  userId: string;
+  status: CallParticipantStatus;
+  joinedAt: string | null;
+  leftAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  user: Pick<User, "id" | "displayName" | "avatarUrl">;
+};
+
+export type SocialCall = {
+  id: string;
+  conversationId: string;
+  initiatorId: string;
+  status: CallStatus;
+  mediaType: CallMediaType;
+  startedAt: string;
+  answeredAt: string | null;
+  endedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  initiator: Pick<User, "id" | "displayName" | "avatarUrl">;
+  participants: CallParticipant[];
+};
+
+export type SocialCallResponse = {
+  call: SocialCall;
+  iceServers: IceServer[];
+};
+
+export type SocialCallHistoryResponse = {
+  data: SocialCall[];
   nextCursor: string | null;
 };

@@ -4,7 +4,7 @@
 
 This document is a standalone, detailed execution plan for a future Phase 5 of the realtime social chat system: live audio/video calling between friends and group members. It assumes the current codebase baseline after Phase 4 option 1: social conversations, messages, group invites, manga sharing, message reactions, conversation mute controls, authenticated Socket.io rooms, and mobile/web social chat clients exist. Infrastructure-heavy Phase 4 follow-ups such as image upload, offline push delivery, and voice notes are still separate work unless explicitly called out below.
 
-Read this together with `REALTIME_CHAT.md`, which holds the current social-chat baseline and route namespace. The initial backend contract slice has been copied back into `REALTIME_CHAT.md`: call persistence, HTTP lifecycle routes, STUN/static TURN/shared-secret TURN ICE server config response, Socket.io signaling relay, and missed-call timeout handling. Choosing and provisioning the real TURN provider, web/mobile WebRTC clients, push/native incoming-call UI, and end-to-end QA remain follow-up work.
+Read this together with `REALTIME_CHAT.md`, which holds the current social-chat baseline and route namespace. The initial backend contract and web foreground calling slices have been copied back into `REALTIME_CHAT.md`: call persistence, HTTP lifecycle routes, STUN/static TURN/shared-secret TURN ICE server config response, Socket.io signaling relay, missed-call timeout handling, and web foreground WebRTC controls. Choosing and provisioning the real TURN provider, mobile WebRTC clients, push/native incoming-call UI, and end-to-end QA remain follow-up work.
 
 ## Background: why calling needs different technology than chat
 
@@ -89,7 +89,7 @@ Backend status: call responses now include ICE server config built from `CALL_ST
 
 **Verification:** a manual call between two devices on different restrictive networks (e.g. two different mobile data connections) succeeds, confirming TURN relay works when direct connection fails.
 
-### Step 7 — Web frontend (React)
+### Step 7 — Web frontend (React) — foreground web slice implemented
 
 1. Build a `useCall` hook/state machine that wraps the call lifecycle: `idle → ringing-outgoing → ringing-incoming → connecting → active → ended`.
 2. Implement the WebRTC peer connection setup using the browser-native `RTCPeerConnection` and `navigator.mediaDevices.getUserMedia` APIs:
@@ -100,6 +100,8 @@ Backend status: call responses now include ICE server config built from `CALL_ST
 3. Build the UI: incoming-call prompt (accept/decline) that listens for `call:incoming`, an in-call screen with mute/camera-toggle/hang-up controls, and a call-history entry in the conversation view sourced from `GET /social/conversations/:id/calls`.
 4. Handle teardown: stop local media tracks and close the `RTCPeerConnection` on hang-up, on the other party leaving, and on tab close (`beforeunload`).
 5. Write component/unit tests for the state machine transitions and for correctly relaying signaling events to mocked `RTCPeerConnection` calls.
+
+Implemented web status: the web Messages thread has audio/video start buttons, incoming call prompt, in-thread call dock, microphone/camera toggles, hang up, and mocked unit coverage for start, accept, decline, and offer/answer signaling. Manual two-browser-device TURN validation remains part of Step 10.
 
 **Verification:** `npm run test -- call*.test.tsx`, `npm run typecheck`, `npm run build` all pass; manual two-tab call works end-to-end including mute/camera toggle and hang-up.
 
