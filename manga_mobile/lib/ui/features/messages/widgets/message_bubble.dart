@@ -6,10 +6,18 @@ import '../../../app_state.dart';
 import 'social_avatar.dart';
 
 class MessageBubble extends StatelessWidget {
-  const MessageBubble({super.key, required this.message, required this.own});
+  const MessageBubble({
+    super.key,
+    required this.message,
+    required this.own,
+    required this.onToggleReaction,
+  });
 
   final SocialMessage message;
   final bool own;
+  final ValueChanged<String> onToggleReaction;
+
+  static const _quickReactions = ['👍', '❤️', '😂'];
 
   @override
   Widget build(BuildContext context) {
@@ -71,6 +79,29 @@ class MessageBubble extends StatelessWidget {
                             : scheme.onSurfaceVariant,
                       ),
                     ),
+                    if (!deleted) ...[
+                      const SizedBox(height: 7),
+                      Wrap(
+                        spacing: 4,
+                        runSpacing: 4,
+                        children: _quickReactions.map((emoji) {
+                          final active = message.currentUserReactions.contains(
+                            emoji,
+                          );
+                          final count = message.reactionCounts[emoji] ?? 0;
+                          return ActionChip(
+                            visualDensity: VisualDensity.compact,
+                            label: Text(count > 0 ? '$emoji $count' : emoji),
+                            backgroundColor: active
+                                ? (own
+                                      ? scheme.onPrimary.withValues(alpha: 0.16)
+                                      : scheme.primaryContainer)
+                                : null,
+                            onPressed: () => onToggleReaction(emoji),
+                          );
+                        }).toList(),
+                      ),
+                    ],
                   ],
                 ),
               ),

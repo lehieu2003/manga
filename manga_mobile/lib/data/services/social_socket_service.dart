@@ -58,6 +58,18 @@ class SocialMemberEvent {
   final String userId;
 }
 
+class SocialReactionUpdatedEvent {
+  const SocialReactionUpdatedEvent({
+    required this.conversationId,
+    required this.messageId,
+    required this.reactionCounts,
+  });
+
+  final String conversationId;
+  final String messageId;
+  final Map<String, int> reactionCounts;
+}
+
 class SocialSocketService {
   SocialSocketService(this._apiClient);
 
@@ -72,6 +84,8 @@ class SocialSocketService {
       StreamController<SocialReadUpdatedEvent>.broadcast();
   final _typingController = StreamController<SocialTypingEvent>.broadcast();
   final _memberController = StreamController<SocialMemberEvent>.broadcast();
+  final _reactionController =
+      StreamController<SocialReactionUpdatedEvent>.broadcast();
 
   Stream<SocialMessageNewEvent> get messageNew => _messageNewController.stream;
   Stream<SocialMessageDeletedEvent> get messageDeleted =>
@@ -80,6 +94,8 @@ class SocialSocketService {
       _readUpdatedController.stream;
   Stream<SocialTypingEvent> get typing => _typingController.stream;
   Stream<SocialMemberEvent> get memberChanged => _memberController.stream;
+  Stream<SocialReactionUpdatedEvent> get reactionUpdated =>
+      _reactionController.stream;
 
   bool get isConnected => _socket?.connected == true;
 
@@ -146,6 +162,7 @@ class SocialSocketService {
       _readUpdatedController.close(),
       _typingController.close(),
       _memberController.close(),
+      _reactionController.close(),
     ]);
   }
 
@@ -218,6 +235,24 @@ class SocialSocketService {
     socket.on('member:invited', handleMemberChanged);
     socket.on('member:added', handleMemberChanged);
     socket.on('member:removed', handleMemberChanged);
+
+    socket.on('reaction:updated', (payload) {
+      final json = _asMap(payload);
+      final counts = _asMap(json?['reactionCounts']);
+      if (json == null) return;
+      _reactionController.add(
+        SocialReactionUpdatedEvent(
+          conversationId: json['conversationId']?.toString() ?? '',
+          messageId: json['messageId']?.toString() ?? '',
+          reactionCounts: (counts ?? {}).map(
+            (key, value) => MapEntry(
+              key,
+              value is int ? value : int.tryParse('$value') ?? 0,
+            ),
+          ),
+        ),
+      );
+    });
   }
 
   Map<String, dynamic>? _asMap(Object? value) {

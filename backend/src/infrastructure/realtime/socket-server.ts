@@ -41,6 +41,8 @@ type SocialMessagePayload = {
   createdAt: Date;
   updatedAt: Date;
   sender: { id: string; displayName: string; avatarUrl: string | null } | null;
+  reactionCounts?: Record<string, number>;
+  currentUserReactions?: string[];
 };
 
 type ReadUpdatedPayload = {
@@ -71,6 +73,12 @@ type SocialMemberPayload = {
   user: UserSummaryPayload;
 };
 
+type ReactionUpdatedPayload = {
+  conversationId: string;
+  messageId: string;
+  reactionCounts: Record<string, number>;
+};
+
 type RealtimeAck<TData> =
   | { ok: true; data: TData }
   | { ok: false; error: { code: string; message: string } };
@@ -97,6 +105,7 @@ type ServerToClientEvents = {
   "member:invited": (payload: { conversationId: string; member: SocialMemberPayload }) => void;
   "member:added": (payload: { conversationId: string; member: SocialMemberPayload }) => void;
   "member:removed": (payload: { conversationId: string; userId: string }) => void;
+  "reaction:updated": (payload: ReactionUpdatedPayload) => void;
   "presence:update": (payload: { userId: string; online: boolean; lastSeenAt: Date }) => void;
 };
 
@@ -260,6 +269,10 @@ export function emitMessageNew(conversationId: string, message: SocialMessagePay
 
 export function emitMessageDeleted(conversationId: string, messageId: string) {
   io?.to(conversationRoom(conversationId)).emit("message:deleted", { conversationId, messageId });
+}
+
+export function emitReactionUpdated(payload: ReactionUpdatedPayload) {
+  io?.to(conversationRoom(payload.conversationId)).emit("reaction:updated", payload);
 }
 
 export function emitReadUpdated(payload: ReadUpdatedPayload) {

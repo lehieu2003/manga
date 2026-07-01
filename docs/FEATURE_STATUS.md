@@ -190,6 +190,13 @@ Mobile hiện là reader client của backend với parity cơ bản cho home, d
 - Reader hiển thị page counter.
 - Reader hiện luôn dùng data-saver page URLs từ MangaDex AtHome metadata.
 
+### Social Chat
+
+- Friendship, direct messages, group creation, group invites, manga sharing, typing, read state và presence socket đã có trên web/mobile.
+- Message reactions đã có backend API, Socket.io aggregate update, web quick reactions và mobile reaction chips.
+- Conversation mute đã có per-member `mutedUntil` trên backend, web header control và mobile thread control.
+- Image upload, reply previews, offline push delivery thật và voice notes vẫn chưa implement.
+
 ### Data Sync Và Local Dev
 
 - Có script sync MangaDex catalog theo limit.
@@ -384,6 +391,31 @@ Comments/notifications:
 - `PATCH /api/notifications/:id/read`
 - `PATCH /api/notifications/read-all`
 - `GET /api/notifications/stream`
+
+Social:
+
+- `GET /api/social/users`
+- `GET /api/social/friends`
+- `GET /api/social/friends/requests`
+- `GET /api/social/friends/sent`
+- `POST /api/social/friends/requests`
+- `PATCH /api/social/friends/:id/accept`
+- `PATCH /api/social/friends/:id/reject`
+- `PATCH /api/social/friends/:id/block`
+- `PATCH /api/social/friends/:id/unblock`
+- `DELETE /api/social/friends/:id`
+- `GET /api/social/conversations`
+- `POST /api/social/conversations`
+- `GET /api/social/conversations/:id`
+- `POST /api/social/conversations/:id/invites`
+- `PATCH /api/social/conversations/:id/invites/:userId`
+- `PATCH /api/social/conversations/:id/mute`
+- `GET /api/social/conversations/:id/messages`
+- `POST /api/social/conversations/:id/messages`
+- `PATCH /api/social/conversations/:id/read`
+- `DELETE /api/social/messages/:id`
+- `PUT /api/social/messages/:id/reactions/:emoji`
+- `DELETE /api/social/messages/:id/reactions/:emoji`
 
 Chat:
 

@@ -28,6 +28,10 @@ type ResolveGroupInviteInput = {
   action: "accept" | "decline" | "cancel";
 };
 
+type MuteConversationInput = {
+  mutedUntil: Date | null;
+};
+
 const conversationInclude = {
   members: {
     include: {
@@ -221,6 +225,27 @@ export async function resolveSocialGroupInvite(userId: string, conversationId: s
   }
 
   return { conversation: serializeConversation(result.conversation, userId) };
+}
+
+export async function muteSocialConversation(userId: string, conversationId: string, input: MuteConversationInput) {
+  const conversation = await prisma.$transaction(async (tx) => {
+    const membership = await tx.socialConversationMember.findUnique({
+      where: { conversationId_userId: { conversationId, userId } },
+      select: { status: true }
+    });
+    if (membership?.status !== SocialMembershipStatus.ACTIVE) {
+      throw new HttpError(404, "Conversation not found", "SOCIAL_CONVERSATION_NOT_FOUND");
+    }
+
+    await tx.socialConversationMember.update({
+      where: { conversationId_userId: { conversationId, userId } },
+      data: { mutedUntil: input.mutedUntil }
+    });
+
+    return loadConversationOrThrow(tx, conversationId);
+  });
+
+  return { conversation: serializeConversation(conversation, userId) };
 }
 
 function serializeConversation<TConversation extends Awaited<ReturnType<typeof prisma.socialConversation.findMany>>[number]>(

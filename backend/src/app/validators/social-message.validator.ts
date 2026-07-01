@@ -11,6 +11,11 @@ export const socialMessageParamsSchema = z.object({
   id: z.string().trim().min(1)
 });
 
+export const socialMessageReactionParamsSchema = z.object({
+  id: z.string().trim().min(1),
+  emoji: z.string().trim().min(1).max(16)
+});
+
 export const sendSocialMessageSchema = z.object({
   clientMessageId: uuidSchema,
   type: z.literal(SocialMessageType.TEXT).default(SocialMessageType.TEXT),

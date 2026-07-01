@@ -366,7 +366,9 @@ const ownMessage: SocialMessage = {
   deletedAt: null,
   createdAt: "2026-06-28T08:59:00.000Z",
   updatedAt: "2026-06-28T08:59:00.000Z",
-  sender: currentUser
+  sender: currentUser,
+  reactionCounts: {},
+  currentUserReactions: []
 };
 
 const peerMessage: SocialMessage = {
@@ -381,7 +383,9 @@ const peerMessage: SocialMessage = {
   deletedAt: null,
   createdAt: now,
   updatedAt: now,
-  sender: peer
+  sender: peer,
+  reactionCounts: {},
+  currentUserReactions: []
 };
 
 const sentMessage: SocialMessage = {
@@ -396,7 +400,9 @@ const sentMessage: SocialMessage = {
   deletedAt: null,
   createdAt: "2026-06-28T09:01:00.000Z",
   updatedAt: "2026-06-28T09:01:00.000Z",
-  sender: currentUser
+  sender: currentUser,
+  reactionCounts: {},
+  currentUserReactions: []
 };
 
 const sharedMangaMessage: SocialMessage = {
@@ -423,7 +429,9 @@ const sharedMangaMessage: SocialMessage = {
   deletedAt: null,
   createdAt: "2026-06-28T09:03:00.000Z",
   updatedAt: "2026-06-28T09:03:00.000Z",
-  sender: currentUser
+  sender: currentUser,
+  reactionCounts: {},
+  currentUserReactions: []
 };
 
 const deletedOwnMessage: SocialMessage = {

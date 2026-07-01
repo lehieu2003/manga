@@ -371,6 +371,8 @@ export type SocialMessage = {
   createdAt: string;
   updatedAt: string;
   sender: Pick<User, "id" | "displayName" | "avatarUrl"> | null;
+  reactionCounts: Record<string, number>;
+  currentUserReactions: string[];
 };
 
 export type SocialConversation = {
@@ -384,7 +386,7 @@ export type SocialConversation = {
   updatedAt: string;
   currentMember: SocialCurrentMember | null;
   members: SocialMember[];
-  latestMessage: Omit<SocialMessage, "clientMessageId" | "replyToId" | "updatedAt"> | null;
+  latestMessage: Omit<SocialMessage, "clientMessageId" | "replyToId" | "updatedAt" | "reactionCounts" | "currentUserReactions"> | null;
 };
 
 export type SocialConversationListResponse = {

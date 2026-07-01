@@ -28,3 +28,11 @@ export const createSocialGroupInviteSchema = z.object({
 export const resolveSocialGroupInviteSchema = z.object({
   action: z.enum(["accept", "decline", "cancel"])
 });
+
+export const muteSocialConversationSchema = z.object({
+  mutedUntil: z
+    .string()
+    .datetime()
+    .transform((value) => new Date(value))
+    .nullable()
+});

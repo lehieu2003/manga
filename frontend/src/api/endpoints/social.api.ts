@@ -70,6 +70,12 @@ export const socialApi = {
       body: JSON.stringify({ action })
     });
   },
+  muteSocialConversation(conversationId: string, mutedUntil: string | null) {
+    return request<{ conversation: SocialConversationListResponse["data"][number] }>(`/social/conversations/${conversationId}/mute`, {
+      method: "PATCH",
+      body: JSON.stringify({ mutedUntil })
+    });
+  },
   listSocialMessages(conversationId: string, params: { limit?: number; cursor?: string } = {}) {
     const query = new URLSearchParams();
     query.set("limit", String(params.limit ?? 50));
@@ -91,5 +97,11 @@ export const socialApi = {
   },
   deleteSocialMessage(messageId: string) {
     return request<{ message: SocialMessage; idempotent: boolean }>(`/social/messages/${messageId}`, { method: "DELETE" });
+  },
+  setSocialMessageReaction(messageId: string, emoji: string) {
+    return request<{ message: SocialMessage }>(`/social/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`, { method: "PUT" });
+  },
+  removeSocialMessageReaction(messageId: string, emoji: string) {
+    return request<{ message: SocialMessage }>(`/social/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`, { method: "DELETE" });
   }
 };

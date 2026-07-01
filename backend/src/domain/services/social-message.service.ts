@@ -8,6 +8,7 @@ import {
 import {
   emitMessageDeleted,
   emitMessageNew,
+  emitReactionUpdated,
   emitReadUpdated,
 } from '../../infrastructure/realtime/socket-server.js';
 import { prisma } from '../../infrastructure/database/client.js';
@@ -36,6 +37,7 @@ type MessageCursor = {
 
 const messageInclude = {
   sender: { select: { id: true, displayName: true, avatarUrl: true } },
+  reactions: { select: { userId: true, emoji: true } },
 };
 
 export async function listSocialMessages(
@@ -69,7 +71,7 @@ export async function listSocialMessages(
   const next = rows.length > input.limit ? page.at(-1) : undefined;
 
   return {
-    data: page.map(serializeMessage),
+    data: page.map((message) => serializeMessage(message, userId)),
     nextCursor: next
       ? encodeMessageCursor({
           createdAt: next.createdAt.toISOString(),
@@ -102,7 +104,7 @@ export async function sendSocialMessage(
     include: messageInclude,
   });
   if (existing)
-    return { message: serializeMessage(existing), idempotent: true };
+    return { message: serializeMessage(existing, userId), idempotent: true };
 
   const result = await prisma
     .$transaction(async (tx) => {
@@ -145,7 +147,7 @@ export async function sendSocialMessage(
       throw error;
     });
 
-  const message = serializeMessage(result.message);
+  const message = serializeMessage(result.message, userId);
   if (result.created) emitMessageNew(conversationId, message);
   return { message, idempotent: !result.created };
 }
@@ -236,7 +238,7 @@ export async function deleteSocialMessage(userId: string, messageId: string) {
       'SOCIAL_MESSAGE_DELETE_FORBIDDEN',
     );
   if (message.deletedAt)
-    return { message: serializeMessage(message), idempotent: true };
+    return { message: serializeMessage(message, userId), idempotent: true };
 
   const deleted = await prisma.socialMessage.update({
     where: { id: message.id },
@@ -245,7 +247,73 @@ export async function deleteSocialMessage(userId: string, messageId: string) {
   });
 
   emitMessageDeleted(deleted.conversationId, deleted.id);
-  return { message: serializeMessage(deleted), idempotent: false };
+  return { message: serializeMessage(deleted, userId), idempotent: false };
+}
+
+export async function addSocialMessageReaction(
+  userId: string,
+  messageId: string,
+  emoji: string,
+) {
+  const normalizedEmoji = normalizeReactionEmoji(emoji);
+  const message = await loadReactableMessage(userId, messageId);
+
+  await prisma.messageReaction.upsert({
+    where: {
+      messageId_userId_emoji: {
+        messageId,
+        userId,
+        emoji: normalizedEmoji,
+      },
+    },
+    update: {},
+    create: {
+      messageId,
+      userId,
+      emoji: normalizedEmoji,
+    },
+  });
+
+  const updated = await prisma.socialMessage.findUniqueOrThrow({
+    where: { id: messageId },
+    include: messageInclude,
+  });
+  const serialized = serializeMessage(updated, userId);
+  emitReactionUpdated({
+    conversationId: message.conversationId,
+    messageId,
+    reactionCounts: serialized.reactionCounts,
+  });
+  return { message: serialized };
+}
+
+export async function removeSocialMessageReaction(
+  userId: string,
+  messageId: string,
+  emoji: string,
+) {
+  const normalizedEmoji = normalizeReactionEmoji(emoji);
+  const message = await loadReactableMessage(userId, messageId);
+
+  await prisma.messageReaction.deleteMany({
+    where: {
+      messageId,
+      userId,
+      emoji: normalizedEmoji,
+    },
+  });
+
+  const updated = await prisma.socialMessage.findUniqueOrThrow({
+    where: { id: messageId },
+    include: messageInclude,
+  });
+  const serialized = serializeMessage(updated, userId);
+  emitReactionUpdated({
+    conversationId: message.conversationId,
+    messageId,
+    reactionCounts: serialized.reactionCounts,
+  });
+  return { message: serialized };
 }
 
 async function assertActiveConversationMember(
@@ -425,8 +493,16 @@ function serializeMessage<
       displayName: string;
       avatarUrl: string | null;
     } | null;
+    reactions?: Array<{ userId: string; emoji: string }>;
   },
->(message: TMessage) {
+>(message: TMessage, currentUserId: string) {
+  const reactionCounts: Record<string, number> = {};
+  const currentUserReactions: string[] = [];
+  for (const reaction of message.reactions ?? []) {
+    reactionCounts[reaction.emoji] = (reactionCounts[reaction.emoji] ?? 0) + 1;
+    if (reaction.userId === currentUserId) currentUserReactions.push(reaction.emoji);
+  }
+
   return {
     id: message.id,
     conversationId: message.conversationId,
@@ -440,7 +516,38 @@ function serializeMessage<
     createdAt: message.createdAt,
     updatedAt: message.updatedAt,
     sender: message.sender,
+    reactionCounts,
+    currentUserReactions,
   };
+}
+
+async function loadReactableMessage(userId: string, messageId: string) {
+  const message = await prisma.socialMessage.findFirst({
+    where: {
+      id: messageId,
+      deletedAt: null,
+      conversation: {
+        members: { some: { userId, status: SocialMembershipStatus.ACTIVE } },
+      },
+    },
+    select: { id: true, conversationId: true },
+  });
+
+  if (!message)
+    throw new HttpError(404, 'Message not found', 'SOCIAL_MESSAGE_NOT_FOUND');
+  return message;
+}
+
+function normalizeReactionEmoji(emoji: string) {
+  const normalized = emoji.trim();
+  if (!normalized || normalized.length > 16) {
+    throw new HttpError(
+      400,
+      'Reaction emoji is invalid',
+      'SOCIAL_MESSAGE_REACTION_INVALID',
+    );
+  }
+  return normalized;
 }
 
 function encodeMessageCursor(cursor: MessageCursor) {

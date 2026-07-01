@@ -43,8 +43,7 @@ class ApiClient {
     final parsed = Uri.tryParse(url);
     if (parsed != null && parsed.hasScheme) {
       final shouldUseApiOrigin =
-          !kIsWeb &&
-          (parsed.host == 'localhost' || parsed.host == '127.0.0.1');
+          !kIsWeb && (parsed.host == 'localhost' || parsed.host == '127.0.0.1');
       if (!shouldUseApiOrigin) return url;
       return '$origin${parsed.path}${parsed.hasQuery ? '?${parsed.query}' : ''}';
     }
@@ -170,7 +169,7 @@ class ApiClient {
     );
     final token = await tokenStore.accessToken;
     final headers = {
-      'Content-Type': 'application/json',
+      if (body != null) 'Content-Type': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',
     };
     final encoded = body == null ? null : jsonEncode(body);
