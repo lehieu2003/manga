@@ -197,7 +197,8 @@ Mobile hiện là reader client của backend với parity cơ bản cho home, d
 - Conversation mute đã có per-member `mutedUntil` trên backend, web header control và mobile thread control.
 - Backend call session contract đã có Prisma models, HTTP lifecycle routes, ICE server config response và Socket.io signaling relay.
 - Ringing timeout/missed calls đã có backend sweep, `MISSED_CALL` notification và `call:ended` reason `no-answer`.
-- WebRTC client UI, TURN credentials, mobile native calling, offline push delivery thật, image upload, reply previews và voice notes vẫn chưa implement.
+- ICE server response hỗ trợ STUN, static TURN credentials cho dev và shared-secret TURN credentials ngắn hạn cho production-style coturn/provider.
+- WebRTC client UI, chọn/provision TURN provider thật, mobile native calling, offline push delivery thật, image upload, reply previews và voice notes vẫn chưa implement.
 
 ### Data Sync Và Local Dev
 

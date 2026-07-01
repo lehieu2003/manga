@@ -50,7 +50,9 @@ const envSchema = z.object({
   CALL_STUN_URLS: z.string().default("stun:stun.l.google.com:19302"),
   CALL_TURN_URLS: optionalNonEmpty,
   CALL_TURN_USERNAME: optionalNonEmpty,
-  CALL_TURN_CREDENTIAL: optionalNonEmpty
+  CALL_TURN_CREDENTIAL: optionalNonEmpty,
+  CALL_TURN_SHARED_SECRET: optionalSecret,
+  CALL_TURN_CREDENTIAL_TTL_SECONDS: z.coerce.number().int().positive().default(3600)
 });
 
 export const env = envSchema.parse(process.env);

@@ -4,7 +4,7 @@
 
 This document is a standalone, detailed execution plan for a future Phase 5 of the realtime social chat system: live audio/video calling between friends and group members. It assumes the current codebase baseline after Phase 4 option 1: social conversations, messages, group invites, manga sharing, message reactions, conversation mute controls, authenticated Socket.io rooms, and mobile/web social chat clients exist. Infrastructure-heavy Phase 4 follow-ups such as image upload, offline push delivery, and voice notes are still separate work unless explicitly called out below.
 
-Read this together with `REALTIME_CHAT.md`, which holds the current social-chat baseline and route namespace. The initial backend contract slice has been copied back into `REALTIME_CHAT.md`: call persistence, HTTP lifecycle routes, ICE server config response, Socket.io signaling relay, and missed-call timeout handling. TURN provisioning, web/mobile WebRTC clients, push/native incoming-call UI, and end-to-end QA remain follow-up work.
+Read this together with `REALTIME_CHAT.md`, which holds the current social-chat baseline and route namespace. The initial backend contract slice has been copied back into `REALTIME_CHAT.md`: call persistence, HTTP lifecycle routes, STUN/static TURN/shared-secret TURN ICE server config response, Socket.io signaling relay, and missed-call timeout handling. Choosing and provisioning the real TURN provider, web/mobile WebRTC clients, push/native incoming-call UI, and end-to-end QA remain follow-up work.
 
 ## Background: why calling needs different technology than chat
 
@@ -78,12 +78,14 @@ Three technical building blocks make this possible, and the rest of this plan is
 
 **Verification:** sweep unit test passes; manual test confirms a real un-answered call transitions to missed within the timeout window.
 
-### Step 6 — TURN/STUN provisioning (Infra)
+### Step 6 — TURN/STUN provisioning (Infra) — backend credential provider implemented
 
 1. Stand up the chosen TURN solution (managed provider account, or deploy coturn behind a stable public IP with TLS).
 2. Generate short-lived, per-call or per-session TURN credentials server-side (most providers support time-limited credentials via a shared secret — never ship a long-lived static TURN password to the client).
 3. Add a backend endpoint or include TURN credentials in the `startCall`/`joinCall` response payload so the client receives a fresh ICE server list (STUN + TURN URLs + credentials) at call time.
 4. Document the TURN credential rotation policy and the environment variables/secrets required in each deployment environment (staging, production).
+
+Backend status: call responses now include ICE server config built from `CALL_STUN_URLS`, optional static TURN credentials, or preferred shared-secret TURN credentials generated with `CALL_TURN_SHARED_SECRET` and `CALL_TURN_CREDENTIAL_TTL_SECONDS`. The actual managed TURN account or coturn server is still an infrastructure task.
 
 **Verification:** a manual call between two devices on different restrictive networks (e.g. two different mobile data connections) succeeds, confirming TURN relay works when direct connection fails.
 

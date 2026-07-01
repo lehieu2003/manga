@@ -30,14 +30,14 @@ Completed:
 - Phase 3 group invite backend slice is implemented: group owners/admins can invite accepted friends, pending invitees can accept or decline, owners/admins can cancel pending invites, invitees can list pending invite conversations, invite lifecycle socket events are emitted, and invite creation emits `GROUP_INVITE` notifications without duplicating already-pending invites.
 - Phase 3 web group invite UI is implemented: users can see pending group invites, accept or decline incoming invites, invite eligible friends from group threads, cancel pending invites as owner/admin, and refresh invite state from member lifecycle socket events.
 - Phase 4 reactions and mute controls are implemented across backend, web, and mobile: active members can add/remove quick message reactions, reaction aggregates update through Socket.io, and each member can mute/unmute a conversation by setting `mutedUntil`.
-- Phase 5 backend call contract is started: call session/participant persistence, authenticated call HTTP routes, live-call conflict protection, ICE server config response, Socket.io signaling relay events, and ringing timeout/missed-call handling exist for web/mobile clients to build on.
+- Phase 5 backend call contract is started: call session/participant persistence, authenticated call HTTP routes, live-call conflict protection, STUN/static TURN/shared-secret TURN ICE server config responses, Socket.io signaling relay events, and ringing timeout/missed-call handling exist for web/mobile clients to build on.
 
 In progress:
 
 - Phase 3 group chat continuation: add mobile controls for pending invites, then implement member management after invites are usable from clients.
 - Verify the manga sharing slice across backend and mobile, then add optional chapter picking to the share sheet if needed.
 - Phase 4 follow-up slices: image upload flow, reply previews, offline push delivery, and voice notes remain separate infrastructure-heavy work.
-- Phase 5 follow-up slices: TURN provider credentials, web WebRTC UI, Flutter WebRTC UI, push/native incoming-call UI, and full cross-network QA remain separate work.
+- Phase 5 follow-up slices: choosing/provisioning the real TURN provider, web WebRTC UI, Flutter WebRTC UI, push/native incoming-call UI, and full cross-network QA remain separate work.
 
 Latest verification:
 
@@ -62,6 +62,10 @@ Latest verification:
 - Phase 5 missed-call timeout: `npm run typecheck` in `backend` passed.
 - Phase 5 missed-call timeout: `npx prisma validate` in `backend` passed.
 - Phase 5 missed-call timeout: `npm test` in `backend` passed with 123 tests.
+- Phase 5 ICE credential provider: `npm test -- src/tests/unit/call-ice.service.test.ts src/tests/integration/routes/social-call.routes.test.ts` in `backend` passed with 10 tests.
+- Phase 5 ICE credential provider: `npm run typecheck` in `backend` passed.
+- Phase 5 ICE credential provider: `npx prisma validate` in `backend` passed.
+- Phase 5 ICE credential provider: `npm test` in `backend` passed with 127 tests.
 
 Not started:
 
@@ -292,6 +296,8 @@ All routes require authenticated users and return the project-standard error env
 | DELETE | `/social/messages/:id/reactions/:emoji` | Remove the caller's reaction idempotently. |
 
 Every conversation route first confirms active membership. Role checks happen in the domain service, never only in the route handler. Blocking prevents new DM sends and friend actions; existing group membership is unaffected unless a later moderation policy says otherwise.
+
+Call responses that can create or rehydrate a WebRTC peer connection include `iceServers`. `CALL_STUN_URLS` always contributes STUN URLs when configured. `CALL_TURN_URLS` with `CALL_TURN_USERNAME` and `CALL_TURN_CREDENTIAL` adds static TURN credentials for local/dev. Production should prefer `CALL_TURN_SHARED_SECRET`, which generates coturn REST-style short-lived usernames in the shape `{expiresAt}:{userId}:{callId}` and HMAC-SHA1 credentials. `CALL_TURN_CREDENTIAL_TTL_SECONDS` controls the credential lifetime.
 
 ## Real-time contract
 

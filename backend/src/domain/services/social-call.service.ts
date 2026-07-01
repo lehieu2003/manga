@@ -13,6 +13,7 @@ import { prisma } from "../../infrastructure/database/client.js";
 import { emitCallEnded, emitCallIncoming, emitCallParticipantJoined, emitCallParticipantLeft } from "../../infrastructure/realtime/socket-server.js";
 import { env } from "../../shared/configs/app.config.js";
 import { HttpError } from "../../shared/errors/http-error.js";
+import { getCallIceServers } from "./call-ice.service.js";
 import { canonicalPair } from "./friendship.service.js";
 import { publishNotification } from "./notification-stream.service.js";
 
@@ -77,7 +78,7 @@ export async function startSocialCall(userId: string, conversationId: string, in
       }
     }
 
-    return { call: serializeCall(call), iceServers: getIceServers() };
+    return { call: serializeCall(call), iceServers: getCallIceServers({ callId: call.id, userId }) };
   } catch (error) {
     if (isUniqueConstraintError(error)) throw new HttpError(409, "A call is already active for this conversation", "SOCIAL_CALL_ALREADY_ACTIVE");
     throw error;
@@ -107,7 +108,7 @@ export async function joinSocialCall(userId: string, callId: string) {
 
   const serialized = serializeCall(call);
   emitCallParticipantJoined(call.conversationId, { callId, userId, call: serialized });
-  return { call: serialized, iceServers: getIceServers() };
+  return { call: serialized, iceServers: getCallIceServers({ callId, userId }) };
 }
 
 export async function declineSocialCall(userId: string, callId: string) {
@@ -163,7 +164,7 @@ export async function leaveSocialCall(userId: string, callId: string) {
 
 export async function getSocialCall(userId: string, callId: string) {
   const call = await loadCallForParticipant(prisma, callId, userId);
-  return { call: serializeCall(call), iceServers: getIceServers() };
+  return { call: serializeCall(call), iceServers: getCallIceServers({ callId: call.id, userId }) };
 }
 
 export async function listSocialCallHistory(userId: string, conversationId: string, input: ListCallHistoryInput) {
@@ -425,28 +426,6 @@ async function shouldEndAfterParticipantExit(tx: Prisma.TransactionClient, callI
     where: { callId, status: CallParticipantStatus.JOINED }
   });
   return activeParticipants <= 1 && joinedParticipants <= 1;
-}
-
-function getIceServers() {
-  const servers: Array<{ urls: string | string[]; username?: string; credential?: string }> = [];
-  const stunUrls = splitCsv(env.CALL_STUN_URLS);
-  if (stunUrls.length) servers.push({ urls: stunUrls });
-
-  const turnUrls = splitCsv(env.CALL_TURN_URLS);
-  if (turnUrls.length && env.CALL_TURN_USERNAME && env.CALL_TURN_CREDENTIAL) {
-    servers.push({ urls: turnUrls, username: env.CALL_TURN_USERNAME, credential: env.CALL_TURN_CREDENTIAL });
-  }
-
-  return servers;
-}
-
-function splitCsv(value: string | undefined) {
-  return value
-    ? value
-        .split(",")
-        .map((entry) => entry.trim())
-        .filter(Boolean)
-    : [];
 }
 
 function encodeCallCursor(cursor: CallCursor) {
