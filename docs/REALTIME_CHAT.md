@@ -8,7 +8,7 @@ After this plan is implemented, a signed-in user can manage friendships, exchang
 
 ## Current checkpoint
 
-Last updated: 2026-06-30
+Last updated: 2026-07-01
 
 Reader: an internal engineer continuing the realtime social chat work.
 
@@ -30,12 +30,14 @@ Completed:
 - Phase 3 group invite backend slice is implemented: group owners/admins can invite accepted friends, pending invitees can accept or decline, owners/admins can cancel pending invites, invitees can list pending invite conversations, invite lifecycle socket events are emitted, and invite creation emits `GROUP_INVITE` notifications without duplicating already-pending invites.
 - Phase 3 web group invite UI is implemented: users can see pending group invites, accept or decline incoming invites, invite eligible friends from group threads, cancel pending invites as owner/admin, and refresh invite state from member lifecycle socket events.
 - Phase 4 reactions and mute controls are implemented across backend, web, and mobile: active members can add/remove quick message reactions, reaction aggregates update through Socket.io, and each member can mute/unmute a conversation by setting `mutedUntil`.
+- Phase 5 backend call contract is started: call session/participant persistence, authenticated call HTTP routes, live-call conflict protection, ICE server config response, and Socket.io signaling relay events exist for web/mobile clients to build on.
 
 In progress:
 
 - Phase 3 group chat continuation: add mobile controls for pending invites, then implement member management after invites are usable from clients.
 - Verify the manga sharing slice across backend and mobile, then add optional chapter picking to the share sheet if needed.
 - Phase 4 follow-up slices: image upload flow, reply previews, offline push delivery, and voice notes remain separate infrastructure-heavy work.
+- Phase 5 follow-up slices: ringing timeout/missed-call sweep, TURN provider credentials, web WebRTC UI, Flutter WebRTC UI, push/native incoming-call UI, and full cross-network QA remain separate work.
 
 Latest verification:
 
@@ -50,14 +52,17 @@ Latest verification:
 - Phase 3 group invite backend: `npm run typecheck` in `backend` passed.
 - Phase 3 web group invite UI: `npm run test -- social-chat-page.test.tsx` in `frontend` passed with 10 tests.
 - Phase 3 web group invite UI: `npm run typecheck` in `frontend` passed.
-- Pending after manga sharing changes: backend typecheck/tests and mobile analyze/widget tests.
-- `npm run typecheck` in `backend`
-- `npm test -- src/tests/unit/friendship.service.test.ts` in `backend`
+- Phase 5 backend call contract: `npx prisma generate` in `backend` passed.
+- Phase 5 backend call contract: `npm test -- src/tests/integration/routes/social-call.routes.test.ts src/tests/integration/realtime/socket-server.test.ts` in `backend` passed with 10 tests.
+- Phase 5 backend call contract: `npm run typecheck` in `backend` passed.
+- Phase 5 backend call contract: `npx prisma validate` in `backend` passed.
+- Phase 5 backend call contract: `npm test` in `backend` passed with 122 tests.
 
 Not started:
 
 - Phase 3 group chat after creation: member roles, leave/kick, ownership transfer, disband, and system messages.
 - Phase 4 rich features after reactions/mute: image uploads, reply previews, offline push delivery, and voice notes.
+- Phase 5 call client work: web/mobile WebRTC call UI, mobile background incoming calls, and TURN provisioning.
 
 Checkpoint update rule:
 
@@ -268,9 +273,15 @@ All routes require authenticated users and return the project-standard error env
 | DELETE | `/social/conversations/:id/members/:userId` | Leave or kick an active member as authorized. |
 | PATCH | `/social/conversations/:id/members/:userId/role` | Change a member role; owner only. |
 | PATCH | `/social/conversations/:id/mute` | Set or clear the caller's `mutedUntil`. |
+| POST | `/social/conversations/:id/calls` | Start an audio/video call for active members; rejects if another call is ringing or active. |
+| GET | `/social/conversations/:id/calls` | List call history for the conversation. |
 | GET | `/social/conversations/:id/messages` | Fetch messages before a `(createdAt, id)` cursor. |
 | POST | `/social/conversations/:id/messages` | Persist a message using `clientMessageId`; broadcasts after commit. |
 | PATCH | `/social/conversations/:id/read` | Advance the caller's read checkpoint. |
+| GET | `/social/calls/:id` | Return call state and ICE server config for a participant. |
+| PATCH | `/social/calls/:id/join` | Mark the caller joined and transition ringing calls to active. |
+| PATCH | `/social/calls/:id/decline` | Decline an invited call and end it if no other invitees remain. |
+| PATCH | `/social/calls/:id/leave` | Leave a call and end it when no joined participants remain. |
 | DELETE | `/social/messages/:id` | Soft-delete a message; sender may delete own messages, owner/admin policy is explicit for group moderation. |
 | PUT | `/social/messages/:id/reactions/:emoji` | Add a reaction idempotently. |
 | DELETE | `/social/messages/:id/reactions/:emoji` | Remove the caller's reaction idempotently. |
@@ -295,6 +306,10 @@ On deployments with more than one backend instance, Socket.io uses the Redis ada
 | `typing:stop` | `conversationId` | Remove typing state and broadcast stopped state. |
 | `message:read` | `conversationId`, `lastMessageId` | Call the same read-checkpoint service as HTTP. |
 | `presence:ping` | none | Refresh this socket's presence TTL. |
+| `call:offer` | `callId`, `toUserId`, `description` | Recheck call participation and relay only to `user:{toUserId}`. |
+| `call:answer` | `callId`, `toUserId`, `description` | Recheck call participation and relay only to `user:{toUserId}`. |
+| `call:ice-candidate` | `callId`, `toUserId`, `candidate` | Recheck call participation and relay only to `user:{toUserId}`. |
+| `call:media-state` | `callId`, `toUserId`, `mediaState` | Recheck call participation and relay only to `user:{toUserId}`. |
 
 Durable message, friend, membership, reaction, and moderation commands use the HTTP endpoints. This gives clients standard retry semantics and makes idempotency explicit. If a future client needs a socket command for one of these actions, it must use the same service and return the same acknowledgement shape: `{ ok, data }` or `{ ok: false, error: { code, message } }`.
 
@@ -314,6 +329,14 @@ Durable message, friend, membership, reaction, and moderation commands use the H
 | `friend:incoming` | Friendship ID and requester summary. |
 | `friend:accepted` | Friendship ID, friend summary, and DM conversation ID. |
 | `presence:update` | User ID, online boolean, and last-seen timestamp. |
+| `call:incoming` | Canonical call record for an invited participant. |
+| `call:participant-joined` | Call ID, user ID, and refreshed call record. |
+| `call:participant-left` | Call ID, user ID, participant status, and refreshed call record. |
+| `call:ended` | Call ID, end reason, and refreshed call record. |
+| `call:offer` | Relayed SDP offer with `fromUserId`. |
+| `call:answer` | Relayed SDP answer with `fromUserId`. |
+| `call:ice-candidate` | Relayed ICE candidate with `fromUserId`. |
+| `call:media-state` | Relayed audio/video enabled state with `fromUserId`. |
 
 All message events are emitted only after the database transaction commits. A reconnecting client reloads its inbox and message cursor through HTTP; it never relies on replaying a complete Socket.io event history.
 

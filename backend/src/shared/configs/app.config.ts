@@ -45,7 +45,12 @@ const envSchema = z.object({
   SMTP_PORT: z.coerce.number().int().positive().default(465),
   SMTP_USER: optionalEmail,
   SMTP_PASS: optionalNonEmpty,
-  MAIL_FROM: optionalEmail
+  MAIL_FROM: optionalEmail,
+  CALL_RING_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(45),
+  CALL_STUN_URLS: z.string().default("stun:stun.l.google.com:19302"),
+  CALL_TURN_URLS: optionalNonEmpty,
+  CALL_TURN_USERNAME: optionalNonEmpty,
+  CALL_TURN_CREDENTIAL: optionalNonEmpty
 });
 
 export const env = envSchema.parse(process.env);

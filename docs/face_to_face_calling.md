@@ -4,7 +4,7 @@
 
 This document is a standalone, detailed execution plan for a future Phase 5 of the realtime social chat system: live audio/video calling between friends and group members. It assumes the current codebase baseline after Phase 4 option 1: social conversations, messages, group invites, manga sharing, message reactions, conversation mute controls, authenticated Socket.io rooms, and mobile/web social chat clients exist. Infrastructure-heavy Phase 4 follow-ups such as image upload, offline push delivery, and voice notes are still separate work unless explicitly called out below.
 
-Read this together with `REALTIME_CHAT.md`, which holds the current social-chat baseline and route namespace. This document is the first calling-specific contract; if implementation begins, copy the finalized schema, HTTP routes, and socket events back into `REALTIME_CHAT.md` in the same change.
+Read this together with `REALTIME_CHAT.md`, which holds the current social-chat baseline and route namespace. The initial backend contract slice has been copied back into `REALTIME_CHAT.md`: call persistence, HTTP lifecycle routes, ICE server config response, and Socket.io signaling relay. Ringing timeout, TURN provisioning, web/mobile WebRTC clients, push/native incoming-call UI, and end-to-end QA remain follow-up work.
 
 ## Background: why calling needs different technology than chat
 
@@ -28,7 +28,7 @@ Three technical building blocks make this possible, and the rest of this plan is
   - Self-hosted **coturn** — open source, more setup and operational ownership, lower marginal cost at scale.
 - [ ] Confirm target call sizes for v1: 1:1 calls (always direct mesh — 2 peers) and small group calls (mesh, capped at 8 participants). Anything larger requires an SFU, which is explicitly out of scope for this phase.
 
-### Step 1 — Database schema and migration (Backend)
+### Step 1 — Database schema and migration (Backend) — backend contract slice implemented
 
 1. Add the enums `CallStatus`, `CallMediaType`, `CallParticipantStatus` and the models `CallSession`, `CallParticipant` to `schema.prisma`, plus the relation fields on `User` and `SocialConversation`. These models do not exist in the current schema yet.
 2. Add a partial/composite constraint so at most one `CallSession` with status `RINGING` or `ACTIVE` exists per DM `conversationId` at a time. Enforce this at the database level (a partial unique index in the migration SQL) in addition to checking it in application code, the same pattern already used for the DM `directKey` uniqueness.
@@ -37,7 +37,7 @@ Three technical building blocks make this possible, and the rest of this plan is
 
 **Verification:** migration applies to a copy of the production-like database; `CallSession`/`CallParticipant` types compile; the partial unique index is confirmed with a manual SQL insert test (second concurrent active call in the same DM is rejected).
 
-### Step 2 — Call domain service (Backend)
+### Step 2 — Call domain service (Backend) — backend contract slice implemented
 
 1. Implement `callService.startCall(conversationId, initiatorId, mediaType)`:
    - Verify the initiator has active membership in the conversation (reuse the existing membership-check helper used by message routes).
@@ -50,7 +50,7 @@ Three technical building blocks make this possible, and the rest of this plan is
 
 **Verification:** `npm run test -- call.service.test.ts` passes; `npm run typecheck` passes.
 
-### Step 3 — HTTP routes (Backend)
+### Step 3 — HTTP routes (Backend) — backend contract slice implemented
 
 1. Implement the six routes from the API contract table under the current `/api` prefix (`POST /social/conversations/:id/calls`, `PATCH /social/calls/:id/join`, `PATCH /social/calls/:id/decline`, `PATCH /social/calls/:id/leave`, `GET /social/calls/:id`, `GET /social/conversations/:id/calls`), each calling the corresponding domain service method and returning the project-standard error envelope on failure.
 2. Add rate limiting on `POST /social/conversations/:id/calls`, scoped per user and per conversation, to prevent ring-spam (reuse the existing rate-limiter middleware pattern from friend requests).
@@ -58,7 +58,7 @@ Three technical building blocks make this possible, and the rest of this plan is
 
 **Verification:** `npm run test -- social-call.routes.test.ts` passes; `npm run typecheck` passes.
 
-### Step 4 — Socket.io signaling relay (Backend)
+### Step 4 — Socket.io signaling relay (Backend) — backend contract slice implemented
 
 1. Add four new socket event handlers on the existing authenticated socket connection: `call:offer`, `call:answer`, `call:ice-candidate`, `call:media-state`. Each handler:
    - Re-validates that the sending user is an active participant of the call's conversation (do not trust the client-supplied `callId` alone — look up the call and its conversation, then check membership, same defense-in-depth pattern as message and typing events).

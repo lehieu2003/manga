@@ -9,7 +9,8 @@ const prismaMocks = vi.hoisted(() => ({
   socialConversationMemberFindFirst: vi.fn(),
   socialConversationMemberUpdate: vi.fn(),
   socialConversationFindFirst: vi.fn(),
-  socialMessageFindFirst: vi.fn()
+  socialMessageFindFirst: vi.fn(),
+  callSessionFindFirst: vi.fn()
 }));
 
 vi.mock("../../../infrastructure/database/client.js", () => ({
@@ -24,6 +25,9 @@ vi.mock("../../../infrastructure/database/client.js", () => ({
     },
     socialMessage: {
       findFirst: prismaMocks.socialMessageFindFirst
+    },
+    callSession: {
+      findFirst: prismaMocks.callSessionFindFirst
     }
   }
 }));
@@ -125,6 +129,63 @@ describe("realtime socket server", () => {
     });
 
     socket.disconnect();
+    await context.app.close();
+  });
+
+  it("relays call signaling only to a verified call participant", async () => {
+    const context = await makeRealtimeContext();
+    prismaMocks.socialConversationMemberFindMany.mockImplementation(({ where }: { where: { userId: string } }) => {
+      if (where.userId === "user-1" || where.userId === "user-2") return Promise.resolve([{ conversationId: "conv-1" }]);
+      return Promise.resolve([]);
+    });
+    prismaMocks.callSessionFindFirst.mockResolvedValue({
+      id: "call-1",
+      conversationId: "conv-1",
+      participants: [{ userId: "user-2", status: "INVITED" }]
+    });
+
+    const sender = connectSocket(context.url, { auth: { token: context.signToken("user-1") }, reconnection: false });
+    const receiver = connectSocket(context.url, { auth: { token: context.signToken("user-2") }, reconnection: false });
+    await Promise.all([waitForConnect(sender), waitForConnect(receiver)]);
+
+    const offerPromise = waitForEvent(receiver, "call:offer");
+    const ackPromise = emitWithAck(sender, "call:offer", {
+      callId: "call-1",
+      toUserId: "user-2",
+      description: { type: "offer", sdp: "test-sdp" }
+    });
+
+    await expect(ackPromise).resolves.toMatchObject({ ok: true, data: { relayed: true } });
+    await expect(offerPromise).resolves.toMatchObject({
+      callId: "call-1",
+      fromUserId: "user-1",
+      toUserId: "user-2",
+      description: { type: "offer", sdp: "test-sdp" }
+    });
+    expect(prismaMocks.callSessionFindFirst).toHaveBeenCalledWith({
+      where: {
+        id: "call-1",
+        status: { in: ["RINGING", "ACTIVE"] },
+        conversation: {
+          AND: [
+            { members: { some: { userId: "user-1", status: SocialMembershipStatus.ACTIVE } } },
+            { members: { some: { userId: "user-2", status: SocialMembershipStatus.ACTIVE } } }
+          ]
+        },
+        AND: [
+          { participants: { some: { userId: "user-1", status: { in: ["INVITED", "JOINED"] } } } },
+          { participants: { some: { userId: "user-2", status: { in: ["INVITED", "JOINED"] } } } }
+        ]
+      },
+      select: {
+        id: true,
+        conversationId: true,
+        participants: { where: { userId: "user-2" }, select: { userId: true, status: true } }
+      }
+    });
+
+    sender.disconnect();
+    receiver.disconnect();
     await context.app.close();
   });
 });
