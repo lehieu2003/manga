@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../../domain/models/models.dart';
+import '../cubit/call_state.dart';
 import '../cubit/messages_state.dart';
+import 'call_panel.dart';
 import 'message_bubble.dart';
 import 'social_avatar.dart';
 
@@ -9,9 +11,17 @@ class MessageThread extends StatelessWidget {
   const MessageThread({
     super.key,
     required this.state,
+    required this.callState,
     required this.currentUserId,
     required this.messageController,
     required this.onBack,
+    required this.onStartAudioCall,
+    required this.onStartVideoCall,
+    required this.onAcceptCall,
+    required this.onDeclineCall,
+    required this.onHangUpCall,
+    required this.onToggleCallAudio,
+    required this.onToggleCallVideo,
     required this.onSend,
     required this.onShareManga,
     required this.onInviteMember,
@@ -24,9 +34,17 @@ class MessageThread extends StatelessWidget {
   });
 
   final MessagesState state;
+  final CallState callState;
   final String currentUserId;
   final TextEditingController messageController;
   final VoidCallback onBack;
+  final VoidCallback onStartAudioCall;
+  final VoidCallback onStartVideoCall;
+  final VoidCallback onAcceptCall;
+  final VoidCallback onDeclineCall;
+  final VoidCallback onHangUpCall;
+  final VoidCallback onToggleCallAudio;
+  final VoidCallback onToggleCallVideo;
   final ValueChanged<String> onSend;
   final VoidCallback onShareManga;
   final VoidCallback onInviteMember;
@@ -59,6 +77,10 @@ class MessageThread extends StatelessWidget {
     final mutedUntil = conversation.currentMember?.mutedUntil;
     final isMuted = mutedUntil != null && mutedUntil.isAfter(DateTime.now());
 
+    final canStartCall =
+        conversation.currentMember?.status != 'PENDING_INVITE' &&
+        !callState.hasActiveCall;
+
     return Column(
       children: [
         SafeArea(
@@ -80,39 +102,38 @@ class MessageThread extends StatelessWidget {
             subtitle: Text(
               typingSentence.isEmpty ? 'Active now' : typingSentence,
             ),
-            trailing: canManageInvites
-                ? Wrap(
-                    spacing: 4,
-                    children: [
-                      IconButton.filledTonal(
-                        tooltip: 'Invite member',
-                        onPressed: onInviteMember,
-                        icon: const Icon(Icons.person_add_alt),
-                      ),
-                      IconButton(
-                        tooltip: isMuted
-                            ? 'Unmute conversation'
-                            : 'Mute conversation',
-                        onPressed: onToggleMute,
-                        icon: Icon(
-                          isMuted
-                              ? Icons.notifications_off
-                              : Icons.notifications_none,
-                        ),
-                      ),
-                    ],
-                  )
-                : IconButton(
-                    tooltip: isMuted
-                        ? 'Unmute conversation'
-                        : 'Mute conversation',
-                    onPressed: onToggleMute,
-                    icon: Icon(
-                      isMuted
-                          ? Icons.notifications_off
-                          : Icons.notifications_none,
-                    ),
+            trailing: Wrap(
+              spacing: 4,
+              children: [
+                IconButton.filledTonal(
+                  tooltip: 'Start voice call',
+                  onPressed: canStartCall ? onStartAudioCall : null,
+                  icon: const Icon(Icons.call_outlined),
+                ),
+                IconButton.filledTonal(
+                  tooltip: 'Start video call',
+                  onPressed: canStartCall ? onStartVideoCall : null,
+                  icon: const Icon(Icons.videocam_outlined),
+                ),
+                if (canManageInvites)
+                  IconButton.filledTonal(
+                    tooltip: 'Invite member',
+                    onPressed: onInviteMember,
+                    icon: const Icon(Icons.person_add_alt),
                   ),
+                IconButton(
+                  tooltip: isMuted
+                      ? 'Unmute conversation'
+                      : 'Mute conversation',
+                  onPressed: onToggleMute,
+                  icon: Icon(
+                    isMuted
+                        ? Icons.notifications_off
+                        : Icons.notifications_none,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         if (canManageInvites && pendingMembers.isNotEmpty)
@@ -140,6 +161,14 @@ class MessageThread extends StatelessWidget {
             ),
           ),
         const Divider(height: 1),
+        CallPanel(
+          state: callState,
+          onAccept: onAcceptCall,
+          onDecline: onDeclineCall,
+          onHangUp: onHangUpCall,
+          onToggleAudio: onToggleCallAudio,
+          onToggleVideo: onToggleCallVideo,
+        ),
         Expanded(
           child: state.messages.isEmpty && typingName.isEmpty
               ? const Center(child: Text('No messages yet.'))

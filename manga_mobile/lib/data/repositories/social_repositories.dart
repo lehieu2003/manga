@@ -323,6 +323,57 @@ class SocialRepository {
       'lastMessageId': lastMessageId,
     }, (json) => json);
   }
+
+  Future<SocialCallResponse> startCall({
+    required String conversationId,
+    required String mediaType,
+  }) {
+    return _api.post('/social/conversations/$conversationId/calls', {
+      'mediaType': mediaType,
+    }, SocialCallResponse.fromJson);
+  }
+
+  Future<SocialCallHistoryResponse> listCalls(
+    String conversationId, {
+    int limit = 20,
+    String? cursor,
+  }) {
+    return _api.get(
+      '/social/conversations/$conversationId/calls',
+      SocialCallHistoryResponse.fromJson,
+      query: {'limit': '$limit', 'cursor': cursor},
+    );
+  }
+
+  Future<SocialCallResponse> getCall(String callId) {
+    return _api.get('/social/calls/$callId', SocialCallResponse.fromJson);
+  }
+
+  Future<SocialCallResponse> joinCall(String callId) {
+    return _api.patch(
+      '/social/calls/$callId/join',
+      const {},
+      SocialCallResponse.fromJson,
+    );
+  }
+
+  Future<SocialCall> declineCall(String callId) async {
+    final payload = await _api.patch(
+      '/social/calls/$callId/decline',
+      const {},
+      (json) => json,
+    );
+    return SocialCall.fromJson(payload['call'] as Map<String, dynamic>);
+  }
+
+  Future<SocialCall> leaveCall(String callId) async {
+    final payload = await _api.patch(
+      '/social/calls/$callId/leave',
+      const {},
+      (json) => json,
+    );
+    return SocialCall.fromJson(payload['call'] as Map<String, dynamic>);
+  }
 }
 
 class ChatRepository {

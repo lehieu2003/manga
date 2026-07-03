@@ -530,10 +530,33 @@ async function handleCallSignalEvent(
   }
 
   try {
+    app.log.info(
+      {
+        event: "social-call-signal-received",
+        signal: event,
+        callId,
+        fromUserId: socket.data.userId,
+        toUserId,
+        hasDescription: Boolean(payload.description),
+        hasCandidate: Boolean(payload.candidate),
+        hasMediaState: Boolean(payload.mediaState)
+      },
+      "Received social call signal"
+    );
     const { verifyCallSignalParticipant } = await import("../../domain/services/social-call.service.js");
     await verifyCallSignalParticipant(callId, socket.data.userId, toUserId);
     const relayed = { ...payload, callId, toUserId, fromUserId: socket.data.userId };
     emitCallSignal(event, toUserId, relayed);
+    app.log.info(
+      {
+        event: "social-call-signal-relayed",
+        signal: event,
+        callId,
+        fromUserId: socket.data.userId,
+        toUserId
+      },
+      "Relayed social call signal"
+    );
     ack?.({ ok: true, data: { relayed: true } });
   } catch (error) {
     app.log.warn({ error, userId: socket.data.userId, callId, toUserId, event }, "Failed to relay call signaling event");

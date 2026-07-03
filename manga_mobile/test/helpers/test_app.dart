@@ -62,9 +62,25 @@ class FakeSocialSocketService extends SocialSocketService {
       StreamController<SocialReadUpdatedEvent>.broadcast();
   final _typingController = StreamController<SocialTypingEvent>.broadcast();
   final _memberController = StreamController<SocialMemberEvent>.broadcast();
+  final _callIncomingController = StreamController<SocialCall>.broadcast();
+  final _callOfferController =
+      StreamController<SocialCallSignalEvent>.broadcast();
+  final _callAnswerController =
+      StreamController<SocialCallSignalEvent>.broadcast();
+  final _callIceCandidateController =
+      StreamController<SocialCallSignalEvent>.broadcast();
+  final _callMediaStateController =
+      StreamController<SocialCallSignalEvent>.broadcast();
+  final _callParticipantJoinedController =
+      StreamController<SocialCallParticipantJoinedEvent>.broadcast();
+  final _callParticipantLeftController =
+      StreamController<SocialCallParticipantLeftEvent>.broadcast();
+  final _callEndedController =
+      StreamController<SocialCallEndedEvent>.broadcast();
   final List<String> readMessageIds = [];
   final List<String> typingStarts = [];
   final List<String> typingStops = [];
+  final List<Map<String, dynamic>> callSignals = [];
 
   @override
   Stream<SocialMessageNewEvent> get messageNew => _messageNewController.stream;
@@ -82,6 +98,34 @@ class FakeSocialSocketService extends SocialSocketService {
 
   @override
   Stream<SocialMemberEvent> get memberChanged => _memberController.stream;
+
+  @override
+  Stream<SocialCall> get callIncoming => _callIncomingController.stream;
+
+  @override
+  Stream<SocialCallSignalEvent> get callOffer => _callOfferController.stream;
+
+  @override
+  Stream<SocialCallSignalEvent> get callAnswer => _callAnswerController.stream;
+
+  @override
+  Stream<SocialCallSignalEvent> get callIceCandidate =>
+      _callIceCandidateController.stream;
+
+  @override
+  Stream<SocialCallSignalEvent> get callMediaState =>
+      _callMediaStateController.stream;
+
+  @override
+  Stream<SocialCallParticipantJoinedEvent> get callParticipantJoined =>
+      _callParticipantJoinedController.stream;
+
+  @override
+  Stream<SocialCallParticipantLeftEvent> get callParticipantLeft =>
+      _callParticipantLeftController.stream;
+
+  @override
+  Stream<SocialCallEndedEvent> get callEnded => _callEndedController.stream;
 
   @override
   Future<void> connect() async {}
@@ -118,6 +162,74 @@ class FakeSocialSocketService extends SocialSocketService {
     );
   }
 
+  void emitIncomingCall(SocialCall call) {
+    _callIncomingController.add(call);
+  }
+
+  @override
+  Future<bool> emitCallOffer({
+    required String callId,
+    required String toUserId,
+    required Map<String, dynamic> description,
+  }) async {
+    callSignals.add({
+      'event': 'call:offer',
+      'callId': callId,
+      'toUserId': toUserId,
+      'description': description,
+    });
+    return true;
+  }
+
+  @override
+  Future<bool> emitCallAnswer({
+    required String callId,
+    required String toUserId,
+    required Map<String, dynamic> description,
+  }) async {
+    callSignals.add({
+      'event': 'call:answer',
+      'callId': callId,
+      'toUserId': toUserId,
+      'description': description,
+    });
+    return true;
+  }
+
+  @override
+  Future<bool> emitCallIceCandidate({
+    required String callId,
+    required String toUserId,
+    required Map<String, dynamic> candidate,
+  }) async {
+    callSignals.add({
+      'event': 'call:ice-candidate',
+      'callId': callId,
+      'toUserId': toUserId,
+      'candidate': candidate,
+    });
+    return true;
+  }
+
+  @override
+  Future<bool> emitCallMediaState({
+    required String callId,
+    required String toUserId,
+    required bool audioEnabled,
+    required bool videoEnabled,
+  }) async {
+    callSignals.add({
+      'event': 'call:media-state',
+      'callId': callId,
+      'toUserId': toUserId,
+      'mediaState': {
+        'audioEnabled': audioEnabled,
+        'videoEnabled': videoEnabled,
+      },
+    });
+    return true;
+  }
+
   @override
   void emitTypingStart(String conversationId) {
     typingStarts.add(conversationId);
@@ -136,6 +248,14 @@ class FakeSocialSocketService extends SocialSocketService {
       _readUpdatedController.close(),
       _typingController.close(),
       _memberController.close(),
+      _callIncomingController.close(),
+      _callOfferController.close(),
+      _callAnswerController.close(),
+      _callIceCandidateController.close(),
+      _callMediaStateController.close(),
+      _callParticipantJoinedController.close(),
+      _callParticipantLeftController.close(),
+      _callEndedController.close(),
     ]);
   }
 }
@@ -527,6 +647,10 @@ class FakeSocialRepository extends SocialRepository {
   final List<(String, List<String>)> createdGroups = [];
   final List<(String, String)> createdInvites = [];
   final List<(String, String, String)> resolvedInvites = [];
+  final List<(String, String)> startedCalls = [];
+  final List<String> joinedCalls = [];
+  final List<String> declinedCalls = [];
+  final List<String> leftCalls = [];
 
   late List<Friendship> friends = [
     Friendship(
@@ -959,6 +1083,44 @@ class FakeSocialRepository extends SocialRepository {
     String conversationId,
     String lastMessageId,
   ) async {}
+
+  @override
+  Future<SocialCallResponse> startCall({
+    required String conversationId,
+    required String mediaType,
+  }) async {
+    startedCalls.add((conversationId, mediaType));
+    return SocialCallResponse(
+      call: testCall(
+        id: 'call-${startedCalls.length}',
+        conversationId: conversationId,
+        initiatorId: 'user-1',
+        mediaType: mediaType,
+      ),
+      iceServers: const [],
+    );
+  }
+
+  @override
+  Future<SocialCallResponse> joinCall(String callId) async {
+    joinedCalls.add(callId);
+    return SocialCallResponse(
+      call: testCall(id: callId, initiatorId: 'user-2', joined: true),
+      iceServers: const [],
+    );
+  }
+
+  @override
+  Future<SocialCall> declineCall(String callId) async {
+    declinedCalls.add(callId);
+    return testCall(id: callId, initiatorId: 'user-2', status: 'DECLINED');
+  }
+
+  @override
+  Future<SocialCall> leaveCall(String callId) async {
+    leftCalls.add(callId);
+    return testCall(id: callId, status: 'ENDED');
+  }
 }
 
 class FakeChatRepository extends ChatRepository {
@@ -1047,6 +1209,50 @@ User testUser() => User(
   displayName: 'Reader',
   createdAt: testNow,
 );
+
+SocialCall testCall({
+  String id = 'call-1',
+  String conversationId = 'conversation-1',
+  String initiatorId = 'user-2',
+  String mediaType = 'VIDEO',
+  String status = 'RINGING',
+  bool joined = false,
+}) {
+  final currentUserJoined = initiatorId == 'user-1' || joined;
+  final peerJoined = initiatorId == 'user-2' || joined;
+  return SocialCall(
+    id: id,
+    conversationId: conversationId,
+    initiatorId: initiatorId,
+    mediaType: mediaType,
+    status: status,
+    startedAt: testNow,
+    createdAt: testNow,
+    updatedAt: testNow,
+    participants: [
+      SocialCallParticipant(
+        id: '$id-participant-1',
+        callId: id,
+        userId: 'user-1',
+        status: currentUserJoined ? 'JOINED' : 'INVITED',
+        joinedAt: currentUserJoined ? testNow : null,
+        createdAt: testNow,
+        updatedAt: testNow,
+        user: const SocialUser(id: 'user-1', displayName: 'Reader'),
+      ),
+      SocialCallParticipant(
+        id: '$id-participant-2',
+        callId: id,
+        userId: 'user-2',
+        status: peerJoined ? 'JOINED' : 'INVITED',
+        joinedAt: peerJoined ? testNow : null,
+        createdAt: testNow,
+        updatedAt: testNow,
+        user: const SocialUser(id: 'user-2', displayName: 'Mina'),
+      ),
+    ],
+  );
+}
 
 LibraryItem testLibraryItem({
   required String id,
