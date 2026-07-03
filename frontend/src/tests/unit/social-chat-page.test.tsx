@@ -109,7 +109,7 @@ describe("SocialChatPage", () => {
     mocks.createSocialGroupConversation.mockResolvedValue({ conversation: groupConversation });
     mocks.createSocialGroupInvite.mockResolvedValue({ conversation: groupConversationWithPendingInvite });
     mocks.resolveSocialGroupInvite.mockResolvedValue({ conversation: groupConversation });
-    mocks.startSocialCall.mockResolvedValue({ call: ringingVideoCall, iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }] });
+    mocks.startSocialCall.mockResolvedValue({ call: outgoingRingingVideoCall, iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }] });
     mocks.joinSocialCall.mockResolvedValue({ call: activeVideoCall, iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }] });
     mocks.declineSocialCall.mockResolvedValue({ call: declinedVideoCall });
     mocks.leaveSocialCall.mockResolvedValue({ call: endedVideoCall });
@@ -323,6 +323,16 @@ describe("SocialChatPage", () => {
     await user.click(screen.getByRole("button", { name: "Start video call" }));
 
     await waitFor(() => expect(mocks.startSocialCall).toHaveBeenCalledWith("conv-1", "VIDEO"));
+    expect(await screen.findByText("Ringing")).toBeInTheDocument();
+
+    act(() => {
+      mocks.socketHandlers.get("call:participant-joined")?.({
+        callId: "call-1",
+        userId: "user-2",
+        call: outgoingActiveVideoCall
+      });
+    });
+
     await waitFor(() =>
       expect(mocks.socketEmit).toHaveBeenCalledWith(
         "call:offer",
@@ -330,10 +340,10 @@ describe("SocialChatPage", () => {
           callId: "call-1",
           toUserId: "user-2",
           description: expect.objectContaining({ type: "offer" })
-        })
+        }),
+        expect.any(Function)
       )
     );
-    expect(await screen.findByText("Ringing")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Hang up call" }));
     await waitFor(() => expect(mocks.leaveSocialCall).toHaveBeenCalledWith("call-1"));
   });
@@ -382,7 +392,8 @@ describe("SocialChatPage", () => {
           callId: "call-1",
           toUserId: "user-2",
           description: expect.objectContaining({ type: "answer" })
-        })
+        }),
+        expect.any(Function)
       )
     );
     expect(await screen.findByText("In call")).toBeInTheDocument();
@@ -767,6 +778,28 @@ const activeVideoCall: SocialCall = {
   answeredAt: "2026-06-28T09:05:10.000Z",
   participants: ringingVideoCall.participants.map((participant) =>
     participant.userId === currentUser.id
+      ? { ...participant, status: "JOINED" as const, joinedAt: "2026-06-28T09:05:10.000Z" }
+      : participant
+  )
+};
+
+const outgoingRingingVideoCall: SocialCall = {
+  ...ringingVideoCall,
+  initiatorId: currentUser.id,
+  initiator: currentUser,
+  participants: ringingVideoCall.participants.map((participant) =>
+    participant.userId === currentUser.id
+      ? { ...participant, status: "JOINED" as const, joinedAt: "2026-06-28T09:05:00.000Z" }
+      : { ...participant, status: "INVITED" as const, joinedAt: null }
+  )
+};
+
+const outgoingActiveVideoCall: SocialCall = {
+  ...outgoingRingingVideoCall,
+  status: "ACTIVE",
+  answeredAt: "2026-06-28T09:05:10.000Z",
+  participants: outgoingRingingVideoCall.participants.map((participant) =>
+    participant.userId === peer.id
       ? { ...participant, status: "JOINED" as const, joinedAt: "2026-06-28T09:05:10.000Z" }
       : participant
   )
