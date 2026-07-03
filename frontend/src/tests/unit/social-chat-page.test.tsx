@@ -5,7 +5,7 @@ import type { ReactElement } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SocialChatPage } from "@/features/social/SocialChatPage";
-import type { MangaSummary, SocialConversation, SocialMessage, User } from "@/types";
+import type { MangaSummary, SocialCall, SocialConversation, SocialMessage, User } from "@/types";
 
 type SocketHandler = (payload?: unknown, ack?: (result: unknown) => void) => void;
 
@@ -20,6 +20,10 @@ const mocks = vi.hoisted(() => ({
   createSocialGroupConversation: vi.fn(),
   createSocialGroupInvite: vi.fn(),
   resolveSocialGroupInvite: vi.fn(),
+  startSocialCall: vi.fn(),
+  joinSocialCall: vi.fn(),
+  declineSocialCall: vi.fn(),
+  leaveSocialCall: vi.fn(),
   sendFriendRequest: vi.fn(),
   acceptFriendRequest: vi.fn(),
   rejectFriendRequest: vi.fn(),
@@ -47,6 +51,10 @@ vi.mock("@/api", () => ({
     createSocialGroupConversation: mocks.createSocialGroupConversation,
     createSocialGroupInvite: mocks.createSocialGroupInvite,
     resolveSocialGroupInvite: mocks.resolveSocialGroupInvite,
+    startSocialCall: mocks.startSocialCall,
+    joinSocialCall: mocks.joinSocialCall,
+    declineSocialCall: mocks.declineSocialCall,
+    leaveSocialCall: mocks.leaveSocialCall,
     sendFriendRequest: mocks.sendFriendRequest,
     acceptFriendRequest: mocks.acceptFriendRequest,
     rejectFriendRequest: mocks.rejectFriendRequest,
@@ -70,6 +78,9 @@ vi.mock("@/features/social/social-socket", () => ({
   createSocialSocket: () => ({
     on: (event: string, handler: SocketHandler) => {
       mocks.socketHandlers.set(event, handler);
+    },
+    off: (event: string, handler: SocketHandler) => {
+      if (mocks.socketHandlers.get(event) === handler) mocks.socketHandlers.delete(event);
     },
     emit: mocks.socketEmit,
     disconnect: mocks.socketDisconnect
@@ -98,6 +109,10 @@ describe("SocialChatPage", () => {
     mocks.createSocialGroupConversation.mockResolvedValue({ conversation: groupConversation });
     mocks.createSocialGroupInvite.mockResolvedValue({ conversation: groupConversationWithPendingInvite });
     mocks.resolveSocialGroupInvite.mockResolvedValue({ conversation: groupConversation });
+    mocks.startSocialCall.mockResolvedValue({ call: outgoingRingingVideoCall, iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }] });
+    mocks.joinSocialCall.mockResolvedValue({ call: activeVideoCall, iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }] });
+    mocks.declineSocialCall.mockResolvedValue({ call: declinedVideoCall });
+    mocks.leaveSocialCall.mockResolvedValue({ call: endedVideoCall });
     mocks.sendFriendRequest.mockResolvedValue({ friendship: sentFriendship });
     mocks.acceptFriendRequest.mockResolvedValue({ friendship: acceptedFriendship, conversation });
     mocks.rejectFriendRequest.mockResolvedValue({ friendship: incomingFriendship });
@@ -105,6 +120,7 @@ describe("SocialChatPage", () => {
     mocks.unfriend.mockResolvedValue({ friendship });
     mocks.sendSocialMessage.mockResolvedValue({ message: sentMessage, idempotent: false });
     mocks.deleteSocialMessage.mockResolvedValue({ message: deletedOwnMessage, idempotent: false });
+    installWebRtcMocks();
   });
 
   it("renders the inbox and marks the latest peer message as read with REST fallback", async () => {
@@ -297,6 +313,90 @@ describe("SocialChatPage", () => {
       expect(mocks.createSocialGroupInvite).toHaveBeenCalledWith("group-1", "user-5")
     );
     expect(await screen.findByRole("button", { name: "Cancel invite for Kira" })).toBeInTheDocument();
+  });
+
+  it("starts a video call and sends an SDP offer through the social socket", async () => {
+    const user = userEvent.setup();
+    renderWithClient(<SocialChatPage />);
+
+    await screen.findByText("See you at chapter 12");
+    await user.click(screen.getByRole("button", { name: "Start video call" }));
+
+    await waitFor(() => expect(mocks.startSocialCall).toHaveBeenCalledWith("conv-1", "VIDEO"));
+    expect(await screen.findByText("Ringing")).toBeInTheDocument();
+
+    act(() => {
+      mocks.socketHandlers.get("call:participant-joined")?.({
+        callId: "call-1",
+        userId: "user-2",
+        call: outgoingActiveVideoCall
+      });
+    });
+
+    await waitFor(() =>
+      expect(mocks.socketEmit).toHaveBeenCalledWith(
+        "call:offer",
+        expect.objectContaining({
+          callId: "call-1",
+          toUserId: "user-2",
+          description: expect.objectContaining({ type: "offer" })
+        }),
+        expect.any(Function)
+      )
+    );
+    await user.click(screen.getByRole("button", { name: "Hang up call" }));
+    await waitFor(() => expect(mocks.leaveSocialCall).toHaveBeenCalledWith("call-1"));
+  });
+
+  it("shows an incoming call prompt and declines it", async () => {
+    const user = userEvent.setup();
+    renderWithClient(<SocialChatPage />);
+
+    await screen.findByText("See you at chapter 12");
+    act(() => {
+      mocks.socketHandlers.get("call:incoming")?.(ringingVideoCall);
+    });
+
+    expect(await screen.findByLabelText("Incoming call")).toBeInTheDocument();
+    expect(screen.getByText("Video call")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Decline call" }));
+
+    await waitFor(() => expect(mocks.declineSocialCall).toHaveBeenCalledWith("call-1"));
+    expect(screen.queryByLabelText("Incoming call")).not.toBeInTheDocument();
+  });
+
+  it("accepts an incoming call and answers a socket offer", async () => {
+    const user = userEvent.setup();
+    renderWithClient(<SocialChatPage />);
+
+    await screen.findByText("See you at chapter 12");
+    act(() => {
+      mocks.socketHandlers.get("call:incoming")?.(ringingVideoCall);
+    });
+    await user.click(await screen.findByRole("button", { name: "Accept call" }));
+
+    await waitFor(() => expect(mocks.joinSocialCall).toHaveBeenCalledWith("call-1"));
+    act(() => {
+      mocks.socketHandlers.get("call:offer")?.({
+        callId: "call-1",
+        fromUserId: "user-2",
+        toUserId: "user-1",
+        description: { type: "offer", sdp: "peer-offer" }
+      });
+    });
+
+    await waitFor(() =>
+      expect(mocks.socketEmit).toHaveBeenCalledWith(
+        "call:answer",
+        expect.objectContaining({
+          callId: "call-1",
+          toUserId: "user-2",
+          description: expect.objectContaining({ type: "answer" })
+        }),
+        expect.any(Function)
+      )
+    );
+    expect(await screen.findByText("In call")).toBeInTheDocument();
   });
 });
 
@@ -634,6 +734,89 @@ const acceptedFriendship = {
   updatedAt: "2026-06-28T08:30:00.000Z"
 };
 
+const ringingVideoCall: SocialCall = {
+  id: "call-1",
+  conversationId: "conv-1",
+  initiatorId: peer.id,
+  status: "RINGING",
+  mediaType: "VIDEO",
+  startedAt: "2026-06-28T09:05:00.000Z",
+  answeredAt: null,
+  endedAt: null,
+  createdAt: "2026-06-28T09:05:00.000Z",
+  updatedAt: "2026-06-28T09:05:00.000Z",
+  initiator: peer,
+  participants: [
+    {
+      id: "call-participant-1",
+      callId: "call-1",
+      userId: peer.id,
+      status: "JOINED",
+      joinedAt: "2026-06-28T09:05:00.000Z",
+      leftAt: null,
+      createdAt: "2026-06-28T09:05:00.000Z",
+      updatedAt: "2026-06-28T09:05:00.000Z",
+      user: peer
+    },
+    {
+      id: "call-participant-2",
+      callId: "call-1",
+      userId: currentUser.id,
+      status: "INVITED",
+      joinedAt: null,
+      leftAt: null,
+      createdAt: "2026-06-28T09:05:00.000Z",
+      updatedAt: "2026-06-28T09:05:00.000Z",
+      user: currentUser
+    }
+  ]
+};
+
+const activeVideoCall: SocialCall = {
+  ...ringingVideoCall,
+  status: "ACTIVE",
+  answeredAt: "2026-06-28T09:05:10.000Z",
+  participants: ringingVideoCall.participants.map((participant) =>
+    participant.userId === currentUser.id
+      ? { ...participant, status: "JOINED" as const, joinedAt: "2026-06-28T09:05:10.000Z" }
+      : participant
+  )
+};
+
+const outgoingRingingVideoCall: SocialCall = {
+  ...ringingVideoCall,
+  initiatorId: currentUser.id,
+  initiator: currentUser,
+  participants: ringingVideoCall.participants.map((participant) =>
+    participant.userId === currentUser.id
+      ? { ...participant, status: "JOINED" as const, joinedAt: "2026-06-28T09:05:00.000Z" }
+      : { ...participant, status: "INVITED" as const, joinedAt: null }
+  )
+};
+
+const outgoingActiveVideoCall: SocialCall = {
+  ...outgoingRingingVideoCall,
+  status: "ACTIVE",
+  answeredAt: "2026-06-28T09:05:10.000Z",
+  participants: outgoingRingingVideoCall.participants.map((participant) =>
+    participant.userId === peer.id
+      ? { ...participant, status: "JOINED" as const, joinedAt: "2026-06-28T09:05:10.000Z" }
+      : participant
+  )
+};
+
+const declinedVideoCall: SocialCall = {
+  ...ringingVideoCall,
+  status: "DECLINED",
+  endedAt: "2026-06-28T09:05:15.000Z"
+};
+
+const endedVideoCall: SocialCall = {
+  ...activeVideoCall,
+  status: "ENDED",
+  endedAt: "2026-06-28T09:06:00.000Z"
+};
+
 function renderWithClient(ui: ReactElement) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return render(
@@ -641,4 +824,54 @@ function renderWithClient(ui: ReactElement) {
       <QueryClientProvider client={client}>{ui}</QueryClientProvider>
     </MemoryRouter>
   );
+}
+
+function installWebRtcMocks() {
+  const audioTrack = makeMediaTrack("audio");
+  const videoTrack = makeMediaTrack("video");
+  const localStream = {
+    getTracks: () => [audioTrack, videoTrack],
+    getAudioTracks: () => [audioTrack],
+    getVideoTracks: () => [videoTrack]
+  };
+
+  Object.defineProperty(navigator, "mediaDevices", {
+    configurable: true,
+    value: {
+      getUserMedia: vi.fn().mockResolvedValue(localStream)
+    }
+  });
+
+  class MockMediaStream {
+    private tracks: unknown[] = [];
+    addTrack(track: unknown) {
+      this.tracks.push(track);
+    }
+    getTracks() {
+      return this.tracks;
+    }
+  }
+
+  class MockRTCPeerConnection {
+    onicecandidate: ((event: { candidate: { toJSON: () => RTCIceCandidateInit } | null }) => void) | null = null;
+    ontrack: ((event: { streams: Array<{ getTracks: () => unknown[] }> }) => void) | null = null;
+    addTrack = vi.fn();
+    createOffer = vi.fn().mockResolvedValue({ type: "offer", sdp: "local-offer" });
+    createAnswer = vi.fn().mockResolvedValue({ type: "answer", sdp: "local-answer" });
+    setLocalDescription = vi.fn().mockResolvedValue(undefined);
+    setRemoteDescription = vi.fn().mockResolvedValue(undefined);
+    addIceCandidate = vi.fn().mockResolvedValue(undefined);
+    close = vi.fn();
+  }
+
+  vi.stubGlobal("MediaStream", MockMediaStream);
+  vi.stubGlobal("RTCPeerConnection", MockRTCPeerConnection);
+}
+
+function makeMediaTrack(kind: "audio" | "video") {
+  return {
+    kind,
+    enabled: true,
+    stop: vi.fn()
+  };
 }

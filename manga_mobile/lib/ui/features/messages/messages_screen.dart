@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../app_state.dart';
 import '../../core/widgets.dart';
+import 'cubit/call_cubit.dart';
+import 'cubit/call_state.dart';
 import 'cubit/messages_cubit.dart';
 import 'cubit/messages_state.dart';
 import 'widgets/add_friend_sheet.dart';
@@ -25,12 +27,23 @@ class MessagesScreen extends StatelessWidget {
       return const AsyncPane(message: 'Login to use messages.');
     }
 
-    return BlocProvider(
-      create: (_) => MessagesCubit(
-        socialRepository: app.socialRepository,
-        socialSocketService: app.socialSocketService,
-        currentUserId: user.id,
-      )..load(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) => MessagesCubit(
+            socialRepository: app.socialRepository,
+            socialSocketService: app.socialSocketService,
+            currentUserId: user.id,
+          )..load(),
+        ),
+        BlocProvider(
+          create: (_) => CallCubit(
+            socialRepository: app.socialRepository,
+            socialSocketService: app.socialSocketService,
+            currentUserId: user.id,
+          ),
+        ),
+      ],
       child: _MessagesView(currentUserId: user.id),
     );
   }
@@ -161,71 +174,34 @@ class _MessagesViewState extends State<_MessagesView> {
           );
         }
 
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final wide = constraints.maxWidth >= 760;
-            if (wide) {
-              _showShellChromeAfterBuild();
-              return Row(
-                children: [
-                  SizedBox(
-                    width: 330,
-                    child: MessagesInbox(
-                      state: state,
-                      currentUserId: widget.currentUserId,
-                      onAddFriend: () => _openAddFriendSheet(context),
-                      onCreateGroup: () => _openCreateGroupSheet(context),
-                      onOpenRequests: () => _openFriendRequestsSheet(context),
-                      onResolveInvite: (conversation, action) {
-                        messagesCubit.resolveGroupInvite(
-                          conversationId: conversation.id,
-                          userId: widget.currentUserId,
-                          action: action,
-                        );
-                      },
-                      onSelectConversation: (conversation) {
-                        messagesCubit.selectConversation(conversation.id);
-                      },
-                    ),
-                  ),
-                  const VerticalDivider(width: 1),
-                  Expanded(
-                    child: MessageThread(
-                      state: state,
-                      currentUserId: widget.currentUserId,
-                      messageController: _messageController,
-                      showBackButton: false,
-                      onBack: () {},
-                      onSend: messagesCubit.sendMessage,
-                      onShareManga: () => _openMangaShareSheet(context),
-                      onInviteMember: () => _openGroupInviteSheet(context),
-                      onCancelInvite: (userId) {
-                        final conversation = state.selectedConversation;
-                        if (conversation == null) return;
-                        messagesCubit.resolveGroupInvite(
-                          conversationId: conversation.id,
-                          userId: userId,
-                          action: 'cancel',
-                        );
-                      },
-                      onToggleMute:
-                          messagesCubit.toggleMuteSelectedConversation,
-                      onToggleReaction: messagesCubit.toggleReaction,
-                      onTypingChanged: messagesCubit.typingChanged,
-                      onTypingStopped: messagesCubit.stopTyping,
-                    ),
-                  ),
-                ],
-              );
-            }
-
-            if (_showCompactThread && state.selectedConversation != null) {
+        return BlocBuilder<CallCubit, CallState>(
+          builder: (context, callState) {
+            final callCubit = context.read<CallCubit>();
+            MessageThread buildThread({required bool showBackButton}) {
               return MessageThread(
                 state: state,
+                callState: callState,
                 currentUserId: widget.currentUserId,
                 messageController: _messageController,
-                showBackButton: true,
+                showBackButton: showBackButton,
                 onBack: () => _setCompactThreadVisible(false),
+                onStartAudioCall: () {
+                  final conversation = state.selectedConversation;
+                  if (conversation != null) {
+                    callCubit.startCall(conversation, 'AUDIO');
+                  }
+                },
+                onStartVideoCall: () {
+                  final conversation = state.selectedConversation;
+                  if (conversation != null) {
+                    callCubit.startCall(conversation, 'VIDEO');
+                  }
+                },
+                onAcceptCall: callCubit.acceptIncomingCall,
+                onDeclineCall: callCubit.declineIncomingCall,
+                onHangUpCall: callCubit.hangUp,
+                onToggleCallAudio: callCubit.toggleAudio,
+                onToggleCallVideo: callCubit.toggleVideo,
                 onSend: messagesCubit.sendMessage,
                 onShareManga: () => _openMangaShareSheet(context),
                 onInviteMember: () => _openGroupInviteSheet(context),
@@ -245,22 +221,62 @@ class _MessagesViewState extends State<_MessagesView> {
               );
             }
 
-            return MessagesInbox(
-              state: state,
-              currentUserId: widget.currentUserId,
-              onAddFriend: () => _openAddFriendSheet(context),
-              onCreateGroup: () => _openCreateGroupSheet(context),
-              onOpenRequests: () => _openFriendRequestsSheet(context),
-              onResolveInvite: (conversation, action) {
-                messagesCubit.resolveGroupInvite(
-                  conversationId: conversation.id,
-                  userId: widget.currentUserId,
-                  action: action,
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final wide = constraints.maxWidth >= 760;
+                if (wide) {
+                  _showShellChromeAfterBuild();
+                  return Row(
+                    children: [
+                      SizedBox(
+                        width: 330,
+                        child: MessagesInbox(
+                          state: state,
+                          currentUserId: widget.currentUserId,
+                          onAddFriend: () => _openAddFriendSheet(context),
+                          onCreateGroup: () => _openCreateGroupSheet(context),
+                          onOpenRequests: () =>
+                              _openFriendRequestsSheet(context),
+                          onResolveInvite: (conversation, action) {
+                            messagesCubit.resolveGroupInvite(
+                              conversationId: conversation.id,
+                              userId: widget.currentUserId,
+                              action: action,
+                            );
+                          },
+                          onSelectConversation: (conversation) {
+                            messagesCubit.selectConversation(conversation.id);
+                          },
+                        ),
+                      ),
+                      const VerticalDivider(width: 1),
+                      Expanded(child: buildThread(showBackButton: false)),
+                    ],
+                  );
+                }
+
+                if (_showCompactThread && state.selectedConversation != null) {
+                  return buildThread(showBackButton: true);
+                }
+
+                return MessagesInbox(
+                  state: state,
+                  currentUserId: widget.currentUserId,
+                  onAddFriend: () => _openAddFriendSheet(context),
+                  onCreateGroup: () => _openCreateGroupSheet(context),
+                  onOpenRequests: () => _openFriendRequestsSheet(context),
+                  onResolveInvite: (conversation, action) {
+                    messagesCubit.resolveGroupInvite(
+                      conversationId: conversation.id,
+                      userId: widget.currentUserId,
+                      action: action,
+                    );
+                  },
+                  onSelectConversation: (conversation) {
+                    messagesCubit.selectConversation(conversation.id);
+                    _setCompactThreadVisible(true);
+                  },
                 );
-              },
-              onSelectConversation: (conversation) {
-                messagesCubit.selectConversation(conversation.id);
-                _setCompactThreadVisible(true);
               },
             );
           },

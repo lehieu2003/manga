@@ -21,7 +21,12 @@ const prismaMocks = vi.hoisted(() => ({
   emitMessageNew: vi.fn(),
   emitMessageDeleted: vi.fn(),
   emitReadUpdated: vi.fn(),
-  emitReactionUpdated: vi.fn()
+  emitReactionUpdated: vi.fn(),
+  emitCallEnded: vi.fn(),
+  emitCallIncoming: vi.fn(),
+  emitCallParticipantJoined: vi.fn(),
+  emitCallParticipantLeft: vi.fn(),
+  emitNotification: vi.fn()
 }));
 
 vi.mock("../../../infrastructure/database/client.js", () => ({
@@ -62,7 +67,12 @@ vi.mock("../../../infrastructure/realtime/socket-server.js", () => ({
   emitMessageNew: prismaMocks.emitMessageNew,
   emitMessageDeleted: prismaMocks.emitMessageDeleted,
   emitReactionUpdated: prismaMocks.emitReactionUpdated,
-  emitReadUpdated: prismaMocks.emitReadUpdated
+  emitReadUpdated: prismaMocks.emitReadUpdated,
+  emitCallEnded: prismaMocks.emitCallEnded,
+  emitCallIncoming: prismaMocks.emitCallIncoming,
+  emitCallParticipantJoined: prismaMocks.emitCallParticipantJoined,
+  emitCallParticipantLeft: prismaMocks.emitCallParticipantLeft,
+  emitNotification: prismaMocks.emitNotification
 }));
 
 const expectedMessageInclude = {

@@ -1,4 +1,5 @@
 import { Bell, BellOff, Loader2, UserPlus, X } from 'lucide-react';
+import type { ReactNode } from 'react';
 import type { SocialConversation } from '@/types';
 import { getConversationAvatar, getConversationTitle } from '../utils';
 import { Avatar } from './Avatar';
@@ -11,6 +12,7 @@ interface ThreadHeaderProps {
   onOpenInvite?: () => void;
   onCancelInvite?: (userId: string) => void;
   onToggleMute?: () => void;
+  callActions?: ReactNode;
 }
 
 export function ThreadHeader({
@@ -21,6 +23,7 @@ export function ThreadHeader({
   onOpenInvite,
   onCancelInvite,
   onToggleMute,
+  callActions,
 }: ThreadHeaderProps) {
   const title = getConversationTitle(conversation, currentUserId);
   const canManageInvites =
@@ -50,6 +53,7 @@ export function ThreadHeader({
               : `${conversation.members.filter((member) => member.status === 'ACTIVE').length} members`}
           </p>
         </div>
+        {callActions}
         {canManageInvites && onOpenInvite ? (
           <button
             className='btn reader-icon-button social-thread-action'

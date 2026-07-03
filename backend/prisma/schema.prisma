@@ -58,6 +58,7 @@ enum NotificationType {
   FRIEND_ACCEPTED
   CHAT_MESSAGE
   GROUP_INVITE
+  MISSED_CALL
 }
 
 enum NotificationSubjectType {
@@ -65,6 +66,7 @@ enum NotificationSubjectType {
   FRIENDSHIP
   CONVERSATION
   MESSAGE
+  CALL
 }
 
 enum FriendshipStatus {
@@ -99,6 +101,27 @@ enum SocialMessageType {
   VOICE_NOTE
 }
 
+enum CallStatus {
+  RINGING
+  ACTIVE
+  ENDED
+  MISSED
+  DECLINED
+}
+
+enum CallMediaType {
+  AUDIO
+  VIDEO
+}
+
+enum CallParticipantStatus {
+  INVITED
+  JOINED
+  DECLINED
+  LEFT
+  MISSED
+}
+
 model User {
   id              String            @id @default(cuid())
   email           String            @unique
@@ -128,6 +151,8 @@ model User {
   socialMemberships  SocialConversationMember[]
   socialMessages     SocialMessage[]
   messageReactions   MessageReaction[]
+  initiatedCalls      CallSession[]     @relation("CallInitiator")
+  callParticipants    CallParticipant[]
 
   @@index([role])
 }
@@ -363,6 +388,7 @@ model SocialConversation {
   updatedAt     DateTime                   @updatedAt
   members       SocialConversationMember[]
   messages      SocialMessage[]
+  calls         CallSession[]
 
   @@index([type, lastMessageAt])
   @@index([directKey])
@@ -420,6 +446,42 @@ model MessageReaction {
 
   @@unique([messageId, userId, emoji])
   @@index([messageId])
+}
+
+model CallSession {
+  id             String            @id @default(cuid())
+  conversationId String
+  initiatorId    String
+  status         CallStatus        @default(RINGING)
+  mediaType      CallMediaType
+  startedAt      DateTime          @default(now())
+  answeredAt     DateTime?
+  endedAt        DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  conversation   SocialConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  initiator      User              @relation("CallInitiator", fields: [initiatorId], references: [id], onDelete: Cascade)
+  participants   CallParticipant[]
+
+  @@index([conversationId, status, startedAt])
+  @@index([initiatorId, startedAt])
+}
+
+model CallParticipant {
+  id        String                @id @default(cuid())
+  callId    String
+  userId    String
+  status    CallParticipantStatus @default(INVITED)
+  joinedAt  DateTime?
+  leftAt    DateTime?
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+  call      CallSession           @relation(fields: [callId], references: [id], onDelete: Cascade)
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([callId, userId])
+  @@index([userId, status, updatedAt])
+  @@index([callId, status])
 }
 
 model Comment {

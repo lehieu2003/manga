@@ -195,7 +195,11 @@ Mobile hiện là reader client của backend với parity cơ bản cho home, d
 - Friendship, direct messages, group creation, group invites, manga sharing, typing, read state và presence socket đã có trên web/mobile.
 - Message reactions đã có backend API, Socket.io aggregate update, web quick reactions và mobile reaction chips.
 - Conversation mute đã có per-member `mutedUntil` trên backend, web header control và mobile thread control.
-- Image upload, reply previews, offline push delivery thật và voice notes vẫn chưa implement.
+- Backend call session contract đã có Prisma models, HTTP lifecycle routes, ICE server config response và Socket.io signaling relay.
+- Ringing timeout/missed calls đã có backend sweep, `MISSED_CALL` notification và `call:ended` reason `no-answer`.
+- ICE server response hỗ trợ STUN, static TURN credentials cho dev và shared-secret TURN credentials ngắn hạn cho production-style coturn/provider.
+- Web foreground call UI đã có start audio/video, incoming prompt, WebRTC offer/answer/ICE signaling, mute/camera toggle và hang up trong thread.
+- Chọn/provision TURN provider thật, mobile native calling, offline push delivery thật, image upload, reply previews và voice notes vẫn chưa implement.
 
 ### Data Sync Và Local Dev
 
@@ -410,6 +414,12 @@ Social:
 - `POST /api/social/conversations/:id/invites`
 - `PATCH /api/social/conversations/:id/invites/:userId`
 - `PATCH /api/social/conversations/:id/mute`
+- `POST /api/social/conversations/:id/calls`
+- `GET /api/social/conversations/:id/calls`
+- `GET /api/social/calls/:id`
+- `PATCH /api/social/calls/:id/join`
+- `PATCH /api/social/calls/:id/decline`
+- `PATCH /api/social/calls/:id/leave`
 - `GET /api/social/conversations/:id/messages`
 - `POST /api/social/conversations/:id/messages`
 - `PATCH /api/social/conversations/:id/read`

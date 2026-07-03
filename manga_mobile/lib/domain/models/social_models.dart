@@ -610,6 +610,174 @@ class SocialMessageListResponse {
       );
 }
 
+class IceServer {
+  const IceServer({required this.urls, this.username, this.credential});
+
+  final List<String> urls;
+  final String? username;
+  final String? credential;
+
+  Map<String, dynamic> toJson() => {
+    'urls': urls,
+    if (username != null) 'username': username,
+    if (credential != null) 'credential': credential,
+  };
+
+  factory IceServer.fromJson(Map<String, dynamic> json) {
+    final rawUrls = json['urls'];
+    return IceServer(
+      urls: rawUrls is List
+          ? rawUrls.map((item) => item.toString()).toList()
+          : [
+              rawUrls?.toString() ?? '',
+            ].where((item) => item.isNotEmpty).toList(),
+      username: json['username'] as String?,
+      credential: json['credential'] as String?,
+    );
+  }
+}
+
+class SocialCallParticipant {
+  const SocialCallParticipant({
+    required this.id,
+    required this.callId,
+    required this.userId,
+    required this.status,
+    required this.createdAt,
+    required this.updatedAt,
+    this.joinedAt,
+    this.leftAt,
+    this.user,
+  });
+
+  final String id;
+  final String callId;
+  final String userId;
+  final String status;
+  final DateTime? joinedAt;
+  final DateTime? leftAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final SocialUser? user;
+
+  factory SocialCallParticipant.fromJson(Map<String, dynamic> json) =>
+      SocialCallParticipant(
+        id: json['id']?.toString() ?? '',
+        callId: json['callId']?.toString() ?? '',
+        userId: json['userId']?.toString() ?? '',
+        status: json['status']?.toString() ?? 'INVITED',
+        joinedAt: DateTime.tryParse(json['joinedAt']?.toString() ?? ''),
+        leftAt: DateTime.tryParse(json['leftAt']?.toString() ?? ''),
+        createdAt:
+            DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
+            DateTime.fromMillisecondsSinceEpoch(0),
+        updatedAt:
+            DateTime.tryParse(json['updatedAt']?.toString() ?? '') ??
+            DateTime.fromMillisecondsSinceEpoch(0),
+        user: json['user'] is Map<String, dynamic>
+            ? SocialUser.fromJson(json['user'] as Map<String, dynamic>)
+            : null,
+      );
+}
+
+class SocialCall {
+  const SocialCall({
+    required this.id,
+    required this.conversationId,
+    required this.initiatorId,
+    required this.mediaType,
+    required this.status,
+    required this.startedAt,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.participants,
+    this.endedAt,
+  });
+
+  final String id;
+  final String conversationId;
+  final String initiatorId;
+  final String mediaType;
+  final String status;
+  final DateTime startedAt;
+  final DateTime? endedAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final List<SocialCallParticipant> participants;
+
+  bool get isVideo => mediaType == 'VIDEO';
+
+  List<String> activePeerIds(String currentUserId) {
+    final peers = participants
+        .where(
+          (participant) =>
+              participant.userId != currentUserId &&
+              (participant.status == 'INVITED' ||
+                  participant.status == 'JOINED'),
+        )
+        .toList()
+      ..sort((a, b) {
+        if (a.status == b.status) return 0;
+        return a.status == 'JOINED' ? -1 : 1;
+      });
+    return peers.map((participant) => participant.userId).toList();
+  }
+
+  factory SocialCall.fromJson(Map<String, dynamic> json) => SocialCall(
+    id: json['id']?.toString() ?? '',
+    conversationId: json['conversationId']?.toString() ?? '',
+    initiatorId: json['initiatorId']?.toString() ?? '',
+    mediaType: json['mediaType']?.toString() ?? 'VIDEO',
+    status: json['status']?.toString() ?? 'RINGING',
+    startedAt:
+        DateTime.tryParse(json['startedAt']?.toString() ?? '') ??
+        DateTime.fromMillisecondsSinceEpoch(0),
+    endedAt: DateTime.tryParse(json['endedAt']?.toString() ?? ''),
+    createdAt:
+        DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
+        DateTime.fromMillisecondsSinceEpoch(0),
+    updatedAt:
+        DateTime.tryParse(json['updatedAt']?.toString() ?? '') ??
+        DateTime.fromMillisecondsSinceEpoch(0),
+    participants: (json['participants'] as List<dynamic>? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map(SocialCallParticipant.fromJson)
+        .toList(),
+  );
+}
+
+class SocialCallResponse {
+  const SocialCallResponse({required this.call, required this.iceServers});
+
+  final SocialCall call;
+  final List<IceServer> iceServers;
+
+  factory SocialCallResponse.fromJson(Map<String, dynamic> json) =>
+      SocialCallResponse(
+        call: SocialCall.fromJson(json['call'] as Map<String, dynamic>),
+        iceServers: (json['iceServers'] as List<dynamic>? ?? [])
+            .whereType<Map<String, dynamic>>()
+            .map(IceServer.fromJson)
+            .toList(),
+      );
+}
+
+class SocialCallHistoryResponse {
+  const SocialCallHistoryResponse({required this.data, this.nextCursor});
+
+  final List<SocialCall> data;
+  final String? nextCursor;
+
+  factory SocialCallHistoryResponse.fromJson(Map<String, dynamic> json) =>
+      SocialCallHistoryResponse(
+        data: (json['data'] as List<dynamic>? ?? [])
+            .whereType<Map<String, dynamic>>()
+            .map(SocialCall.fromJson)
+            .toList(),
+        nextCursor: json['nextCursor'] as String?,
+      );
+}
+
 class ChatSource {
   const ChatSource({
     required this.type,

@@ -19,6 +19,10 @@ const prismaMocks = vi.hoisted(() => ({
 const socketMocks = vi.hoisted(() => ({
   emitFriendAccepted: vi.fn(),
   emitFriendIncoming: vi.fn(),
+  emitCallEnded: vi.fn(),
+  emitCallIncoming: vi.fn(),
+  emitCallParticipantJoined: vi.fn(),
+  emitCallParticipantLeft: vi.fn(),
   emitMemberAdded: vi.fn(),
   emitMemberInvited: vi.fn(),
   emitMemberRemoved: vi.fn(),

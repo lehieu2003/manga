@@ -70,6 +70,62 @@ class SocialReactionUpdatedEvent {
   final Map<String, int> reactionCounts;
 }
 
+class SocialCallParticipantJoinedEvent {
+  const SocialCallParticipantJoinedEvent({
+    required this.callId,
+    required this.userId,
+    required this.call,
+  });
+
+  final String callId;
+  final String userId;
+  final SocialCall call;
+}
+
+class SocialCallParticipantLeftEvent {
+  const SocialCallParticipantLeftEvent({
+    required this.callId,
+    required this.userId,
+    required this.status,
+    required this.call,
+  });
+
+  final String callId;
+  final String userId;
+  final String status;
+  final SocialCall call;
+}
+
+class SocialCallEndedEvent {
+  const SocialCallEndedEvent({
+    required this.callId,
+    required this.reason,
+    required this.call,
+  });
+
+  final String callId;
+  final String reason;
+  final SocialCall call;
+}
+
+class SocialCallSignalEvent {
+  const SocialCallSignalEvent({
+    required this.callId,
+    this.fromUserId,
+    this.toUserId,
+    this.description,
+    this.candidate,
+    this.mediaState,
+  });
+
+  final String callId;
+  final String? fromUserId;
+  final String? toUserId;
+  final Map<String, dynamic>? description;
+  final Map<String, dynamic>? candidate;
+  final Map<String, dynamic>? mediaState;
+}
+
 class SocialSocketService {
   SocialSocketService(this._apiClient);
 
@@ -86,6 +142,21 @@ class SocialSocketService {
   final _memberController = StreamController<SocialMemberEvent>.broadcast();
   final _reactionController =
       StreamController<SocialReactionUpdatedEvent>.broadcast();
+  final _callIncomingController = StreamController<SocialCall>.broadcast();
+  final _callParticipantJoinedController =
+      StreamController<SocialCallParticipantJoinedEvent>.broadcast();
+  final _callParticipantLeftController =
+      StreamController<SocialCallParticipantLeftEvent>.broadcast();
+  final _callEndedController =
+      StreamController<SocialCallEndedEvent>.broadcast();
+  final _callOfferController =
+      StreamController<SocialCallSignalEvent>.broadcast();
+  final _callAnswerController =
+      StreamController<SocialCallSignalEvent>.broadcast();
+  final _callIceCandidateController =
+      StreamController<SocialCallSignalEvent>.broadcast();
+  final _callMediaStateController =
+      StreamController<SocialCallSignalEvent>.broadcast();
 
   Stream<SocialMessageNewEvent> get messageNew => _messageNewController.stream;
   Stream<SocialMessageDeletedEvent> get messageDeleted =>
@@ -96,6 +167,18 @@ class SocialSocketService {
   Stream<SocialMemberEvent> get memberChanged => _memberController.stream;
   Stream<SocialReactionUpdatedEvent> get reactionUpdated =>
       _reactionController.stream;
+  Stream<SocialCall> get callIncoming => _callIncomingController.stream;
+  Stream<SocialCallParticipantJoinedEvent> get callParticipantJoined =>
+      _callParticipantJoinedController.stream;
+  Stream<SocialCallParticipantLeftEvent> get callParticipantLeft =>
+      _callParticipantLeftController.stream;
+  Stream<SocialCallEndedEvent> get callEnded => _callEndedController.stream;
+  Stream<SocialCallSignalEvent> get callOffer => _callOfferController.stream;
+  Stream<SocialCallSignalEvent> get callAnswer => _callAnswerController.stream;
+  Stream<SocialCallSignalEvent> get callIceCandidate =>
+      _callIceCandidateController.stream;
+  Stream<SocialCallSignalEvent> get callMediaState =>
+      _callMediaStateController.stream;
 
   bool get isConnected => _socket?.connected == true;
 
@@ -149,6 +232,58 @@ class SocialSocketService {
     _socket?.emit('typing:stop', {'conversationId': conversationId});
   }
 
+  Future<bool> emitCallOffer({
+    required String callId,
+    required String toUserId,
+    required Map<String, dynamic> description,
+  }) {
+    return _emitCallSignal('call:offer', {
+      'callId': callId,
+      'toUserId': toUserId,
+      'description': description,
+    });
+  }
+
+  Future<bool> emitCallAnswer({
+    required String callId,
+    required String toUserId,
+    required Map<String, dynamic> description,
+  }) {
+    return _emitCallSignal('call:answer', {
+      'callId': callId,
+      'toUserId': toUserId,
+      'description': description,
+    });
+  }
+
+  Future<bool> emitCallIceCandidate({
+    required String callId,
+    required String toUserId,
+    required Map<String, dynamic> candidate,
+  }) {
+    return _emitCallSignal('call:ice-candidate', {
+      'callId': callId,
+      'toUserId': toUserId,
+      'candidate': candidate,
+    });
+  }
+
+  Future<bool> emitCallMediaState({
+    required String callId,
+    required String toUserId,
+    required bool audioEnabled,
+    required bool videoEnabled,
+  }) {
+    return _emitCallSignal('call:media-state', {
+      'callId': callId,
+      'toUserId': toUserId,
+      'mediaState': {
+        'audioEnabled': audioEnabled,
+        'videoEnabled': videoEnabled,
+      },
+    });
+  }
+
   void disconnect() {
     _socket?.dispose();
     _socket = null;
@@ -163,6 +298,14 @@ class SocialSocketService {
       _typingController.close(),
       _memberController.close(),
       _reactionController.close(),
+      _callIncomingController.close(),
+      _callParticipantJoinedController.close(),
+      _callParticipantLeftController.close(),
+      _callEndedController.close(),
+      _callOfferController.close(),
+      _callAnswerController.close(),
+      _callIceCandidateController.close(),
+      _callMediaStateController.close(),
     ]);
   }
 
@@ -253,6 +396,100 @@ class SocialSocketService {
         ),
       );
     });
+
+    socket.on('call:incoming', (payload) {
+      final json = _asMap(payload);
+      if (json == null) return;
+      _callIncomingController.add(SocialCall.fromJson(json));
+    });
+
+    socket.on('call:participant-joined', (payload) {
+      final json = _asMap(payload);
+      final callJson = _asMap(json?['call']);
+      if (json == null || callJson == null) return;
+      _callParticipantJoinedController.add(
+        SocialCallParticipantJoinedEvent(
+          callId: json['callId']?.toString() ?? '',
+          userId: json['userId']?.toString() ?? '',
+          call: SocialCall.fromJson(callJson),
+        ),
+      );
+    });
+
+    socket.on('call:participant-left', (payload) {
+      final json = _asMap(payload);
+      final callJson = _asMap(json?['call']);
+      if (json == null || callJson == null) return;
+      _callParticipantLeftController.add(
+        SocialCallParticipantLeftEvent(
+          callId: json['callId']?.toString() ?? '',
+          userId: json['userId']?.toString() ?? '',
+          status: json['status']?.toString() ?? '',
+          call: SocialCall.fromJson(callJson),
+        ),
+      );
+    });
+
+    socket.on('call:ended', (payload) {
+      final json = _asMap(payload);
+      final callJson = _asMap(json?['call']);
+      if (json == null || callJson == null) return;
+      _callEndedController.add(
+        SocialCallEndedEvent(
+          callId: json['callId']?.toString() ?? '',
+          reason: json['reason']?.toString() ?? '',
+          call: SocialCall.fromJson(callJson),
+        ),
+      );
+    });
+
+    socket.on('call:offer', (payload) {
+      final event = _callSignalFromPayload(payload);
+      if (event != null) _callOfferController.add(event);
+    });
+
+    socket.on('call:answer', (payload) {
+      final event = _callSignalFromPayload(payload);
+      if (event != null) _callAnswerController.add(event);
+    });
+
+    socket.on('call:ice-candidate', (payload) {
+      final event = _callSignalFromPayload(payload);
+      if (event != null) _callIceCandidateController.add(event);
+    });
+
+    socket.on('call:media-state', (payload) {
+      final event = _callSignalFromPayload(payload);
+      if (event != null) _callMediaStateController.add(event);
+    });
+  }
+
+  Future<bool> _emitCallSignal(
+    String event,
+    Map<String, dynamic> payload,
+  ) async {
+    final socket = _socket;
+    if (socket?.connected != true) return false;
+
+    try {
+      final ack = await socket!.emitWithAckAsync(event, payload);
+      return ack is Map && ack['ok'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  SocialCallSignalEvent? _callSignalFromPayload(Object? payload) {
+    final json = _asMap(payload);
+    if (json == null) return null;
+    return SocialCallSignalEvent(
+      callId: json['callId']?.toString() ?? '',
+      fromUserId: json['fromUserId'] as String?,
+      toUserId: json['toUserId'] as String?,
+      description: _asMap(json['description']),
+      candidate: _asMap(json['candidate']),
+      mediaState: _asMap(json['mediaState']),
+    );
   }
 
   Map<String, dynamic>? _asMap(Object? value) {

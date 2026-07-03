@@ -79,6 +79,43 @@ type ReactionUpdatedPayload = {
   reactionCounts: Record<string, number>;
 };
 
+type CallPayload = {
+  id: string;
+  conversationId: string;
+  initiatorId: string;
+  status: string;
+  mediaType: string;
+  startedAt: Date;
+  answeredAt: Date | null;
+  endedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  initiator: UserSummaryPayload;
+  participants: Array<{
+    id: string;
+    callId: string;
+    userId: string;
+    status: string;
+    joinedAt: Date | null;
+    leftAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+    user: UserSummaryPayload;
+  }>;
+};
+
+type CallSignalPayload = {
+  callId: string;
+  toUserId: string;
+  fromUserId?: string;
+  description?: unknown;
+  candidate?: unknown;
+  mediaState?: {
+    audioEnabled?: boolean;
+    videoEnabled?: boolean;
+  };
+};
+
 type RealtimeAck<TData> =
   | { ok: true; data: TData }
   | { ok: false; error: { code: string; message: string } };
@@ -93,6 +130,7 @@ type ReadStatePayload = {
 };
 
 type ReadAck = (result: RealtimeAck<ReadStatePayload>) => void;
+type CallSignalAck = (result: RealtimeAck<{ relayed: true }>) => void;
 
 type ServerToClientEvents = {
   "notification:new": (payload: NotificationPayload) => void;
@@ -107,6 +145,14 @@ type ServerToClientEvents = {
   "member:removed": (payload: { conversationId: string; userId: string }) => void;
   "reaction:updated": (payload: ReactionUpdatedPayload) => void;
   "presence:update": (payload: { userId: string; online: boolean; lastSeenAt: Date }) => void;
+  "call:incoming": (payload: CallPayload) => void;
+  "call:participant-joined": (payload: { callId: string; userId: string; call: CallPayload }) => void;
+  "call:participant-left": (payload: { callId: string; userId: string; status: string; call: CallPayload }) => void;
+  "call:ended": (payload: { callId: string; reason: string; call: CallPayload }) => void;
+  "call:offer": (payload: CallSignalPayload) => void;
+  "call:answer": (payload: CallSignalPayload) => void;
+  "call:ice-candidate": (payload: CallSignalPayload) => void;
+  "call:media-state": (payload: CallSignalPayload) => void;
 };
 
 type ClientToServerEvents = {
@@ -114,6 +160,10 @@ type ClientToServerEvents = {
   "typing:stop": (payload: { conversationId: string }) => void;
   "message:read": (payload: { conversationId: string; lastMessageId: string }, ack?: ReadAck) => void;
   "presence:ping": () => void;
+  "call:offer": (payload: CallSignalPayload, ack?: CallSignalAck) => void;
+  "call:answer": (payload: CallSignalPayload, ack?: CallSignalAck) => void;
+  "call:ice-candidate": (payload: CallSignalPayload, ack?: CallSignalAck) => void;
+  "call:media-state": (payload: CallSignalPayload, ack?: CallSignalAck) => void;
 };
 
 type InterServerEvents = Record<string, never>;
@@ -208,6 +258,22 @@ export async function registerRealtimeServer(app: FastifyInstance) {
       void handleReadEvent(socket, payload, ack, app);
     });
 
+    socket.on("call:offer", (payload, ack) => {
+      void handleCallSignalEvent(socket, "call:offer", payload, ack, app);
+    });
+
+    socket.on("call:answer", (payload, ack) => {
+      void handleCallSignalEvent(socket, "call:answer", payload, ack, app);
+    });
+
+    socket.on("call:ice-candidate", (payload, ack) => {
+      void handleCallSignalEvent(socket, "call:ice-candidate", payload, ack, app);
+    });
+
+    socket.on("call:media-state", (payload, ack) => {
+      void handleCallSignalEvent(socket, "call:media-state", payload, ack, app);
+    });
+
     socket.on("disconnect", () => {
       void handleSocketDisconnect(socket, app);
     });
@@ -273,6 +339,22 @@ export function emitMessageDeleted(conversationId: string, messageId: string) {
 
 export function emitReactionUpdated(payload: ReactionUpdatedPayload) {
   io?.to(conversationRoom(payload.conversationId)).emit("reaction:updated", payload);
+}
+
+export function emitCallIncoming(userId: string, call: CallPayload) {
+  io?.to(userRoom(userId)).emit("call:incoming", call);
+}
+
+export function emitCallParticipantJoined(conversationId: string, payload: { callId: string; userId: string; call: CallPayload }) {
+  io?.to(conversationRoom(conversationId)).emit("call:participant-joined", payload);
+}
+
+export function emitCallParticipantLeft(conversationId: string, payload: { callId: string; userId: string; status: string; call: CallPayload }) {
+  io?.to(conversationRoom(conversationId)).emit("call:participant-left", payload);
+}
+
+export function emitCallEnded(conversationId: string, payload: { callId: string; reason: string; call: CallPayload }) {
+  io?.to(conversationRoom(conversationId)).emit("call:ended", payload);
 }
 
 export function emitReadUpdated(payload: ReadUpdatedPayload) {
@@ -431,6 +513,83 @@ async function handleReadEvent(
       }
     });
   }
+}
+
+async function handleCallSignalEvent(
+  socket: Socket<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>,
+  event: "call:offer" | "call:answer" | "call:ice-candidate" | "call:media-state",
+  payload: CallSignalPayload,
+  ack: CallSignalAck | undefined,
+  app: FastifyInstance
+) {
+  const callId = typeof payload?.callId === "string" ? payload.callId.trim() : "";
+  const toUserId = typeof payload?.toUserId === "string" ? payload.toUserId.trim() : "";
+  if (!callId || !toUserId || toUserId === socket.data.userId) {
+    ack?.({ ok: false, error: { code: "SOCIAL_CALL_SIGNAL_PAYLOAD_INVALID", message: "callId and a different toUserId are required" } });
+    return;
+  }
+
+  try {
+    app.log.info(
+      {
+        event: "social-call-signal-received",
+        signal: event,
+        callId,
+        fromUserId: socket.data.userId,
+        toUserId,
+        hasDescription: Boolean(payload.description),
+        hasCandidate: Boolean(payload.candidate),
+        hasMediaState: Boolean(payload.mediaState)
+      },
+      "Received social call signal"
+    );
+    const { verifyCallSignalParticipant } = await import("../../domain/services/social-call.service.js");
+    await verifyCallSignalParticipant(callId, socket.data.userId, toUserId);
+    const relayed = { ...payload, callId, toUserId, fromUserId: socket.data.userId };
+    emitCallSignal(event, toUserId, relayed);
+    app.log.info(
+      {
+        event: "social-call-signal-relayed",
+        signal: event,
+        callId,
+        fromUserId: socket.data.userId,
+        toUserId
+      },
+      "Relayed social call signal"
+    );
+    ack?.({ ok: true, data: { relayed: true } });
+  } catch (error) {
+    app.log.warn({ error, userId: socket.data.userId, callId, toUserId, event }, "Failed to relay call signaling event");
+    ack?.({
+      ok: false,
+      error: {
+        code: readErrorCode(error),
+        message: error instanceof Error ? error.message : "Failed to relay call signaling event"
+      }
+    });
+  }
+}
+
+function emitCallSignal(event: "call:offer" | "call:answer" | "call:ice-candidate" | "call:media-state", toUserId: string, payload: CallSignalPayload) {
+  const server = io;
+  if (!server) return;
+
+  if (event === "call:offer") {
+    server.to(userRoom(toUserId)).emit("call:offer", payload);
+    return;
+  }
+
+  if (event === "call:answer") {
+    server.to(userRoom(toUserId)).emit("call:answer", payload);
+    return;
+  }
+
+  if (event === "call:ice-candidate") {
+    server.to(userRoom(toUserId)).emit("call:ice-candidate", payload);
+    return;
+  }
+
+  server.to(userRoom(toUserId)).emit("call:media-state", payload);
 }
 
 function readErrorCode(error: unknown) {

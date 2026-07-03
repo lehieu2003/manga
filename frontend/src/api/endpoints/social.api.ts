@@ -1,4 +1,4 @@
-import type { Friendship, FriendshipListResponse, SocialConversationListResponse, SocialMembershipStatus, SocialMessage, SocialMessageListResponse, SocialMessageType, SocialUserSearchResponse } from "@/types";
+import type { CallMediaType, Friendship, FriendshipListResponse, SocialCallHistoryResponse, SocialCallResponse, SocialConversationListResponse, SocialMembershipStatus, SocialMessage, SocialMessageListResponse, SocialMessageType, SocialUserSearchResponse } from "@/types";
 import { request } from "../interceptors/auth.interceptor";
 
 type SendSocialMessageInput =
@@ -75,6 +75,30 @@ export const socialApi = {
       method: "PATCH",
       body: JSON.stringify({ mutedUntil })
     });
+  },
+  startSocialCall(conversationId: string, mediaType: CallMediaType) {
+    return request<SocialCallResponse>(`/social/conversations/${conversationId}/calls`, {
+      method: "POST",
+      body: JSON.stringify({ mediaType })
+    });
+  },
+  listSocialCalls(conversationId: string, params: { limit?: number; cursor?: string } = {}) {
+    const query = new URLSearchParams();
+    query.set("limit", String(params.limit ?? 20));
+    if (params.cursor) query.set("cursor", params.cursor);
+    return request<SocialCallHistoryResponse>(`/social/conversations/${conversationId}/calls?${query}`);
+  },
+  getSocialCall(callId: string) {
+    return request<SocialCallResponse>(`/social/calls/${callId}`);
+  },
+  joinSocialCall(callId: string) {
+    return request<SocialCallResponse>(`/social/calls/${callId}/join`, { method: "PATCH" });
+  },
+  declineSocialCall(callId: string) {
+    return request<{ call: SocialCallResponse["call"] }>(`/social/calls/${callId}/decline`, { method: "PATCH" });
+  },
+  leaveSocialCall(callId: string) {
+    return request<{ call: SocialCallResponse["call"] }>(`/social/calls/${callId}/leave`, { method: "PATCH" });
   },
   listSocialMessages(conversationId: string, params: { limit?: number; cursor?: string } = {}) {
     const query = new URLSearchParams();

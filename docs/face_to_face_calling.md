@@ -4,7 +4,7 @@
 
 This document is a standalone, detailed execution plan for a future Phase 5 of the realtime social chat system: live audio/video calling between friends and group members. It assumes the current codebase baseline after Phase 4 option 1: social conversations, messages, group invites, manga sharing, message reactions, conversation mute controls, authenticated Socket.io rooms, and mobile/web social chat clients exist. Infrastructure-heavy Phase 4 follow-ups such as image upload, offline push delivery, and voice notes are still separate work unless explicitly called out below.
 
-Read this together with `REALTIME_CHAT.md`, which holds the current social-chat baseline and route namespace. This document is the first calling-specific contract; if implementation begins, copy the finalized schema, HTTP routes, and socket events back into `REALTIME_CHAT.md` in the same change.
+Read this together with `REALTIME_CHAT.md`, which holds the current social-chat baseline and route namespace. The initial backend contract and web foreground calling slices have been copied back into `REALTIME_CHAT.md`: call persistence, HTTP lifecycle routes, STUN/static TURN/shared-secret TURN ICE server config response, Socket.io signaling relay, missed-call timeout handling, and web foreground WebRTC controls. Choosing and provisioning the real TURN provider, mobile WebRTC clients, push/native incoming-call UI, and end-to-end QA remain follow-up work.
 
 ## Background: why calling needs different technology than chat
 
@@ -28,7 +28,7 @@ Three technical building blocks make this possible, and the rest of this plan is
   - Self-hosted **coturn** — open source, more setup and operational ownership, lower marginal cost at scale.
 - [ ] Confirm target call sizes for v1: 1:1 calls (always direct mesh — 2 peers) and small group calls (mesh, capped at 8 participants). Anything larger requires an SFU, which is explicitly out of scope for this phase.
 
-### Step 1 — Database schema and migration (Backend)
+### Step 1 — Database schema and migration (Backend) — backend contract slice implemented
 
 1. Add the enums `CallStatus`, `CallMediaType`, `CallParticipantStatus` and the models `CallSession`, `CallParticipant` to `schema.prisma`, plus the relation fields on `User` and `SocialConversation`. These models do not exist in the current schema yet.
 2. Add a partial/composite constraint so at most one `CallSession` with status `RINGING` or `ACTIVE` exists per DM `conversationId` at a time. Enforce this at the database level (a partial unique index in the migration SQL) in addition to checking it in application code, the same pattern already used for the DM `directKey` uniqueness.
@@ -37,7 +37,7 @@ Three technical building blocks make this possible, and the rest of this plan is
 
 **Verification:** migration applies to a copy of the production-like database; `CallSession`/`CallParticipant` types compile; the partial unique index is confirmed with a manual SQL insert test (second concurrent active call in the same DM is rejected).
 
-### Step 2 — Call domain service (Backend)
+### Step 2 — Call domain service (Backend) — backend contract slice implemented
 
 1. Implement `callService.startCall(conversationId, initiatorId, mediaType)`:
    - Verify the initiator has active membership in the conversation (reuse the existing membership-check helper used by message routes).
@@ -50,7 +50,7 @@ Three technical building blocks make this possible, and the rest of this plan is
 
 **Verification:** `npm run test -- call.service.test.ts` passes; `npm run typecheck` passes.
 
-### Step 3 — HTTP routes (Backend)
+### Step 3 — HTTP routes (Backend) — backend contract slice implemented
 
 1. Implement the six routes from the API contract table under the current `/api` prefix (`POST /social/conversations/:id/calls`, `PATCH /social/calls/:id/join`, `PATCH /social/calls/:id/decline`, `PATCH /social/calls/:id/leave`, `GET /social/calls/:id`, `GET /social/conversations/:id/calls`), each calling the corresponding domain service method and returning the project-standard error envelope on failure.
 2. Add rate limiting on `POST /social/conversations/:id/calls`, scoped per user and per conversation, to prevent ring-spam (reuse the existing rate-limiter middleware pattern from friend requests).
@@ -58,7 +58,7 @@ Three technical building blocks make this possible, and the rest of this plan is
 
 **Verification:** `npm run test -- social-call.routes.test.ts` passes; `npm run typecheck` passes.
 
-### Step 4 — Socket.io signaling relay (Backend)
+### Step 4 — Socket.io signaling relay (Backend) — backend contract slice implemented
 
 1. Add four new socket event handlers on the existing authenticated socket connection: `call:offer`, `call:answer`, `call:ice-candidate`, `call:media-state`. Each handler:
    - Re-validates that the sending user is an active participant of the call's conversation (do not trust the client-supplied `callId` alone — look up the call and its conversation, then check membership, same defense-in-depth pattern as message and typing events).
@@ -69,25 +69,27 @@ Three technical building blocks make this possible, and the rest of this plan is
 
 **Verification:** socket test suite passes; manual two-browser-tab smoke test of a full call (ring → answer → media flows → hang up).
 
-### Step 5 — Ringing timeout and missed-call handling (Backend)
+### Step 5 — Ringing timeout and missed-call handling (Backend) — backend timeout slice implemented
 
 1. Implement a scheduled sweep (interval job or a delayed queue entry created at call start) that checks `RINGING` sessions older than the timeout (45 seconds default, make it configurable).
 2. On timeout: mark the session `MISSED`, mark all still-`INVITED`/`RINGING` participants `MISSED`, emit `call:ended` with reason `no-answer`, and create a call-specific notification payload. Reuse the existing generic notification table, but add a dedicated notification type if missed-call rendering needs copy or routing that differs from `CHAT_MESSAGE`.
-3. Store the sweep's working state in Redis (`social:call:ringing:{callId}`) so the sweep does not need to scan the full `CallSession` table; the database row remains authoritative if the Redis key is lost (recompute from `status = RINGING AND startedAt < now() - timeout`).
+3. Store the sweep's working state in Redis (`social:call:ringing:{callId}`) so the sweep does not need to scan the full `CallSession` table; the database row remains authoritative if the Redis key is lost (recompute from `status = RINGING AND startedAt < now() - timeout`). The implemented v1 sweep uses the authoritative database query directly; Redis optimization can be added if call volume requires it.
 4. Write a test that fast-forwards time (or directly invokes the sweep function) and asserts the missed-call transition and notification creation.
 
 **Verification:** sweep unit test passes; manual test confirms a real un-answered call transitions to missed within the timeout window.
 
-### Step 6 — TURN/STUN provisioning (Infra)
+### Step 6 — TURN/STUN provisioning (Infra) — backend credential provider implemented
 
 1. Stand up the chosen TURN solution (managed provider account, or deploy coturn behind a stable public IP with TLS).
 2. Generate short-lived, per-call or per-session TURN credentials server-side (most providers support time-limited credentials via a shared secret — never ship a long-lived static TURN password to the client).
 3. Add a backend endpoint or include TURN credentials in the `startCall`/`joinCall` response payload so the client receives a fresh ICE server list (STUN + TURN URLs + credentials) at call time.
 4. Document the TURN credential rotation policy and the environment variables/secrets required in each deployment environment (staging, production).
 
+Backend status: call responses now include ICE server config built from `CALL_STUN_URLS`, optional static TURN credentials, or preferred shared-secret TURN credentials generated with `CALL_TURN_SHARED_SECRET` and `CALL_TURN_CREDENTIAL_TTL_SECONDS`. The actual managed TURN account or coturn server is still an infrastructure task.
+
 **Verification:** a manual call between two devices on different restrictive networks (e.g. two different mobile data connections) succeeds, confirming TURN relay works when direct connection fails.
 
-### Step 7 — Web frontend (React)
+### Step 7 — Web frontend (React) — foreground web slice implemented
 
 1. Build a `useCall` hook/state machine that wraps the call lifecycle: `idle → ringing-outgoing → ringing-incoming → connecting → active → ended`.
 2. Implement the WebRTC peer connection setup using the browser-native `RTCPeerConnection` and `navigator.mediaDevices.getUserMedia` APIs:
@@ -98,6 +100,8 @@ Three technical building blocks make this possible, and the rest of this plan is
 3. Build the UI: incoming-call prompt (accept/decline) that listens for `call:incoming`, an in-call screen with mute/camera-toggle/hang-up controls, and a call-history entry in the conversation view sourced from `GET /social/conversations/:id/calls`.
 4. Handle teardown: stop local media tracks and close the `RTCPeerConnection` on hang-up, on the other party leaving, and on tab close (`beforeunload`).
 5. Write component/unit tests for the state machine transitions and for correctly relaying signaling events to mocked `RTCPeerConnection` calls.
+
+Implemented web status: the web Messages thread has audio/video start buttons, incoming call prompt, in-thread call dock, microphone/camera toggles, hang up, and mocked unit coverage for start, accept, decline, and offer/answer signaling. Manual two-browser-device TURN validation remains part of Step 10.
 
 **Verification:** `npm run test -- call*.test.tsx`, `npm run typecheck`, `npm run build` all pass; manual two-tab call works end-to-end including mute/camera toggle and hang-up.
 

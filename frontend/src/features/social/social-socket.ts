@@ -1,6 +1,22 @@
 import { io, type Socket } from 'socket.io-client';
 import { API_ORIGIN, getAccessToken } from '@/api';
-import type { SocialMember, SocialMessage, User } from '@/types';
+import type { SocialCall, SocialMember, SocialMessage, User } from '@/types';
+
+export type CallSignalPayload = {
+  callId: string;
+  toUserId: string;
+  fromUserId?: string;
+  description?: RTCSessionDescriptionInit;
+  candidate?: RTCIceCandidateInit;
+  mediaState?: {
+    audioEnabled?: boolean;
+    videoEnabled?: boolean;
+  };
+};
+
+type SocketAck<TData = unknown> =
+  | { ok: true; data: TData }
+  | { ok: false; error: { code: string; message: string } };
 
 export type SocialServerEvents = {
   'message:new': (payload: {
@@ -44,6 +60,27 @@ export type SocialServerEvents = {
     online: boolean;
     lastSeenAt: string;
   }) => void;
+  'call:incoming': (payload: SocialCall) => void;
+  'call:participant-joined': (payload: {
+    callId: string;
+    userId: string;
+    call: SocialCall;
+  }) => void;
+  'call:participant-left': (payload: {
+    callId: string;
+    userId: string;
+    status: string;
+    call: SocialCall;
+  }) => void;
+  'call:ended': (payload: {
+    callId: string;
+    reason: string;
+    call: SocialCall;
+  }) => void;
+  'call:offer': (payload: CallSignalPayload) => void;
+  'call:answer': (payload: CallSignalPayload) => void;
+  'call:ice-candidate': (payload: CallSignalPayload) => void;
+  'call:media-state': (payload: CallSignalPayload) => void;
 };
 
 export type SocialClientEvents = {
@@ -58,6 +95,22 @@ export type SocialClientEvents = {
     ) => void,
   ) => void;
   'presence:ping': () => void;
+  'call:offer': (
+    payload: CallSignalPayload,
+    ack?: (result: SocketAck<{ relayed: true }>) => void,
+  ) => void;
+  'call:answer': (
+    payload: CallSignalPayload,
+    ack?: (result: SocketAck<{ relayed: true }>) => void,
+  ) => void;
+  'call:ice-candidate': (
+    payload: CallSignalPayload,
+    ack?: (result: SocketAck<{ relayed: true }>) => void,
+  ) => void;
+  'call:media-state': (
+    payload: CallSignalPayload,
+    ack?: (result: SocketAck<{ relayed: true }>) => void,
+  ) => void;
 };
 
 export type SocialSocket = Socket<SocialServerEvents, SocialClientEvents>;
