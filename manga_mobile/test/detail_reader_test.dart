@@ -5,6 +5,7 @@ import 'package:manga_mobile/ui/core/theme.dart';
 import 'package:manga_mobile/ui/features/detail/manga_detail_screen.dart';
 import 'package:manga_mobile/ui/features/reader/reader_screen.dart';
 
+import 'fakes/fake_reader_settings_store.dart';
 import 'helpers/test_app.dart';
 
 void main() {
