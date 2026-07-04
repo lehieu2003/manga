@@ -46,6 +46,35 @@ curl http://localhost/health/ready
 
 Set `JWT_SECRET`, `POSTGRES_PASSWORD`, and `CORS_ORIGIN` in `.env` for the VPS environment before starting the production stack. Set `PUBLIC_MEDIA_BASE_URL` to the Cloudflare-proxied API or media hostname when enabling CDN media caching.
 
+## Local Nginx Smoke Test
+
+Use this when you want a production-like same-origin Nginx path without replacing the normal Vite dev server on `http://localhost:5173`.
+
+```bash
+copy .env.nginx.local.example .env.nginx.local
+docker compose --env-file .env.nginx.local -f docker-compose.prod.yml up --build
+```
+
+The app is served at `http://localhost:8080`. Nginx serves the built frontend and proxies `/api`, `/health`, `/docs`, `/uploads`, and `/socket.io` to the backend service.
+
+Smoke checks:
+
+```bash
+curl http://localhost:8080/health
+curl http://localhost:8080/health/ready
+curl "http://localhost:8080/api/manga/search?q=one"
+curl http://localhost:8080/docs/json
+curl "http://localhost:8080/socket.io/?EIO=4&transport=polling"
+```
+
+Also open `http://localhost:8080` in a browser and refresh a deep route to confirm the SPA fallback.
+
+Stop the stack:
+
+```bash
+docker compose --env-file .env.nginx.local -f docker-compose.prod.yml down
+```
+
 ## Notes
 
 - MangaDex metadata is requested through the backend and cached in Redis.
@@ -75,5 +104,6 @@ Set `JWT_SECRET`, `POSTGRES_PASSWORD`, and `CORS_ORIGIN` in `.env` for the VPS e
 - [RAG chatbot MVP plan](docs/RAG_CHATBOT_PLAN.md): authenticated floating chatbot, pgvector indexing, retrieval flow, and step-by-step delivery status.
 - [RAG chatbot workflow overview](docs/RAG_CHATBOT_WORKFLOW_VI.md): plain-language Vietnamese explanation of how the RAG chatbot works end to end.
 - [Backend/Ops deploy plan](docs/BACKEND_OPS_PLAN.md): production Docker Compose, CI checks, health readiness, and VPS runbook.
+- [Local Nginx setup](docs/LOCAL_NGINX_SETUP.md): local production-like Nginx setup, smoke tests, and route-by-route explanation.
 - [Image traffic scale plan](docs/IMAGE_TRAFFIC_SCALE_PLAN.md): backend media proxy hardening, Cloudflare CDN rules, and future object storage cache.
 - [Cloudflare media cache runbook](docs/CLOUDFLARE_MEDIA_CACHE_RUNBOOK.md): exact cache rules, bypass rules, rate limits, and verification steps for media traffic.
