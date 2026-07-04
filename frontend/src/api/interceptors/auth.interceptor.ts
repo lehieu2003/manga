@@ -1,7 +1,8 @@
 import type { User } from "@/types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000/api";
-export const API_ORIGIN = new URL(API_URL).origin;
+const URL_BASE = globalThis.location?.origin ?? "http://localhost";
+export const API_ORIGIN = new URL(API_URL, URL_BASE).origin;
 
 const ACCESS_TOKEN_KEY = "manga.accessToken";
 const REFRESH_TOKEN_KEY = "manga.refreshToken";
