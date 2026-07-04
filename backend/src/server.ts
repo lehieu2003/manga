@@ -25,6 +25,7 @@ import { healthRoutes } from "./app/routes/health.routes.js";
 import { friendshipRoutes } from "./app/routes/v1/friendship.routes.js";
 import { libraryRoutes } from "./app/routes/v1/library.routes.js";
 import { progressRoutes } from "./app/routes/v1/progress.routes.js";
+import { pushTokenRoutes } from "./app/routes/v1/push-token.routes.js";
 import { searchHistoryRoutes } from "./app/routes/v1/search-history.routes.js";
 import { socialConversationRoutes } from "./app/routes/v1/social-conversation.routes.js";
 import { syncMangaDexCatalog } from "./domain/services/catalog-sync.service.js";
@@ -118,6 +119,7 @@ export async function buildApp() {
   await app.register(pageRoutes, { prefix: "/api" });
   await app.register(libraryRoutes, { prefix: "/api" });
   await app.register(progressRoutes, { prefix: "/api" });
+  await app.register(pushTokenRoutes, { prefix: "/api" });
   await app.register(searchHistoryRoutes, { prefix: "/api" });
 
   if (env.SYNC_ON_STARTUP) {

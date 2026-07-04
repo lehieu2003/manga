@@ -61,7 +61,7 @@ describe("social call timeout sweep", () => {
     });
     const notification = makeNotification();
 
-    prismaMocks.callSessionFindMany.mockResolvedValue([timedOutCall]);
+    prismaMocks.callSessionFindMany.mockResolvedValueOnce([timedOutCall]).mockResolvedValueOnce([]);
     prismaMocks.transaction.mockImplementation((callback) =>
       callback({
         callSession: {
@@ -117,6 +117,72 @@ describe("social call timeout sweep", () => {
     });
     expect(notificationMocks.publishNotification).toHaveBeenCalledWith(notification);
     expect(socketMocks.emitCallEnded).toHaveBeenCalledWith("conv-1", expect.objectContaining({ callId: "call-1", reason: "no-answer" }));
+  });
+
+  it("ends abandoned active calls so they do not block future calls", async () => {
+    const { sweepMissedSocialCalls } = await import("../../domain/services/social-call.service.js");
+    const now = new Date("2026-07-01T12:00:00.000Z");
+    const activeCall = makeCall({
+      status: CallStatus.ACTIVE,
+      answeredAt: new Date("2026-07-01T06:00:00.000Z"),
+      updatedAt: new Date("2026-07-01T07:00:00.000Z"),
+      participants: [
+        makeParticipant({ id: "participant-1", userId: "user-1", status: CallParticipantStatus.JOINED, displayName: "Reader" }),
+        makeParticipant({ id: "participant-2", userId: "user-2", status: CallParticipantStatus.JOINED, displayName: "Friend" })
+      ]
+    });
+    const endedCall = makeCall({
+      status: CallStatus.ENDED,
+      answeredAt: new Date("2026-07-01T06:00:00.000Z"),
+      endedAt: now,
+      participants: [
+        makeParticipant({ id: "participant-1", userId: "user-1", status: CallParticipantStatus.LEFT, displayName: "Reader", leftAt: now }),
+        makeParticipant({ id: "participant-2", userId: "user-2", status: CallParticipantStatus.LEFT, displayName: "Friend", leftAt: now })
+      ]
+    });
+
+    prismaMocks.callSessionFindMany.mockResolvedValueOnce([]).mockResolvedValueOnce([activeCall]);
+    prismaMocks.transaction.mockImplementation((callback) =>
+      callback({
+        callSession: {
+          updateMany: prismaMocks.callSessionUpdateMany,
+          findUnique: prismaMocks.callSessionFindUnique
+        },
+        callParticipant: {
+          updateMany: prismaMocks.callParticipantUpdateMany
+        },
+        notification: {
+          create: prismaMocks.notificationCreate
+        }
+      })
+    );
+    prismaMocks.callSessionUpdateMany.mockResolvedValue({ count: 1 });
+    prismaMocks.callParticipantUpdateMany.mockResolvedValue({ count: 2 });
+    prismaMocks.callSessionFindUnique.mockResolvedValue(endedCall);
+
+    const result = await sweepMissedSocialCalls(now);
+
+    expect(result).toMatchObject({ timedOut: 1, calls: [{ id: "call-1", status: "ENDED" }] });
+    expect(prismaMocks.callSessionFindMany).toHaveBeenNthCalledWith(2, {
+      where: {
+        status: CallStatus.ACTIVE,
+        updatedAt: { lt: new Date("2026-07-01T08:00:00.000Z") }
+      },
+      include: expect.any(Object)
+    });
+    expect(prismaMocks.callSessionUpdateMany).toHaveBeenCalledWith({
+      where: { id: "call-1", status: CallStatus.ACTIVE },
+      data: { status: CallStatus.ENDED, endedAt: now }
+    });
+    expect(prismaMocks.callParticipantUpdateMany).toHaveBeenCalledWith({
+      where: {
+        callId: "call-1",
+        status: { in: [CallParticipantStatus.INVITED, CallParticipantStatus.JOINED] }
+      },
+      data: { status: CallParticipantStatus.LEFT, leftAt: now }
+    });
+    expect(notificationMocks.publishNotification).not.toHaveBeenCalled();
+    expect(socketMocks.emitCallEnded).toHaveBeenCalledWith("conv-1", expect.objectContaining({ callId: "call-1", reason: "timeout" }));
   });
 });
 

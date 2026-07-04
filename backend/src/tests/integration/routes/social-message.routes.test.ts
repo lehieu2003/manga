@@ -1,4 +1,4 @@
-import { FriendshipStatus, SocialConversationType, SocialMembershipStatus, SocialMessageType } from "@prisma/client";
+import { FriendshipStatus, NotificationSubjectType, NotificationType, SocialConversationType, SocialMembershipStatus, SocialMessageType } from "@prisma/client";
 import Fastify from "fastify";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -13,6 +13,7 @@ const prismaMocks = vi.hoisted(() => ({
   socialMessageFindFirst: vi.fn(),
   socialMessageCreate: vi.fn(),
   socialMessageUpdate: vi.fn(),
+  notificationCreate: vi.fn(),
   messageReactionUpsert: vi.fn(),
   messageReactionDeleteMany: vi.fn(),
   friendshipFindUnique: vi.fn(),
@@ -26,7 +27,8 @@ const prismaMocks = vi.hoisted(() => ({
   emitCallIncoming: vi.fn(),
   emitCallParticipantJoined: vi.fn(),
   emitCallParticipantLeft: vi.fn(),
-  emitNotification: vi.fn()
+  emitNotification: vi.fn(),
+  deliverPushNotification: vi.fn()
 }));
 
 vi.mock("../../../infrastructure/database/client.js", () => ({
@@ -43,6 +45,9 @@ vi.mock("../../../infrastructure/database/client.js", () => ({
       findFirst: prismaMocks.socialMessageFindFirst,
       create: prismaMocks.socialMessageCreate,
       update: prismaMocks.socialMessageUpdate
+    },
+    notification: {
+      create: prismaMocks.notificationCreate
     },
     messageReaction: {
       upsert: prismaMocks.messageReactionUpsert,
@@ -73,6 +78,10 @@ vi.mock("../../../infrastructure/realtime/socket-server.js", () => ({
   emitCallParticipantJoined: prismaMocks.emitCallParticipantJoined,
   emitCallParticipantLeft: prismaMocks.emitCallParticipantLeft,
   emitNotification: prismaMocks.emitNotification
+}));
+
+vi.mock("../../../domain/services/push-notification.service.js", () => ({
+  deliverPushNotification: prismaMocks.deliverPushNotification
 }));
 
 const expectedMessageInclude = {
@@ -116,10 +125,12 @@ describe("social message routes", () => {
     prismaMocks.friendshipFindUnique.mockResolvedValue({ status: FriendshipStatus.ACCEPTED });
     prismaMocks.socialMessageFindUnique.mockResolvedValue(null);
     prismaMocks.socialMessageCreate.mockResolvedValue(makeMessage());
+    prismaMocks.notificationCreate.mockImplementation(async ({ data }) => ({ id: "notification-1", ...data, readAt: null, createdAt: new Date("2024-01-04T00:00:01.000Z") }));
     prismaMocks.transaction.mockImplementation((callback) =>
       callback({
         socialMessage: { create: prismaMocks.socialMessageCreate },
-        socialConversation: { update: prismaMocks.socialConversationUpdate }
+        socialConversation: { update: prismaMocks.socialConversationUpdate },
+        notification: { create: prismaMocks.notificationCreate }
       })
     );
 
@@ -149,7 +160,37 @@ describe("social message routes", () => {
       where: { id: "conv-1" },
       data: { lastMessageAt: new Date("2024-01-04T00:00:00.000Z") }
     });
+    expect(prismaMocks.notificationCreate).toHaveBeenCalledWith({
+      data: {
+        userId: "user-2",
+        actorId: "user-1",
+        type: NotificationType.CHAT_MESSAGE,
+        subjectType: NotificationSubjectType.CONVERSATION,
+        subjectId: "conv-1",
+        payload: {
+          conversationId: "conv-1",
+          messageId: "msg-1",
+          messageType: SocialMessageType.TEXT
+        }
+      }
+    });
     expect(prismaMocks.emitMessageNew).toHaveBeenCalledWith("conv-1", expect.objectContaining({ id: "msg-1" }));
+    expect(prismaMocks.emitNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "notification-1",
+        userId: "user-2",
+        type: NotificationType.CHAT_MESSAGE,
+        subjectId: "conv-1"
+      })
+    );
+    expect(prismaMocks.deliverPushNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "notification-1",
+        userId: "user-2",
+        type: NotificationType.CHAT_MESSAGE,
+        subjectId: "conv-1"
+      })
+    );
     await app.close();
   });
 
@@ -207,10 +248,12 @@ describe("social message routes", () => {
         }
       })
     );
+    prismaMocks.notificationCreate.mockImplementation(async ({ data }) => ({ id: "notification-1", ...data, readAt: null, createdAt: new Date("2024-01-04T00:00:01.000Z") }));
     prismaMocks.transaction.mockImplementation((callback) =>
       callback({
         socialMessage: { create: prismaMocks.socialMessageCreate },
-        socialConversation: { update: prismaMocks.socialConversationUpdate }
+        socialConversation: { update: prismaMocks.socialConversationUpdate },
+        notification: { create: prismaMocks.notificationCreate }
       })
     );
 

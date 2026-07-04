@@ -1,5 +1,7 @@
 import {
   FriendshipStatus,
+  NotificationSubjectType,
+  NotificationType,
   Prisma,
   SocialConversationType,
   SocialMembershipStatus,
@@ -13,6 +15,7 @@ import {
 } from '../../infrastructure/realtime/socket-server.js';
 import { prisma } from '../../infrastructure/database/client.js';
 import { HttpError } from '../../shared/errors/http-error.js';
+import { publishNotification } from './notification-stream.service.js';
 
 type ListMessagesInput = {
   limit: number;
@@ -125,7 +128,31 @@ export async function sendSocialMessage(
         data: { lastMessageAt: message.createdAt },
       });
 
-      return { message, created: true };
+      const recipientMembers = conversation.members.filter(
+        (member) =>
+          member.userId !== userId &&
+          member.status === SocialMembershipStatus.ACTIVE,
+      );
+      const notifications = await Promise.all(
+        recipientMembers.map((member) =>
+          tx.notification.create({
+            data: {
+              userId: member.userId,
+              actorId: userId,
+              type: NotificationType.CHAT_MESSAGE,
+              subjectType: NotificationSubjectType.CONVERSATION,
+              subjectId: conversationId,
+              payload: {
+                conversationId,
+                messageId: message.id,
+                messageType: message.type,
+              },
+            },
+          }),
+        ),
+      );
+
+      return { message, notifications, created: true };
     })
     .catch(async (error: unknown) => {
       if (
@@ -142,13 +169,19 @@ export async function sendSocialMessage(
           },
           include: messageInclude,
         });
-        if (duplicate) return { message: duplicate, created: false };
+        if (duplicate)
+          return { message: duplicate, notifications: [], created: false };
       }
       throw error;
     });
 
   const message = serializeMessage(result.message, userId);
-  if (result.created) emitMessageNew(conversationId, message);
+  if (result.created) {
+    emitMessageNew(conversationId, message);
+    for (const notification of result.notifications) {
+      publishNotification(notification);
+    }
+  }
   return { message, idempotent: !result.created };
 }
 
