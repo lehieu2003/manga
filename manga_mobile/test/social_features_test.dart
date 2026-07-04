@@ -2,6 +2,9 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:manga_mobile/main.dart';
 
+import 'fakes/fake_notification_repository.dart';
+import 'fakes/fake_social_repository.dart';
+import 'fakes/fake_social_socket_service.dart';
 import 'helpers/test_app.dart';
 
 void main() {
