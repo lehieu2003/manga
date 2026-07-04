@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/repositories/repositories.dart';
+import '../data/services/push_notification_service.dart';
 import '../data/services/reader_settings_store.dart';
 import '../data/services/social_socket_service.dart';
 import '../data/services/theme_store.dart';
@@ -15,6 +16,7 @@ class AppState extends ChangeNotifier {
     required this.notificationRepository,
     required this.socialRepository,
     required this.socialSocketService,
+    required this.pushNotificationService,
     required this.chatRepository,
     ReaderSettingsStore? readerSettingsStore,
     ThemeStore? themeStore,
@@ -28,6 +30,7 @@ class AppState extends ChangeNotifier {
   final NotificationRepository notificationRepository;
   final SocialRepository socialRepository;
   final SocialSocketService socialSocketService;
+  final PushNotificationService pushNotificationService;
   final ChatRepository chatRepository;
   final ReaderSettingsStore readerSettingsStore;
   final ThemeStore themeStore;
@@ -54,6 +57,9 @@ class AppState extends ChangeNotifier {
     ]);
     user = results[0] as User?;
     themeMode = results[1] as ThemeMode;
+    if (user != null) {
+      await pushNotificationService.onSignedIn();
+    }
     isBooting = false;
     notifyListeners();
   }
@@ -66,6 +72,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> login(String email, String password) async {
     user = await authRepository.login(email: email, password: password);
+    await pushNotificationService.onSignedIn();
 
     notifyListeners();
   }
@@ -107,6 +114,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    await pushNotificationService.onSignedOut();
     await authRepository.logout();
     user = null;
     notifyListeners();

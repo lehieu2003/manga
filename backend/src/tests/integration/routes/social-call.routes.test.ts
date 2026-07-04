@@ -1,4 +1,4 @@
-import { CallMediaType, CallParticipantStatus, CallStatus, FriendshipStatus, SocialConversationType, SocialMembershipStatus } from "@prisma/client";
+import { CallMediaType, CallParticipantStatus, CallStatus, FriendshipStatus, NotificationSubjectType, NotificationType, SocialConversationType, SocialMembershipStatus } from "@prisma/client";
 import Fastify from "fastify";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -12,8 +12,10 @@ const prismaMocks = vi.hoisted(() => ({
   callSessionFindMany: vi.fn(),
   callSessionCreate: vi.fn(),
   callSessionUpdate: vi.fn(),
+  notificationCreate: vi.fn(),
   callParticipantUpdate: vi.fn(),
-  callParticipantCount: vi.fn()
+  callParticipantCount: vi.fn(),
+  publishNotification: vi.fn()
 }));
 
 const socketMocks = vi.hoisted(() => ({
@@ -46,6 +48,9 @@ vi.mock("../../../infrastructure/database/client.js", () => ({
       create: prismaMocks.callSessionCreate,
       update: prismaMocks.callSessionUpdate
     },
+    notification: {
+      create: prismaMocks.notificationCreate
+    },
     callParticipant: {
       update: prismaMocks.callParticipantUpdate,
       count: prismaMocks.callParticipantCount
@@ -54,6 +59,9 @@ vi.mock("../../../infrastructure/database/client.js", () => ({
 }));
 
 vi.mock("../../../infrastructure/realtime/socket-server.js", () => socketMocks);
+vi.mock("../../../domain/services/notification-stream.service.js", () => ({
+  publishNotification: prismaMocks.publishNotification
+}));
 
 describe("social call routes", () => {
   afterEach(() => {
@@ -67,6 +75,7 @@ describe("social call routes", () => {
     prismaMocks.friendshipFindUnique.mockResolvedValue({ status: FriendshipStatus.ACCEPTED });
     prismaMocks.callSessionFindFirst.mockResolvedValue(null);
     prismaMocks.callSessionCreate.mockResolvedValue(makeCall());
+    prismaMocks.notificationCreate.mockImplementation(async ({ data }) => ({ id: "notification-1", ...data, readAt: null, createdAt: new Date("2024-01-04T00:00:01.000Z") }));
 
     const response = await app.inject({
       method: "POST",
@@ -103,9 +112,32 @@ describe("social call routes", () => {
       },
       include: expect.any(Object)
     });
+    expect(prismaMocks.notificationCreate).toHaveBeenCalledWith({
+      data: {
+        userId: "user-2",
+        actorId: "user-1",
+        type: NotificationType.INCOMING_CALL,
+        subjectType: NotificationSubjectType.CALL,
+        subjectId: "call-1",
+        payload: {
+          callId: "call-1",
+          conversationId: "conv-1",
+          initiatorId: "user-1",
+          mediaType: CallMediaType.VIDEO
+        }
+      }
+    });
+    expect(prismaMocks.publishNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "notification-1",
+        userId: "user-2",
+        type: NotificationType.INCOMING_CALL,
+        subjectId: "call-1"
+      })
+    );
     expect(socketMocks.emitCallIncoming).toHaveBeenCalledWith("user-2", expect.objectContaining({ id: "call-1" }));
     await app.close();
-  });
+  }, 10_000);
 
   it("rejects starting a call for a non-member", async () => {
     const app = await makeSocialCallApp();
@@ -216,6 +248,7 @@ function mockTransaction() {
         create: prismaMocks.callSessionCreate,
         update: prismaMocks.callSessionUpdate
       },
+      notification: { create: prismaMocks.notificationCreate },
       callParticipant: {
         update: prismaMocks.callParticipantUpdate,
         count: prismaMocks.callParticipantCount

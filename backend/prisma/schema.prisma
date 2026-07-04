@@ -57,6 +57,7 @@ enum NotificationType {
   FRIEND_REQUEST
   FRIEND_ACCEPTED
   CHAT_MESSAGE
+  INCOMING_CALL
   GROUP_INVITE
   MISSED_CALL
 }
@@ -153,8 +154,26 @@ model User {
   messageReactions   MessageReaction[]
   initiatedCalls      CallSession[]     @relation("CallInitiator")
   callParticipants    CallParticipant[]
+  pushDeviceTokens    PushDeviceToken[]
 
   @@index([role])
+}
+
+model PushDeviceToken {
+  id         String    @id @default(cuid())
+  userId     String
+  token      String    @unique
+  platform   String
+  deviceId   String?
+  appVersion String?
+  lastSeenAt DateTime  @default(now())
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt, lastSeenAt])
+  @@index([platform, revokedAt])
 }
 
 model RefreshSession {

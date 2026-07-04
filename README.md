@@ -103,6 +103,7 @@ docker compose --env-file .env.nginx.local -f docker-compose.prod.yml down
 - [Auth and account plan](docs/AUTH_ACCOUNT_PLAN.md): account settings, profile updates, password change, and backend logout behavior.
 - [RAG chatbot MVP plan](docs/RAG_CHATBOT_PLAN.md): authenticated floating chatbot, pgvector indexing, retrieval flow, and step-by-step delivery status.
 - [RAG chatbot workflow overview](docs/RAG_CHATBOT_WORKFLOW_VI.md): plain-language Vietnamese explanation of how the RAG chatbot works end to end.
+- [Push notifications plan](docs/PUSH_NOTIFICATIONS_PLAN.md): Android-first Firebase Cloud Messaging architecture, backend token storage, and mobile routing.
 - [Backend/Ops deploy plan](docs/BACKEND_OPS_PLAN.md): production Docker Compose, CI checks, health readiness, and VPS runbook.
 - [Local Nginx setup](docs/LOCAL_NGINX_SETUP.md): local production-like Nginx setup, smoke tests, and route-by-route explanation.
 - [Image traffic scale plan](docs/IMAGE_TRAFFIC_SCALE_PLAN.md): backend media proxy hardening, Cloudflare CDN rules, and future object storage cache.

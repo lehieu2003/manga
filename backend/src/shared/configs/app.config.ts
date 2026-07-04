@@ -47,12 +47,17 @@ const envSchema = z.object({
   SMTP_PASS: optionalNonEmpty,
   MAIL_FROM: optionalEmail,
   CALL_RING_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(45),
+  CALL_ACTIVE_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(14400),
   CALL_STUN_URLS: z.string().default("stun:stun.l.google.com:19302"),
   CALL_TURN_URLS: optionalNonEmpty,
   CALL_TURN_USERNAME: optionalNonEmpty,
   CALL_TURN_CREDENTIAL: optionalNonEmpty,
   CALL_TURN_SHARED_SECRET: optionalSecret,
-  CALL_TURN_CREDENTIAL_TTL_SECONDS: z.coerce.number().int().positive().default(3600)
+  CALL_TURN_CREDENTIAL_TTL_SECONDS: z.coerce.number().int().positive().default(3600),
+  FIREBASE_PROJECT_ID: optionalNonEmpty,
+  FIREBASE_CLIENT_EMAIL: optionalEmail,
+  FIREBASE_PRIVATE_KEY: optionalNonEmpty,
+  FIREBASE_SERVICE_ACCOUNT_JSON: optionalNonEmpty
 });
 
 export const env = envSchema.parse(process.env);

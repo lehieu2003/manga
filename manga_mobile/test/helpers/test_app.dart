@@ -9,6 +9,7 @@ import '../fakes/fake_chat_repository.dart';
 import '../fakes/fake_comment_repository.dart';
 import '../fakes/fake_library_repository.dart';
 import '../fakes/fake_notification_repository.dart';
+import '../fakes/fake_push_notification_service.dart';
 import '../fakes/fake_reader_settings_store.dart';
 import '../fakes/fake_social_repository.dart';
 import '../fakes/fake_social_socket_service.dart';
@@ -28,6 +29,7 @@ TestAppState buildApp({bool signedIn = false}) {
     notificationRepository: FakeNotificationRepository(api),
     socialRepository: FakeSocialRepository(api),
     socialSocketService: FakeSocialSocketService(api),
+    pushNotificationService: FakePushNotificationService(api),
     chatRepository: FakeChatRepository(api),
     readerSettingsStore: FakeReaderSettingsStore(),
     themeStore: FakeThemeStore(),
@@ -52,6 +54,7 @@ class TestAppState extends AppState {
     required super.notificationRepository,
     required super.socialRepository,
     required super.socialSocketService,
+    required super.pushNotificationService,
     required super.chatRepository,
     super.readerSettingsStore,
     super.themeStore,

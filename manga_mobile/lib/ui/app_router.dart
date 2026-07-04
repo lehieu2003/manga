@@ -12,7 +12,6 @@ import 'features/detail/manga_detail_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/library/library_screen.dart';
 import 'features/messages/messages_screen.dart';
-import 'features/notifications/notification_center.dart';
 import 'features/reader/reader_screen.dart';
 import 'features/search/search_screen.dart';
 import 'features/settings/settings_screen.dart';

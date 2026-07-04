@@ -7,7 +7,9 @@ String notificationTitle(UserNotification item) {
     'FRIEND_REQUEST' => 'sent you a friend request',
     'FRIEND_ACCEPTED' => 'accepted your friend request',
     'CHAT_MESSAGE' => 'sent you a message',
+    'INCOMING_CALL' => 'is calling you',
     'GROUP_INVITE' => 'invited you to a group',
+    'MISSED_CALL' => 'called you',
     _ => 'sent you a notification',
   };
 
@@ -27,7 +29,8 @@ String formatNotificationDateTime(DateTime date) {
 String notificationTargetPath(UserNotification item) {
   if (item.subjectType == 'FRIENDSHIP' ||
       item.subjectType == 'CONVERSATION' ||
-      item.subjectType == 'MESSAGE') {
+      item.subjectType == 'MESSAGE' ||
+      item.subjectType == 'CALL') {
     return '/messages';
   }
   if (item.targetType == 'MANGA' && item.targetId != null) {

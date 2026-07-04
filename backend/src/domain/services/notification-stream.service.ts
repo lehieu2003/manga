@@ -1,4 +1,5 @@
 import { emitNotification } from "../../infrastructure/realtime/socket-server.js";
+import { deliverPushNotification } from "./push-notification.service.js";
 
 type NotificationPayload = {
   id: string;
@@ -29,6 +30,7 @@ export function subscribeToNotifications(userId: string, listener: Listener) {
 
 export function publishNotification(payload: NotificationPayload) {
   emitNotification(payload);
+  void deliverPushNotification(payload);
   const listeners = listenersByUser.get(payload.userId);
   if (!listeners) return;
   for (const listener of listeners) listener(payload);

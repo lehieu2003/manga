@@ -11,5 +11,6 @@ export { friendshipRoutes } from "./friendship.routes.js";
 export { libraryRoutes } from "./library.routes.js";
 export { pageRoutes } from "./page.routes.js";
 export { progressRoutes } from "./progress.routes.js";
+export { pushTokenRoutes } from "./push-token.routes.js";
 export { searchHistoryRoutes } from "./search-history.routes.js";
 export { socialConversationRoutes } from "./social-conversation.routes.js";

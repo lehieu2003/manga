@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'data/repositories/repositories.dart';
 import 'data/services/api_client.dart';
+import 'data/services/push_notification_service.dart';
 import 'data/services/social_socket_service.dart';
 import 'ui/app_router.dart';
 import 'ui/app_state.dart';
@@ -13,6 +16,8 @@ Future<void> main() async {
   await dotenv.load(fileName: '.env', isOptional: true);
 
   final apiClient = ApiClient();
+  final pushNotificationService = PushNotificationService(apiClient);
+  await pushNotificationService.initialize();
   final appState = AppState(
     authRepository: AuthRepository(apiClient),
     catalogRepository: CatalogRepository(apiClient),
@@ -21,6 +26,7 @@ Future<void> main() async {
     notificationRepository: NotificationRepository(apiClient),
     socialRepository: SocialRepository(apiClient),
     socialSocketService: SocialSocketService(apiClient),
+    pushNotificationService: pushNotificationService,
     chatRepository: ChatRepository(apiClient),
   );
   runApp(MyApp(appState: appState));
@@ -38,6 +44,23 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   late final _router = buildRouter(widget.appState);
+  StreamSubscription<String>? _pushRouteSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _pushRouteSubscription = widget
+        .appState
+        .pushNotificationService
+        .routeRequests
+        .listen((route) => _router.go(route));
+  }
+
+  @override
+  void dispose() {
+    _pushRouteSubscription?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

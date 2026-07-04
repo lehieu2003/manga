@@ -200,7 +200,7 @@ class CallCubit extends Cubit<CallState> {
         emit(
           state.copyWith(
             status: CallUiStatus.ended,
-            call: event.call,
+            call: null,
             incomingCall: null,
           ),
         );

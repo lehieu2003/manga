@@ -44,7 +44,7 @@ const liveCallStatuses = [CallStatus.RINGING, CallStatus.ACTIVE];
 
 export async function startSocialCall(userId: string, conversationId: string, input: StartCallInput) {
   try {
-    const call = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const conversation = await loadActiveConversationForUser(tx, conversationId, userId);
       await assertDmNotBlocked(tx, conversation, userId);
 
@@ -54,7 +54,7 @@ export async function startSocialCall(userId: string, conversationId: string, in
       });
       if (existing) throw new HttpError(409, "A call is already active for this conversation", "SOCIAL_CALL_ALREADY_ACTIVE");
 
-      return tx.callSession.create({
+      const call = await tx.callSession.create({
         data: {
           conversationId,
           initiatorId: userId,
@@ -70,15 +70,40 @@ export async function startSocialCall(userId: string, conversationId: string, in
         },
         include: callInclude
       });
+
+      const invitedParticipants = call.participants.filter((participant) => participant.userId !== userId && participant.status === CallParticipantStatus.INVITED);
+      const notifications = await Promise.all(
+        invitedParticipants.map((participant) =>
+          tx.notification.create({
+            data: {
+              userId: participant.userId,
+              actorId: userId,
+              type: NotificationType.INCOMING_CALL,
+              subjectType: NotificationSubjectType.CALL,
+              subjectId: call.id,
+              payload: {
+                callId: call.id,
+                conversationId: call.conversationId,
+                initiatorId: call.initiatorId,
+                mediaType: call.mediaType
+              }
+            }
+          })
+        )
+      );
+
+      return { call, notifications };
     });
 
-    for (const participant of call.participants) {
+    for (const notification of result.notifications) publishNotification(notification);
+
+    for (const participant of result.call.participants) {
       if (participant.userId !== userId && participant.status === CallParticipantStatus.INVITED) {
-        emitCallIncoming(participant.userId, serializeCall(call));
+        emitCallIncoming(participant.userId, serializeCall(result.call));
       }
     }
 
-    return { call: serializeCall(call), iceServers: getCallIceServers({ callId: call.id, userId }) };
+    return { call: serializeCall(result.call), iceServers: getCallIceServers({ callId: result.call.id, userId }) };
   } catch (error) {
     if (isUniqueConstraintError(error)) throw new HttpError(409, "A call is already active for this conversation", "SOCIAL_CALL_ALREADY_ACTIVE");
     throw error;
@@ -242,6 +267,41 @@ export async function sweepMissedSocialCalls(now = new Date()) {
     const serialized = serializeCall(result.call);
     for (const notification of result.notifications) publishNotification(notification);
     emitCallEnded(result.call.conversationId, { callId: result.call.id, reason: "no-answer", call: serialized });
+    results.push(serialized);
+  }
+
+  const activeTimeoutMs = env.CALL_ACTIVE_TIMEOUT_SECONDS * 1000;
+  const activeCutoff = new Date(now.getTime() - activeTimeoutMs);
+  const abandonedActiveCalls = await prisma.callSession.findMany({
+    where: {
+      status: CallStatus.ACTIVE,
+      updatedAt: { lt: activeCutoff }
+    },
+    include: callInclude
+  });
+
+  for (const activeCall of abandonedActiveCalls) {
+    const result = await prisma.$transaction(async (tx) => {
+      const updatedCall = await tx.callSession.updateMany({
+        where: { id: activeCall.id, status: CallStatus.ACTIVE },
+        data: { status: CallStatus.ENDED, endedAt: now }
+      });
+      if (!updatedCall.count) return null;
+
+      await tx.callParticipant.updateMany({
+        where: {
+          callId: activeCall.id,
+          status: { in: [CallParticipantStatus.INVITED, CallParticipantStatus.JOINED] }
+        },
+        data: { status: CallParticipantStatus.LEFT, leftAt: now }
+      });
+
+      return loadCallOrThrow(tx, activeCall.id);
+    });
+
+    if (!result) continue;
+    const serialized = serializeCall(result);
+    emitCallEnded(result.conversationId, { callId: result.id, reason: "timeout", call: serialized });
     results.push(serialized);
   }
 
