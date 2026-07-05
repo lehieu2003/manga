@@ -22,7 +22,7 @@ export function GenreChips({
         const active = selected.includes(genre.name);
         if (!onToggle) {
           return (
-            <Link key={genre.name} aria-label={`${genre.name}, ${genre.count} manga`} className="genre-chip" to={`/genres/${encodeURIComponent(genre.name)}`}>
+            <Link key={genre.name} aria-label={`${genre.name}, ${genre.count} manga`} className="genre-chip" data-motion-item to={`/genres/${encodeURIComponent(genre.name)}`}>
               {genre.name}
               <span>{genre.count}</span>
             </Link>
@@ -35,6 +35,7 @@ export function GenreChips({
             aria-pressed={active}
             aria-label={`${genre.name}, ${genre.count} manga`}
             className={`genre-chip ${active ? "genre-chip-active" : ""}`}
+            data-motion-item
             onClick={() => onToggle(genre.name)}
             type="button"
           >

@@ -88,6 +88,8 @@ docker compose --env-file .env.nginx.local -f docker-compose.prod.yml down
 
 ## Documentation
 
+![alt text](image.png)
+
 - [Agent rules](AGENTS.md): coding-agent rules, including detailed commit message requirements.
 - [Feature status](docs/FEATURE_STATUS.md): current implemented features, known limits, and not-yet-implemented roadmap items.
 - [User feature roadmap](docs/USER_FEATURE_ROADMAP.md): role `USER` feature gaps with detailed implementation plans.
