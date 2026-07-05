@@ -54,6 +54,7 @@ const user: User = {
   role: "USER",
   avatarUrl: null,
   emailVerifiedAt: "2024-01-01T00:00:00.000Z",
+  hasPassword: true,
   createdAt: "2024-01-01T00:00:00.000Z"
 };
 

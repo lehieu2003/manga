@@ -5,6 +5,7 @@ export type User = {
   role: "USER" | "ADMIN";
   avatarUrl: string | null;
   emailVerifiedAt: string | null;
+  hasPassword: boolean;
   createdAt: string;
 };
 

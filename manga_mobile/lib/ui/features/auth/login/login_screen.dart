@@ -62,45 +62,62 @@ class _LoginViewState extends State<_LoginView> {
           return AuthScaffold(
             title: 'Welcome back',
             subtitle: 'Continue your manga shelf.',
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  TextFormField(
-                    controller: _email,
-                    decoration: const InputDecoration(labelText: 'Email'),
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (value) => value != null && value.contains('@')
-                        ? null
-                        : 'Enter a valid email',
+            child: Column(
+              children: [
+                GoogleSignInButton(
+                  isLoading: state.isLoading,
+                  onPressed: () => context.read<LoginCubit>().loginWithGoogle(),
+                ),
+                const AuthDivider(),
+                Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: _email,
+                        decoration: const InputDecoration(labelText: 'Email'),
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (value) =>
+                            value != null && value.contains('@')
+                            ? null
+                            : 'Enter a valid email',
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _password,
+                        decoration: const InputDecoration(
+                          labelText: 'Password',
+                        ),
+                        obscureText: true,
+                        validator: (value) =>
+                            value != null && value.isNotEmpty
+                            ? null
+                            : 'Enter password',
+                      ),
+                      if (state.error != null) ErrorText(state.error!),
+                      const SizedBox(height: 18),
+                      FilledButton.icon(
+                        onPressed: state.isLoading
+                            ? null
+                            : () => _submit(context),
+                        icon: const Icon(Icons.login),
+                        label: Text(
+                          state.isLoading ? 'Signing in...' : 'Sign in',
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => context.go('/forgot'),
+                        child: const Text('Forgot password?'),
+                      ),
+                      TextButton(
+                        onPressed: () => context.go('/register'),
+                        child: const Text('Create account'),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _password,
-                    decoration: const InputDecoration(labelText: 'Password'),
-                    obscureText: true,
-                    validator: (value) => value != null && value.isNotEmpty
-                        ? null
-                        : 'Enter password',
-                  ),
-                  if (state.error != null) ErrorText(state.error!),
-                  const SizedBox(height: 18),
-                  FilledButton.icon(
-                    onPressed: state.isLoading ? null : () => _submit(context),
-                    icon: const Icon(Icons.login),
-                    label: Text(state.isLoading ? 'Signing in...' : 'Sign in'),
-                  ),
-                  TextButton(
-                    onPressed: () => context.go('/forgot'),
-                    child: const Text('Forgot password?'),
-                  ),
-                  TextButton(
-                    onPressed: () => context.go('/register'),
-                    child: const Text('Create account'),
-                  ),
-                ],
+                ),
+              ],
               ),
-            ),
           );
         },
       ),

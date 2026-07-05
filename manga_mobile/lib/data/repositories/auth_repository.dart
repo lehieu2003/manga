@@ -1,3 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:firebase_core/firebase_core.dart' as firebase_core;
+import 'package:google_sign_in/google_sign_in.dart';
+
 import '../../domain/models/models.dart';
 import '../services/api_client.dart';
 import '../services/token_store.dart';
@@ -6,6 +10,7 @@ class AuthRepository {
   AuthRepository(this._api);
 
   final ApiClient _api;
+  bool _googleSignInInitialized = false;
 
   Future<User?> restoreSession() async {
     if (await _api.tokenStore.accessToken == null) return null;
@@ -20,6 +25,46 @@ class AuthRepository {
 
   Future<User> login({required String email, required String password}) {
     return _auth('/auth/login', {'email': email, 'password': password});
+  }
+
+  Future<User> loginWithGoogle() async {
+    await _ensureFirebaseInitialized();
+    await _ensureGoogleSignInInitialized();
+
+    final googleSignIn = GoogleSignIn.instance;
+    if (!googleSignIn.supportsAuthenticate()) {
+      throw const ApiException('Google sign-in is not supported here');
+    }
+
+    final googleUser = await googleSignIn.authenticate(
+      scopeHint: const ['email', 'profile'],
+    );
+    final googleAuth = googleUser.authentication;
+    final credential = firebase_auth.GoogleAuthProvider.credential(
+      idToken: googleAuth.idToken,
+    );
+
+    await firebase_auth.FirebaseAuth.instance.signInWithCredential(credential);
+    return loginWithFirebaseCurrentUser();
+  }
+
+  Future<User> exchangeFirebaseIdToken(String idToken) {
+    return _auth('/auth/firebase/exchange', {'idToken': idToken});
+  }
+
+  Future<User> loginWithFirebaseCurrentUser({
+    firebase_auth.FirebaseAuth? firebaseAuth,
+  }) async {
+    final auth = firebaseAuth ?? firebase_auth.FirebaseAuth.instance;
+    final currentUser = auth.currentUser;
+    if (currentUser == null) {
+      throw const ApiException('No Firebase user is signed in');
+    }
+    final idToken = await currentUser.getIdToken();
+    if (idToken == null || idToken.isEmpty) {
+      throw const ApiException('Firebase sign-in token is unavailable');
+    }
+    return exchangeFirebaseIdToken(idToken);
   }
 
   Future<User?> register({
@@ -113,6 +158,32 @@ class AuthRepository {
       }
     } finally {
       await _api.tokenStore.clear();
+      await _signOutFirebase();
+    }
+  }
+
+  Future<void> _ensureFirebaseInitialized() async {
+    if (firebase_core.Firebase.apps.isNotEmpty) return;
+    await firebase_core.Firebase.initializeApp();
+  }
+
+  Future<void> _ensureGoogleSignInInitialized() async {
+    if (_googleSignInInitialized) return;
+    await GoogleSignIn.instance.initialize();
+    _googleSignInInitialized = true;
+  }
+
+  Future<void> _signOutFirebase() async {
+    try {
+      await firebase_auth.FirebaseAuth.instance.signOut();
+    } catch (_) {
+      // Backend logout must still clear the local app session.
+    }
+
+    try {
+      await GoogleSignIn.instance.signOut();
+    } catch (_) {
+      // Google may not be initialized on email/password-only sessions.
     }
   }
 

@@ -15,7 +15,7 @@ class RegisterScreen extends StatelessWidget {
     final app = AppScope.of(context);
 
     return BlocProvider(
-      create: (_) => RegisterCubit(authRepository: app.authRepository),
+      create: (_) => RegisterCubit(appState: app),
       child: const _RegisterView(),
     );
   }
@@ -55,61 +55,81 @@ class _RegisterViewState extends State<_RegisterView> {
   Widget build(BuildContext context) {
     return BlocListener<RegisterCubit, RegisterState>(
       listenWhen: (prev, curr) => curr.isSuccess,
-      listener: (context, state) => context.go(
-        '/verify?email=${Uri.encodeComponent(_email.text.trim())}',
-      ),
+      listener: (context, state) {
+        if (state.signedIn) {
+          context.go('/');
+          return;
+        }
+
+        context.go('/verify?email=${Uri.encodeComponent(_email.text.trim())}');
+      },
       child: BlocBuilder<RegisterCubit, RegisterState>(
         builder: (context, state) {
           return AuthScaffold(
             title: 'Create account',
             subtitle: 'Track reading progress across your shelf.',
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  TextFormField(
-                    controller: _name,
-                    decoration: const InputDecoration(
-                      labelText: 'Display name',
-                    ),
-                    validator: (value) => (value ?? '').trim().length >= 2
-                        ? null
-                        : 'Use at least 2 characters',
+            child: Column(
+              children: [
+                GoogleSignInButton(
+                  isLoading: state.isLoading,
+                  onPressed: () =>
+                      context.read<RegisterCubit>().loginWithGoogle(),
+                ),
+                const AuthDivider(),
+                Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: _name,
+                        decoration: const InputDecoration(
+                          labelText: 'Display name',
+                        ),
+                        validator: (value) => (value ?? '').trim().length >= 2
+                            ? null
+                            : 'Use at least 2 characters',
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _email,
+                        decoration: const InputDecoration(labelText: 'Email'),
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (value) =>
+                            value != null && value.contains('@')
+                            ? null
+                            : 'Enter a valid email',
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _password,
+                        decoration: const InputDecoration(
+                          labelText: 'Password',
+                        ),
+                        obscureText: true,
+                        validator: (value) => (value ?? '').length >= 8
+                            ? null
+                            : 'Use at least 8 characters',
+                      ),
+                      if (state.error != null) ErrorText(state.error!),
+                      const SizedBox(height: 18),
+                      FilledButton.icon(
+                        onPressed: state.isLoading
+                            ? null
+                            : () => _submit(context),
+                        icon: const Icon(Icons.person_add),
+                        label: Text(
+                          state.isLoading ? 'Creating...' : 'Create account',
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => context.go('/login'),
+                        child: const Text('Already have an account'),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _email,
-                    decoration: const InputDecoration(labelText: 'Email'),
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (value) => value != null && value.contains('@')
-                        ? null
-                        : 'Enter a valid email',
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _password,
-                    decoration: const InputDecoration(labelText: 'Password'),
-                    obscureText: true,
-                    validator: (value) => (value ?? '').length >= 8
-                        ? null
-                        : 'Use at least 8 characters',
-                  ),
-                  if (state.error != null) ErrorText(state.error!),
-                  const SizedBox(height: 18),
-                  FilledButton.icon(
-                    onPressed: state.isLoading ? null : () => _submit(context),
-                    icon: const Icon(Icons.person_add),
-                    label: Text(
-                      state.isLoading ? 'Creating...' : 'Create account',
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => context.go('/login'),
-                    child: const Text('Already have an account'),
-                  ),
-                ],
+                ),
+              ],
               ),
-            ),
           );
         },
       ),

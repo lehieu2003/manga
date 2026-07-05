@@ -4,14 +4,35 @@ import type { PasswordFormAction, PasswordFormState } from "../settings/settings
 import { FormMessage, PasswordField } from "./settingsShared";
 
 export function SecuritySettingsForm({
+  hasPassword,
   passwordForm,
   dispatchPassword,
   onSubmit
 }: {
+  hasPassword: boolean;
   passwordForm: PasswordFormState;
   dispatchPassword: (action: PasswordFormAction) => void;
   onSubmit: (event: FormEvent) => void;
 }) {
+  if (!hasPassword) {
+    return (
+      <section className="surface rounded-lg p-5">
+        <div className="mb-5 flex items-center gap-3">
+          <span className="grid size-11 place-items-center rounded-lg border border-[var(--line)] bg-[var(--surface-strong)] text-[var(--accent)]">
+            <KeyRound size={20} />
+          </span>
+          <div>
+            <h2 className="text-xl font-black">Security</h2>
+            <p className="text-sm text-[var(--muted)]">This account signs in with Google.</p>
+          </div>
+        </div>
+        <p className="rounded-lg border border-[var(--line)] bg-[var(--accent-soft)] p-3 text-sm text-[var(--muted)]">
+          Password changes are handled by Google for this account. You can still manage your profile and app session here.
+        </p>
+      </section>
+    );
+  }
+
   return (
     <form className="surface rounded-lg p-5" onSubmit={onSubmit}>
       <div className="mb-5 flex items-center gap-3">

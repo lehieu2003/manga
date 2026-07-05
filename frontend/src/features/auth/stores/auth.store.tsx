@@ -17,6 +17,10 @@ import {
   subscribeAuthTokens,
 } from '@/api';
 import type { User } from '@/types';
+import {
+  clearFirebaseAuthSession,
+  signInWithGoogle,
+} from '../firebase.client';
 
 export type UpdateProfileInput = {
   displayName?: string;
@@ -31,6 +35,7 @@ type AuthState = {
   user: User | null;
   isLoading: boolean;
   login: (input: { email: string; password: string }) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   register: (input: {
     email: string;
     password: string;
@@ -95,6 +100,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const loginWithGoogle = useCallback(async () => {
+    const idToken = await signInWithGoogle();
+    try {
+      const payload = await api.exchangeFirebaseToken({ idToken });
+      dispatch({ type: 'sessionLoaded', user: payload.user });
+      setTokens(payload.accessToken, payload.refreshToken);
+    } catch (error) {
+      await clearFirebaseAuthSession();
+      throw error;
+    }
+  }, []);
+
   const register = useCallback(
     async (input: { email: string; password: string; displayName: string }) => {
       const payload = await api.register(input);
@@ -116,6 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // Local logout must not be blocked by a stale or already-revoked refresh token.
     } finally {
+      await clearFirebaseAuthSession();
       clearTokens();
       dispatch({ type: 'sessionCleared' });
     }
@@ -142,6 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user: state.user,
       isLoading: state.isLoading,
       login,
+      loginWithGoogle,
       register,
       verifyEmail,
       logout,
@@ -153,6 +172,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       state.user,
       state.isLoading,
       login,
+      loginWithGoogle,
       register,
       verifyEmail,
       logout,

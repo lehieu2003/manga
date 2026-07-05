@@ -54,3 +54,53 @@ class ErrorText extends StatelessWidget {
     );
   }
 }
+
+class GoogleSignInButton extends StatelessWidget {
+  const GoogleSignInButton({
+    super.key,
+    required this.isLoading,
+    required this.onPressed,
+  });
+
+  final bool isLoading;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: isLoading ? null : onPressed,
+        icon: isLoading
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.g_mobiledata, size: 28),
+        label: Text(isLoading ? 'Connecting...' : 'Continue with Google'),
+      ),
+    );
+  }
+}
+
+class AuthDivider extends StatelessWidget {
+  const AuthDivider({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 18),
+      child: Row(
+        children: [
+          Expanded(child: Divider()),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 12),
+            child: Text('or', style: TextStyle(color: MangaTheme.muted)),
+          ),
+          Expanded(child: Divider()),
+        ],
+      ),
+    );
+  }
+}

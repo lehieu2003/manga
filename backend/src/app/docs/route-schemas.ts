@@ -25,7 +25,7 @@ const errorResponse = {
 
 const user = {
   type: "object",
-  required: ["id", "email", "displayName", "role", "avatarUrl", "createdAt"],
+  required: ["id", "email", "displayName", "role", "avatarUrl", "createdAt", "hasPassword"],
   properties: {
     id: idString,
     email: { type: "string", format: "email" },
@@ -33,7 +33,8 @@ const user = {
     role: { type: "string", enum: ["USER", "ADMIN"] },
     avatarUrl: { type: ["string", "null"], format: "uri" },
     emailVerifiedAt: { type: ["string", "null"], format: "date-time" },
-    createdAt: dateTime
+    createdAt: dateTime,
+    hasPassword: { type: "boolean" }
   },
   example: {
     id: exampleUserId,
@@ -42,7 +43,8 @@ const user = {
     role: "USER",
     avatarUrl: null,
     emailVerifiedAt: exampleDate,
-    createdAt: exampleDate
+    createdAt: exampleDate,
+    hasPassword: true
   }
 } as const;
 
@@ -454,6 +456,18 @@ export const authRouteSchemas = {
       }
     },
     response: { 200: tokenPair, ...errors }
+  },
+  firebaseExchange: {
+    summary: "Exchange a Firebase sign-in token for app tokens",
+    tags: ["Auth"],
+    body: {
+      type: "object",
+      required: ["idToken"],
+      properties: {
+        idToken: { type: "string", minLength: 20 }
+      }
+    },
+    response: { 200: tokenPair, ...errors, 503: errorResponse }
   },
   refresh: {
     summary: "Rotate refresh token",

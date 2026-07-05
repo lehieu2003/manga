@@ -1,28 +1,56 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:manga_mobile/data/repositories/repositories.dart';
+import '../../../app_state.dart';
 import 'register_state.dart';
 
 class RegisterCubit extends Cubit<RegisterState> {
-  RegisterCubit({required this.authRepository}) : super(const RegisterState());
+  RegisterCubit({required this.appState}) : super(const RegisterState());
 
-  final AuthRepository authRepository;
+  final AppState appState;
 
   Future<void> register({
     required String name,
     required String email,
     required String password,
   }) async {
-    emit(state.copyWith(status: RegisterStatus.loading, error: null));
+    emit(
+      state.copyWith(
+        status: RegisterStatus.loading,
+        error: null,
+        signedIn: false,
+      ),
+    );
 
     try {
-      await authRepository.register(
+      await appState.authRepository.register(
         email: email,
         password: password,
         displayName: name,
       );
 
       if (isClosed) return;
-      emit(state.copyWith(status: RegisterStatus.success));
+      emit(state.copyWith(status: RegisterStatus.success, signedIn: false));
+    } catch (error) {
+      if (isClosed) return;
+      emit(
+        state.copyWith(status: RegisterStatus.failure, error: error.toString()),
+      );
+    }
+  }
+
+  Future<void> loginWithGoogle() async {
+    emit(
+      state.copyWith(
+        status: RegisterStatus.loading,
+        error: null,
+        signedIn: false,
+      ),
+    );
+
+    try {
+      await appState.loginWithGoogle();
+
+      if (isClosed) return;
+      emit(state.copyWith(status: RegisterStatus.success, signedIn: true));
     } catch (error) {
       if (isClosed) return;
       emit(

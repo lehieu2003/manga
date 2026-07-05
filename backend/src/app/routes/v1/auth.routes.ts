@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import {
   handleChangeCurrentUserPassword,
+  handleFirebaseExchange,
   handleGetCurrentUser,
   handleLoginUser,
   handleLogoutUser,
@@ -26,6 +27,12 @@ export async function authRoutes(app: FastifyInstance) {
     '/auth/login',
     { schema: authRouteSchemas.login },
     handleLoginUser,
+  );
+
+  app.post(
+    '/auth/firebase/exchange',
+    { schema: authRouteSchemas.firebaseExchange },
+    handleFirebaseExchange,
   );
 
   app.post(

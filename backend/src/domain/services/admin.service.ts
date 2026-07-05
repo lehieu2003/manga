@@ -274,13 +274,15 @@ function userWhere(query?: string): Prisma.UserWhereInput {
   };
 }
 
-function publicUser(user: { id: string; email: string; displayName: string; role: "USER" | "ADMIN"; avatarUrl: string | null; createdAt: Date }) {
+function publicUser(user: { id: string; email: string; displayName: string; role: "USER" | "ADMIN"; avatarUrl: string | null; emailVerifiedAt?: Date | null; passwordHash?: string | null; createdAt: Date }) {
   return {
     id: user.id,
     email: user.email,
     displayName: user.displayName,
     role: user.role,
     avatarUrl: user.avatarUrl,
+    emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
+    hasPassword: Boolean(user.passwordHash),
     createdAt: user.createdAt.toISOString()
   };
 }

@@ -1,8 +1,7 @@
-import { cert, getApps, initializeApp, type App } from "firebase-admin/app";
 import { getMessaging } from "firebase-admin/messaging";
 import { NotificationSubjectType, NotificationType } from "@prisma/client";
 import { prisma } from "../../infrastructure/database/client.js";
-import { env } from "../../shared/configs/app.config.js";
+import { getFirebaseAdminApp } from "../../infrastructure/firebase/firebase-admin.js";
 
 type NotificationPayload = {
   id: string;
@@ -21,14 +20,17 @@ type PushCopy = {
   body: string;
 };
 
-let firebaseApp: App | null | undefined;
-
 export async function deliverPushNotification(notification: NotificationPayload) {
-  const app = getFirebaseApp();
+  const app = getFirebaseAdminApp();
   if (!app) return;
   if (await shouldSuppressPush(notification)) return;
 
-  const tokens = await prisma.pushDeviceToken.findMany({
+  const pushDeviceTokenDelegate = (prisma as typeof prisma & {
+    pushDeviceToken?: typeof prisma.pushDeviceToken;
+  }).pushDeviceToken;
+  if (!pushDeviceTokenDelegate) return;
+
+  const tokens = await pushDeviceTokenDelegate.findMany({
     where: { userId: notification.userId, revokedAt: null },
     select: { id: true, token: true }
   });
@@ -55,7 +57,7 @@ export async function deliverPushNotification(notification: NotificationPayload)
         });
       } catch (error) {
         if (isInvalidRegistrationToken(error)) {
-          await prisma.pushDeviceToken.updateMany({
+          await pushDeviceTokenDelegate.updateMany({
             where: { id: row.id, revokedAt: null },
             data: { revokedAt: new Date() }
           });
@@ -70,52 +72,6 @@ export async function deliverPushNotification(notification: NotificationPayload)
       }
     })
   );
-}
-
-function getFirebaseApp() {
-  if (firebaseApp !== undefined) return firebaseApp;
-  if (getApps().length) {
-    firebaseApp = getApps()[0] ?? null;
-    return firebaseApp;
-  }
-
-  const serviceAccount = readServiceAccount();
-  if (!serviceAccount) {
-    firebaseApp = null;
-    return firebaseApp;
-  }
-
-  firebaseApp = initializeApp({
-    credential: cert(serviceAccount)
-  });
-  return firebaseApp;
-}
-
-function readServiceAccount() {
-  if (env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-    const parsed = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT_JSON) as {
-      project_id?: string;
-      client_email?: string;
-      private_key?: string;
-    };
-    if (parsed.project_id && parsed.client_email && parsed.private_key) {
-      return {
-        projectId: parsed.project_id,
-        clientEmail: parsed.client_email,
-        privateKey: normalizePrivateKey(parsed.private_key)
-      };
-    }
-  }
-
-  if (!env.FIREBASE_PROJECT_ID || !env.FIREBASE_CLIENT_EMAIL || !env.FIREBASE_PRIVATE_KEY) {
-    return null;
-  }
-
-  return {
-    projectId: env.FIREBASE_PROJECT_ID,
-    clientEmail: env.FIREBASE_CLIENT_EMAIL,
-    privateKey: normalizePrivateKey(env.FIREBASE_PRIVATE_KEY)
-  };
 }
 
 async function shouldSuppressPush(notification: NotificationPayload) {
@@ -189,10 +145,6 @@ function readPayloadString(payload: unknown, key: string) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
   const value = (payload as Record<string, unknown>)[key];
   return typeof value === "string" && value.length > 0 ? value : null;
-}
-
-function normalizePrivateKey(value: string) {
-  return value.replace(/\\n/g, "\n");
 }
 
 function isInvalidRegistrationToken(error: unknown) {

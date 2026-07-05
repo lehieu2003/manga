@@ -88,7 +88,7 @@ export function SettingsPage() {
           onAvatarChange={setAvatarFile}
           onSubmit={saveProfile}
         />
-        <SecuritySettingsForm passwordForm={passwordForm} dispatchPassword={dispatchPassword} onSubmit={savePassword} />
+        <SecuritySettingsForm hasPassword={user?.hasPassword ?? true} passwordForm={passwordForm} dispatchPassword={dispatchPassword} onSubmit={savePassword} />
       </section>
 
       <SessionSettingsSection isLoggingOut={isLoggingOut} onLogout={endSession} />
