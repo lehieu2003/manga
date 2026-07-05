@@ -8,7 +8,7 @@ export function MangaCard({ manga }: { manga: MangaSummary }) {
   const [imageFailed, setImageFailed] = useState(false);
 
   return (
-    <Link to={`/manga/${manga.id}`} className="group block">
+    <Link to={`/manga/${manga.id}`} className="group block" data-motion-item>
       <article className="manga-card">
         <div className="manga-cover-frame">
           {manga.coverUrl && !imageFailed ? (

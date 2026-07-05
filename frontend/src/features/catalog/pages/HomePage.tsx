@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, Compass, History, Play, Sparkles } from 'lucide-react';
+import { BookOpen, Compass, Play } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { GenreChips } from '@/features/catalog/components/GenreChips';
+import { HomeHero } from '@/features/catalog/components/HomeHero';
 import { MangaCard } from '@/features/catalog/components/MangaCard';
 import { api, assetUrl } from '@/api';
 import { useAuth } from '@/features/auth/stores/auth.store';
+import { useAnimeReveal } from '@/features/motion/useAnimeReveal';
 import type { LibraryItem } from '@/types';
 
 export function HomePage() {
@@ -26,11 +28,39 @@ export function HomePage() {
   const libraryItems = library.data?.data ?? [];
   const continueItem = getContinueItems(libraryItems)[0];
   const recentlyRead = getContinueItems(libraryItems).slice(0, 6);
+  const recentMotionKey = recentlyRead.map((item) => item.id).join('|');
+  const popularMotionKey = popular.data?.data.map((manga) => manga.id).join('|') ?? '';
+  const latestMotionKey = latest.data?.data.map((manga) => manga.id).join('|') ?? '';
+  const personalRevealRef = useAnimeReveal<HTMLElement>(
+    [library.isLoading, continueItem?.id, recentMotionKey],
+    { delay: 40, staggerMs: 52 },
+  );
+  const genreRevealRef = useAnimeReveal<HTMLElement>(
+    [genres.isLoading, genres.data?.data.length],
+    { delay: 80, staggerMs: 34, distance: 10, duration: 420 },
+  );
+  const popularRevealRef = useAnimeReveal<HTMLElement>(
+    [popular.isLoading, popularMotionKey],
+    { delay: 80, staggerMs: 36, distance: 12 },
+  );
+  const latestRevealRef = useAnimeReveal<HTMLElement>(
+    [latest.isLoading, latestMotionKey],
+    { delay: 80, staggerMs: 36, distance: 12 },
+  );
 
   return (
     <div className='space-y-8'>
+      <HomeHero
+        isSignedIn={Boolean(user)}
+        manga={popular.data?.data ?? []}
+        continueItem={continueItem}
+      />
+
       {user ? (
-        <section className='grid gap-5 lg:grid-cols-[0.9fr_1.1fr]'>
+        <section
+          ref={personalRevealRef}
+          className='grid gap-5 lg:grid-cols-[0.9fr_1.1fr]'
+        >
           <div className='surface rounded-lg p-5'>
             <p className='mb-2 text-xs font-bold uppercase tracking-[0.24em] text-[var(--accent)]'>
               Continue Reading
@@ -40,7 +70,10 @@ export function HomePage() {
             ) : continueItem ? (
               <ContinueCard item={continueItem} />
             ) : (
-              <div className='rounded-lg border border-[var(--line)] p-5 text-sm text-[var(--muted)]'>
+              <div
+                className='rounded-lg border border-[var(--line)] p-5 text-sm text-[var(--muted)]'
+                data-motion-item
+              >
                 Your shelf is quiet. Follow a manga and start a chapter to see
                 it here.
                 <div className='mt-4'>
@@ -53,7 +86,10 @@ export function HomePage() {
             )}
           </div>
           <div className='surface rounded-lg p-5'>
-            <div className='mb-4 flex items-center justify-between gap-4'>
+            <div
+              className='mb-4 flex items-center justify-between gap-4'
+              data-motion-item
+            >
               <div>
                 <p className='text-xs font-bold uppercase tracking-[0.24em] text-[var(--accent)]'>
                   Recently Read
@@ -80,7 +116,10 @@ export function HomePage() {
                 ))}
               </div>
             ) : (
-              <div className='rounded-lg border border-[var(--line)] p-5 text-sm text-[var(--muted)]'>
+              <div
+                className='rounded-lg border border-[var(--line)] p-5 text-sm text-[var(--muted)]'
+                data-motion-item
+              >
                 Read a chapter and your recent shelf will appear here.
               </div>
             )}
@@ -88,8 +127,8 @@ export function HomePage() {
         </section>
       ) : null}
 
-      <section className='surface rounded-lg p-5'>
-        <div className='mb-4 flex items-center justify-between gap-4'>
+      <section ref={genreRevealRef} className='surface rounded-lg p-5'>
+        <div className='mb-4 flex items-center justify-between gap-4' data-motion-item>
           <h2 className='text-xl font-black'>Browse by genre</h2>
           <Link className='text-sm text-[var(--accent)]' to='/search'>
             More filters
@@ -109,8 +148,8 @@ export function HomePage() {
         )}
       </section>
 
-      <section>
-        <div className='mb-4 flex items-center justify-between'>
+      <section ref={popularRevealRef}>
+        <div className='mb-4 flex items-center justify-between' data-motion-item>
           <h2 className='text-xl font-black'>Popular picks</h2>
           <Link className='text-sm text-[var(--accent)]' to='/discover/popular'>
             View all
@@ -127,9 +166,11 @@ export function HomePage() {
         )}
       </section>
 
-      <section>
-        <h2 className='mb-4 text-xl font-black'>Fast search starters</h2>
-        <div className='mb-4'>
+      <section ref={latestRevealRef}>
+        <h2 className='mb-4 text-xl font-black' data-motion-item>
+          Fast search starters
+        </h2>
+        <div className='mb-4' data-motion-item>
           <Link className='text-sm text-[var(--accent)]' to='/discover/latest'>
             Latest updates
           </Link>
@@ -154,7 +195,7 @@ function ContinueCard({ item }: { item: LibraryItem }) {
   const chapterId = progress?.chapterId ?? item.lastChapterId;
 
   return (
-    <div className='grid gap-4 sm:grid-cols-[96px_1fr]'>
+    <div className='grid gap-4 sm:grid-cols-[96px_1fr]' data-motion-item>
       <Link
         to={`/manga/${item.mangaId}`}
         className='manga-cover-frame rounded-lg'
@@ -199,7 +240,10 @@ function RecentCard({ item }: { item: LibraryItem }) {
   const progress = item.readingProgress;
   const chapterId = progress?.chapterId ?? item.lastChapterId;
   const content = (
-    <article className='grid grid-cols-[48px_1fr] gap-3 rounded-lg border border-[var(--line)] bg-[var(--accent-panel)] p-2.5'>
+    <article
+      className='grid grid-cols-[48px_1fr] gap-3 rounded-lg border border-[var(--line)] bg-[var(--accent-panel)] p-2.5'
+      data-motion-item
+    >
       <div className='manga-cover-frame rounded-md'>
         {item.manga?.coverUrl ? (
           <img
