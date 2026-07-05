@@ -126,7 +126,8 @@ enum CallParticipantStatus {
 model User {
   id              String            @id @default(cuid())
   email           String            @unique
-  passwordHash    String
+  passwordHash    String?
+  firebaseUid     String?           @unique
   displayName     String
   role            UserRole          @default(USER)
   avatarUrl       String?

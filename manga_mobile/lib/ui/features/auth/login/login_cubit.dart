@@ -22,4 +22,20 @@ class LoginCubit extends Cubit<LoginState> {
       );
     }
   }
+
+  Future<void> loginWithGoogle() async {
+    emit(state.copyWith(status: LoginStatus.loading, error: null));
+
+    try {
+      await appState.loginWithGoogle();
+
+      if (isClosed) return;
+      emit(state.copyWith(status: LoginStatus.success));
+    } catch (error) {
+      if (isClosed) return;
+      emit(
+        state.copyWith(status: LoginStatus.failure, error: error.toString()),
+      );
+    }
+  }
 }

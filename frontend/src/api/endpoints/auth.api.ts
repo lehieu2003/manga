@@ -26,6 +26,12 @@ export const authApi = {
       body: JSON.stringify(input)
     });
   },
+  exchangeFirebaseToken(input: { idToken: string }) {
+    return request<{ user: User; accessToken: string; refreshToken: string }>("/auth/firebase/exchange", {
+      method: "POST",
+      body: JSON.stringify(input)
+    });
+  },
   me() {
     return request<{ user: User }>("/me");
   },

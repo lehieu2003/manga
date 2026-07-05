@@ -13,7 +13,7 @@ const apiMocks = vi.hoisted(() => ({
 }));
 
 const authState = vi.hoisted(() => ({
-  user: null as null | { id: string; email: string; displayName: string; role: "USER" | "ADMIN"; avatarUrl: string | null; createdAt: string },
+  user: null as null | { id: string; email: string; displayName: string; role: "USER" | "ADMIN"; avatarUrl: string | null; emailVerifiedAt: string | null; hasPassword: boolean; createdAt: string },
   isLoading: false
 }));
 
@@ -145,6 +145,8 @@ function makeUser(role: "USER" | "ADMIN") {
     displayName: "Reader",
     role,
     avatarUrl: null,
+    emailVerifiedAt: "2024-01-01T00:00:00.000Z",
+    hasPassword: true,
     createdAt: "2024-01-01T00:00:00.000Z"
   };
 }

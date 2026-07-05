@@ -7,6 +7,7 @@ class User {
     this.role = 'USER',
     this.avatarUrl,
     this.emailVerifiedAt,
+    this.hasPassword = true,
   });
 
   final String id;
@@ -16,6 +17,7 @@ class User {
   final String? avatarUrl;
   final DateTime createdAt;
   final DateTime? emailVerifiedAt;
+  final bool hasPassword;
 
   factory User.fromJson(Map<String, dynamic> json) => User(
     id: json['id'] as String,
@@ -29,5 +31,6 @@ class User {
     emailVerifiedAt: json['emailVerifiedAt'] != null
         ? DateTime.tryParse(json['emailVerifiedAt'].toString())
         : null,
+    hasPassword: json['hasPassword'] != false,
   );
 }

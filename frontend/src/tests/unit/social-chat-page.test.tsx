@@ -409,6 +409,7 @@ const currentUser: User = {
   role: "USER",
   avatarUrl: null,
   emailVerifiedAt: "2026-06-28T00:00:00.000Z",
+  hasPassword: true,
   createdAt: "2026-06-28T00:00:00.000Z"
 };
 

@@ -77,6 +77,13 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> loginWithGoogle() async {
+    user = await authRepository.loginWithGoogle();
+    await pushNotificationService.onSignedIn();
+
+    notifyListeners();
+  }
+
   Future<void> register(
     String email,
     String password,

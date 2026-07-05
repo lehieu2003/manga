@@ -26,6 +26,10 @@ const emailMocks = vi.hoisted(() => ({
   sendEmailVerificationOtp: vi.fn()
 }));
 
+const firebaseMocks = vi.hoisted(() => ({
+  verifyFirebaseIdToken: vi.fn()
+}));
+
 vi.mock("../../../infrastructure/database/client.js", () => ({
   prisma: {
     user: {
@@ -59,10 +63,128 @@ vi.mock("../../../infrastructure/email/index.js", () => ({
   }
 }));
 
+vi.mock("../../../domain/services/firebase-auth.service.js", () => ({
+  verifyFirebaseIdToken: firebaseMocks.verifyFirebaseIdToken
+}));
+
 describe("auth account routes", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.clearAllMocks();
+  });
+
+  it("rejects an invalid Firebase sign-in token", async () => {
+    const app = await makeAuthApp();
+    firebaseMocks.verifyFirebaseIdToken.mockRejectedValue(
+      new HttpError(401, "Firebase sign-in token is invalid or expired", "INVALID_FIREBASE_TOKEN")
+    );
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/auth/firebase/exchange",
+      payload: { idToken: "firebase-token-long-enough" }
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toMatchObject({ error: { code: "INVALID_FIREBASE_TOKEN" } });
+    expect(prismaMocks.refreshCreate).not.toHaveBeenCalled();
+    await app.close();
+  });
+
+  it("exchanges Firebase token for app tokens by existing Firebase UID", async () => {
+    const app = await makeAuthApp();
+    firebaseMocks.verifyFirebaseIdToken.mockResolvedValue(makeFirebaseIdentity());
+    prismaMocks.userFindUnique.mockResolvedValueOnce(makeUser({ firebaseUid: "firebase-user-1" }));
+    prismaMocks.refreshCreate.mockResolvedValue({});
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/auth/firebase/exchange",
+      payload: { idToken: "firebase-token-long-enough" }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ user: { id: "user-1", hasPassword: true }, accessToken: "access-token" });
+    expect(prismaMocks.userFindUnique).toHaveBeenCalledWith({ where: { firebaseUid: "firebase-user-1" } });
+    expect(prismaMocks.userUpdate).not.toHaveBeenCalled();
+    expect(prismaMocks.refreshCreate).toHaveBeenCalled();
+    await app.close();
+  });
+
+  it("links an existing local account by verified Google email", async () => {
+    const app = await makeAuthApp();
+    firebaseMocks.verifyFirebaseIdToken.mockResolvedValue(makeFirebaseIdentity());
+    prismaMocks.userFindUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(makeUser({ firebaseUid: null, emailVerifiedAt: null }));
+    prismaMocks.userUpdate.mockResolvedValue(makeUser({ firebaseUid: "firebase-user-1", emailVerifiedAt: new Date("2024-01-01T00:00:00.000Z") }));
+    prismaMocks.refreshCreate.mockResolvedValue({});
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/auth/firebase/exchange",
+      payload: { idToken: "firebase-token-long-enough" }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ user: { id: "user-1", hasPassword: true }, accessToken: "access-token" });
+    expect(prismaMocks.userFindUnique).toHaveBeenNthCalledWith(2, { where: { email: "reader@example.com" } });
+    expect(prismaMocks.userUpdate).toHaveBeenCalledWith({
+      where: { id: "user-1" },
+      data: { firebaseUid: "firebase-user-1", emailVerifiedAt: expect.any(Date) }
+    });
+    await app.close();
+  });
+
+  it("creates a local app user for a new verified Google account", async () => {
+    const app = await makeAuthApp();
+    firebaseMocks.verifyFirebaseIdToken.mockResolvedValue(makeFirebaseIdentity({ displayName: "Google Reader", picture: "https://example.com/avatar.png" }));
+    prismaMocks.userFindUnique.mockResolvedValue(null);
+    prismaMocks.userCreate.mockResolvedValue(makeUser({
+      displayName: "Google Reader",
+      passwordHash: null,
+      firebaseUid: "firebase-user-1",
+      avatarUrl: "https://example.com/avatar.png"
+    }));
+    prismaMocks.refreshCreate.mockResolvedValue({});
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/auth/firebase/exchange",
+      payload: { idToken: "firebase-token-long-enough" }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ user: { displayName: "Google Reader", hasPassword: false }, accessToken: "access-token" });
+    expect(prismaMocks.userCreate).toHaveBeenCalledWith({
+      data: {
+        email: "reader@example.com",
+        passwordHash: null,
+        firebaseUid: "firebase-user-1",
+        displayName: "Google Reader",
+        avatarUrl: "https://example.com/avatar.png",
+        emailVerifiedAt: expect.any(Date)
+      }
+    });
+    await app.close();
+  });
+
+  it("rejects Firebase email linking when the Firebase email is not verified", async () => {
+    const app = await makeAuthApp();
+    firebaseMocks.verifyFirebaseIdToken.mockResolvedValue(makeFirebaseIdentity({ emailVerified: false }));
+    prismaMocks.userFindUnique.mockResolvedValueOnce(null);
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/auth/firebase/exchange",
+      payload: { idToken: "firebase-token-long-enough" }
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({ error: { code: "FIREBASE_EMAIL_NOT_VERIFIED" } });
+    expect(prismaMocks.userCreate).not.toHaveBeenCalled();
+    expect(prismaMocks.userUpdate).not.toHaveBeenCalled();
+    await app.close();
   });
 
   it("registers a new account as pending verification and sends an OTP", async () => {
@@ -429,11 +551,32 @@ function makeUser(overrides: Partial<ReturnType<typeof makeBaseUser>> = {}) {
   return { ...makeBaseUser(), ...overrides };
 }
 
+function makeFirebaseIdentity(overrides: Partial<ReturnType<typeof makeBaseFirebaseIdentity>> = {}) {
+  return { ...makeBaseFirebaseIdentity(), ...overrides };
+}
+
+function makeBaseFirebaseIdentity(): {
+  uid: string;
+  email: string;
+  emailVerified: boolean;
+  displayName: string | null;
+  picture: string | null;
+} {
+  return {
+    uid: "firebase-user-1",
+    email: "reader@example.com",
+    emailVerified: true,
+    displayName: "Reader",
+    picture: null
+  };
+}
+
 function makeBaseUser() {
   const user: {
     id: string;
     email: string;
-    passwordHash: string;
+    passwordHash: string | null;
+    firebaseUid: string | null;
     displayName: string;
     role: "USER" | "ADMIN";
     avatarUrl: string | null;
@@ -443,6 +586,7 @@ function makeBaseUser() {
     id: "user-1",
     email: "reader@example.com",
     passwordHash: "hash",
+    firebaseUid: null,
     displayName: "Reader",
     role: "USER",
     avatarUrl: null,

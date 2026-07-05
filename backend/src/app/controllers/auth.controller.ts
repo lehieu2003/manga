@@ -24,9 +24,11 @@ import {
   rotateRefreshToken,
   verifyPassword,
 } from '../../domain/services/auth.service.js';
+import { verifyFirebaseIdToken } from '../../domain/services/firebase-auth.service.js';
 import { HttpError } from '../../shared/errors/http-error.js';
 import {
   changePasswordSchema,
+  firebaseExchangeSchema,
   forgotPasswordSchema,
   loginSchema,
   refreshSchema,
@@ -39,6 +41,7 @@ import {
 import type { z } from 'zod';
 
 type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+type FirebaseExchangeInput = z.infer<typeof firebaseExchangeSchema>;
 type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 type LoginInput = z.infer<typeof loginSchema>;
 type RefreshInput = z.infer<typeof refreshSchema>;
@@ -63,6 +66,11 @@ export async function handleRegisterUser(request: FastifyRequest, reply: Fastify
 export async function handleLoginUser(request: FastifyRequest) {
   const body = loginSchema.parse(request.body);
   return loginUser(request.server, body);
+}
+
+export async function handleFirebaseExchange(request: FastifyRequest) {
+  const body = firebaseExchangeSchema.parse(request.body);
+  return exchangeFirebaseToken(request.server, body);
 }
 
 export async function handleRefreshAuthToken(request: FastifyRequest) {
@@ -126,6 +134,7 @@ function publicUser(user: {
   avatarUrl: string | null;
   emailVerifiedAt: Date | null;
   createdAt: Date;
+  passwordHash?: string | null;
 }) {
   return {
     id: user.id,
@@ -135,6 +144,7 @@ function publicUser(user: {
     avatarUrl: user.avatarUrl,
     emailVerifiedAt: user.emailVerifiedAt,
     createdAt: user.createdAt,
+    hasPassword: Boolean(user.passwordHash),
   };
 }
 
@@ -163,7 +173,7 @@ export async function registerUser(input: RegisterInput) {
 export async function loginUser(app: FastifyInstance, input: LoginInput) {
   const user = await userRepository.findByEmail(input.email);
 
-  if (!user || !(await verifyPassword(input.password, user.passwordHash))) {
+  if (!user || !user.passwordHash || !(await verifyPassword(input.password, user.passwordHash))) {
     throw new HttpError(
       401,
       'Invalid email or password',
@@ -181,6 +191,57 @@ export async function loginUser(app: FastifyInstance, input: LoginInput) {
 
   const tokens = await issueTokenPair(app, user);
 
+  await domainEvents.publish({
+    type: 'auth.user_logged_in',
+    userId: user.id,
+  });
+  return { user: publicUser(user), ...tokens };
+}
+
+export async function exchangeFirebaseToken(
+  app: FastifyInstance,
+  input: FirebaseExchangeInput,
+) {
+  const identity = await verifyFirebaseIdToken(input.idToken);
+  let user = await userRepository.findByFirebaseUid(identity.uid);
+
+  if (!user) {
+    if (!identity.emailVerified) {
+      throw new HttpError(
+        403,
+        'Google account email must be verified before login',
+        'FIREBASE_EMAIL_NOT_VERIFIED',
+      );
+    }
+
+    const existing = await userRepository.findByEmail(identity.email);
+    if (existing) {
+      if (existing.firebaseUid && existing.firebaseUid !== identity.uid) {
+        throw new HttpError(
+          409,
+          'Email is already linked to another Firebase account',
+          'FIREBASE_EMAIL_LINK_CONFLICT',
+        );
+      }
+
+      user = await userRepository.linkFirebaseUid(existing.id, {
+        firebaseUid: identity.uid,
+        ...(existing.emailVerifiedAt ? {} : { emailVerifiedAt: new Date() }),
+      });
+    } else {
+      user = await userRepository.create({
+        email: identity.email,
+        passwordHash: null,
+        firebaseUid: identity.uid,
+        displayName: displayNameFromFirebase(identity.displayName, identity.email),
+        avatarUrl: identity.picture,
+        emailVerifiedAt: new Date(),
+      });
+      await domainEvents.publish({ type: 'auth.user_registered', userId: user.id });
+    }
+  }
+
+  const tokens = await issueTokenPair(app, user);
   await domainEvents.publish({
     type: 'auth.user_logged_in',
     userId: user.id,
@@ -374,6 +435,13 @@ export async function changeCurrentUserPassword(
   input: ChangePasswordInput,
 ) {
   const user = await userRepository.findByIdOrThrow(userId);
+  if (!user.passwordHash) {
+    throw new HttpError(
+      400,
+      'This account uses Google sign-in and does not have a local password',
+      'LOCAL_PASSWORD_UNAVAILABLE',
+    );
+  }
   if (!(await verifyPassword(input.currentPassword, user.passwordHash))) {
     throw new HttpError(
       401,
@@ -411,6 +479,12 @@ async function sendEmailVerificationCode(user: { id: string; email: string; disp
     expiresAt,
   });
   return { expiresAt };
+}
+
+function displayNameFromFirebase(displayName: string | null, email: string) {
+  const trimmed = displayName?.trim();
+  if (trimmed && trimmed.length >= 2) return trimmed.slice(0, 40);
+  return email.split('@')[0]?.slice(0, 40) || 'Manga Reader';
 }
 
 function getRequestOrigin(headers: { host?: string; ['x-forwarded-proto']?: string | string[] }) {
